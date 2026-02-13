@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"],
+      "@/tools-ai-stock-analyst/*": ["../ai-stock-analyst/*"],
+      "@/tools-gemini-stock-prophet/*": ["../gemini-stock-prophet/*"],
+      "@/tools-global-trend/*": ["../global-investment-trend-dashboard/*"],
+      "@/tools-fund-assistant/*": ["../anue-fund-genius/*"],
+      "@/tools-fund-risk/*": ["../fundscope-ai/*"],
+      "@/tools-asset-analysis/*": ["../wealthvision---yearly-asset-analysis/*"],
+      "@/tools-alphastrategist/*": ["../alphastrategist-ai/*"],
+      "@/tools-fund-insight/*": ["../anue-fund-insight/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+
