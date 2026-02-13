@@ -1,4 +1,4 @@
-# FinBuddy Backend
+# Sagafisc Backend
 
 FastAPI 後端服務
 
@@ -51,5 +51,5 @@ API 文件將在 http://localhost:8000/docs 可用
 - `/api/v1/watchlist/*` - 關注清單管理
 - `/api/v1/analysis/*` - 分析結果儲存與查詢
 
-詳見 `Finbuddy_software_spec_v1.0.md` 中的 API 合約章節。
+詳見 `docs/TOOLS_SPEC.md` 中的工具規格書。
 

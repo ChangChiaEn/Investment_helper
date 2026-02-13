@@ -1,6 +1,6 @@
-# FinBuddy 架構遷移技術文檔
+# Sagafisc 架構遷移技術文檔
 
-本文件記錄 FinBuddy 前端架構從「外部工具 + Webpack Alias」遷移至「統一原生整合」的完整過程、原因與技術細節。
+本文件記錄 Sagafisc 前端架構從「外部工具 + Webpack Alias」遷移至「統一原生整合」的完整過程、原因與技術細節。
 
 ---
 

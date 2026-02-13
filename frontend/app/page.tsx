@@ -40,7 +40,7 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary-600 to-blue-600 bg-clip-text text-transparent">
-            歡迎使用 FinBuddy 理財小能手
+            歡迎使用 Sagafisc 理財小能手
           </h1>
           <p className="text-gray-600">整合多個 AI 分析工具的個人理財平台</p>
         </div>

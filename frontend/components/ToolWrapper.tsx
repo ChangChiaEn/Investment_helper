@@ -26,7 +26,7 @@ export function ToolWrapper({ children, toolId }: ToolWrapperProps) {
       // 嘗試透過 postMessage 傳遞資料
       window.postMessage(
         {
-          type: 'FINBUDDY_TARGET_DATA',
+          type: 'SAGAFISC_TARGET_DATA',
           toolId,
           data: params,
         },

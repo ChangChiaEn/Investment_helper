@@ -1,6 +1,6 @@
 # Cloudflare 部署教學
 
-本文件說明如何將 FinBuddy 部署至 Cloudflare Pages（前端）以及搭配後端服務的完整方案。
+本文件說明如何將 Sagafisc 部署至 Cloudflare Pages（前端）以及搭配後端服務的完整方案。
 
 ---
 
@@ -122,13 +122,13 @@ cd frontend
 npm run build
 
 # 部署
-wrangler pages deploy out --project-name finbuddy
+wrangler pages deploy out --project-name sagafisc
 ```
 
 ### 驗證部署
 
 部署完成後，Cloudflare 會提供一個 URL：
-- `https://finbuddy.pages.dev`（預設）
+- `https://sagafisc.pages.dev`（預設）
 - 或你設定的自訂網域
 
 開啟網站，前往 `/settings` 輸入 Gemini API Key，然後測試各工具。
@@ -162,18 +162,18 @@ wrangler pages deploy out --project-name finbuddy
 
 ```
 JWT_SECRET=your-production-secret-key-at-least-32-chars
-CORS_ORIGINS=https://finbuddy.pages.dev,https://your-domain.com
+CORS_ORIGINS=https://sagafisc.pages.dev,https://your-domain.com
 ENVIRONMENT=production
 SUPABASE_URL=https://placeholder.supabase.co
 SUPABASE_SERVICE_KEY=placeholder
 SUPABASE_ANON_KEY=placeholder
 ```
 
-7. Railway 會自動部署並提供 URL，例如：`https://finbuddy-backend-production.up.railway.app`
+7. Railway 會自動部署並提供 URL，例如：`https://sagafisc-backend-production.up.railway.app`
 
 8. 回到 Cloudflare Pages 的環境變數，更新：
 ```
-NEXT_PUBLIC_API_BASE_URL=https://finbuddy-backend-production.up.railway.app/api/v1
+NEXT_PUBLIC_API_BASE_URL=https://sagafisc-backend-production.up.railway.app/api/v1
 ```
 
 ### 方案 B：Fly.io
@@ -187,12 +187,12 @@ fly auth login
 
 # 在 backend 目錄建立 fly.toml
 cd backend
-fly launch --name finbuddy-api
+fly launch --name sagafisc-api
 
 # 設定環境變數
 fly secrets set JWT_SECRET="your-secret" \
   DATABASE_URL="postgresql://..." \
-  CORS_ORIGINS="https://finbuddy.pages.dev"
+  CORS_ORIGINS="https://sagafisc.pages.dev"
 
 # 部署
 fly deploy
@@ -238,7 +238,7 @@ fly deploy
 
 1. 在 Cloudflare Dashboard → Pages → 你的專案 → Custom domains
 2. 點擊 **Set up a custom domain**
-3. 輸入你的網域，例如 `finbuddy.your-domain.com`
+3. 輸入你的網域，例如 `sagafisc.your-domain.com`
 4. Cloudflare 會自動設定 DNS（如果網域在 Cloudflare 管理）
 
 ### 後端自訂網域
@@ -285,7 +285,7 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          command: pages deploy frontend/out --project-name finbuddy
+          command: pages deploy frontend/out --project-name sagafisc
 ```
 
 需要在 GitHub Secrets 中設定：
@@ -302,7 +302,7 @@ jobs:
 
 | Variable | 說明 | 範例 |
 |----------|------|------|
-| `NEXT_PUBLIC_API_BASE_URL` | 後端 API 位址（可選） | `https://api.finbuddy.com/api/v1` |
+| `NEXT_PUBLIC_API_BASE_URL` | 後端 API 位址（可選） | `https://api.sagafisc.com/api/v1` |
 | `NEXT_PUBLIC_GEMINI_API_KEY` | 預設 API Key（可選） | （留空） |
 | `NODE_VERSION` | Node.js 版本 | `18` |
 
@@ -312,7 +312,7 @@ jobs:
 |----------|------|------|
 | `DATABASE_URL` | PostgreSQL 連線字串 | `postgresql://user:pass@host:5432/db` |
 | `JWT_SECRET` | JWT 密鑰 | 至少 32 字元隨機字串 |
-| `CORS_ORIGINS` | 允許的前端來源 | `https://finbuddy.pages.dev` |
+| `CORS_ORIGINS` | 允許的前端來源 | `https://sagafisc.pages.dev` |
 | `ENVIRONMENT` | 環境標識 | `production` |
 | `SUPABASE_URL` | Supabase URL | `https://xxx.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | Supabase Key | `eyJ...` |

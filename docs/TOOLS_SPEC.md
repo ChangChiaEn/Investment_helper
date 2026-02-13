@@ -1,4 +1,4 @@
-# FinBuddy 八大工具功能規格書
+# Sagafisc 八大工具功能規格書
 
 ## 工具 1：AI 潛力股分析師 (ai-stock-analyst)
 **ID**: `ai-stock-analyst`

@@ -1,6 +1,6 @@
 # 資料庫開發指南
 
-FinBuddy 後端使用 **PostgreSQL** 搭配 **SQLAlchemy ORM**。本文件說明如何接入資料庫、建立資料表、以及不同雲端方案的設定方式。
+Sagafisc 後端使用 **PostgreSQL** 搭配 **SQLAlchemy ORM**。本文件說明如何接入資料庫、建立資料表、以及不同雲端方案的設定方式。
 
 ---
 
@@ -154,8 +154,8 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: finbuddy
-      POSTGRES_USER: finbuddy
+      POSTGRES_DB: sagafisc
+      POSTGRES_USER: sagafisc
       POSTGRES_PASSWORD: your-secure-password
     ports:
       - "5432:5432"
@@ -167,7 +167,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://finbuddy:your-secure-password@db:5432/finbuddy
+      DATABASE_URL: postgresql://sagafisc:your-secure-password@db:5432/sagafisc
       JWT_SECRET: your-super-secret-jwt-key-min-32-chars
       CORS_ORIGINS: http://localhost:3000
       ENVIRONMENT: production
@@ -371,13 +371,13 @@ const saveAnalysis = (data: {
 
 ```python
 # 改為 SQLite（僅開發用）
-DATABASE_URL = "sqlite:///./finbuddy.db"
+DATABASE_URL = "sqlite:///./sagafisc.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 ```
 
 同時在 `.env` 中設定：
 ```
-DATABASE_URL=sqlite:///./finbuddy.db
+DATABASE_URL=sqlite:///./sagafisc.db
 ```
 
 注意：SQLite 不支援部分 PostgreSQL 特有語法，不建議用於生產環境。

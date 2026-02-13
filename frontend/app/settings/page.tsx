@@ -100,7 +100,7 @@ export default function SettingsPage() {
         <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary-600 to-blue-600 bg-clip-text text-transparent">
           設定
         </h1>
-        <p className="text-gray-600">個人化您的 FinBuddy 體驗</p>
+        <p className="text-gray-600">個人化您的 Sagafisc 體驗</p>
       </div>
 
       {/* Gemini API Key 設定 */}

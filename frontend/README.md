@@ -1,4 +1,4 @@
-# FinBuddy Frontend
+# Sagafisc Frontend
 
 Next.js 14 + React 18 + TypeScript 前端應用
 

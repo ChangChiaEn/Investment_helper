@@ -7,8 +7,8 @@ import { ToolDataProvider } from '@/contexts/ToolDataContext'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'FinBuddy 理財小能手',
-  description: '整合多個 AI 分析工具的個人理財平台',
+  title: 'Sagafisc 智慧投研平台',
+  description: '整合多個 AI 分析工具的智慧投資研究平台',
 }
 
 export default function RootLayout({

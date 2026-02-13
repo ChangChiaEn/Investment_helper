@@ -1,5 +1,5 @@
 """
-FinBuddy Backend API
+Sagafisc Backend API
 FastAPI 後端服務主程式
 """
 from fastapi import FastAPI
@@ -10,8 +10,8 @@ import os
 load_dotenv()
 
 app = FastAPI(
-    title="FinBuddy API",
-    description="理財小能手後端 API",
+    title="Sagafisc API",
+    description="智慧投研平台後端 API",
     version="1.0.0"
 )
 
@@ -27,7 +27,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "FinBuddy API", "version": "1.0.0"}
+    return {"message": "Sagafisc API", "version": "1.0.0"}
 
 @app.get("/health")
 async def health():

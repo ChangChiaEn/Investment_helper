@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="frontend/app/icon.svg" width="80" alt="FinBuddy Logo" />
+  <img src="frontend/app/icon.svg" width="80" alt="Sagafisc Logo" />
 </p>
 
-<h1 align="center">FinBuddy 理財小能手</h1>
+<h1 align="center">Sagafisc 智慧投研平台</h1>
 
 <p align="center">
   整合 8 個 AI 分析工具的一站式投資理財平台<br/>
@@ -160,7 +160,7 @@ Investment_helper/
 │   ├── ARCHITECTURE_MIGRATION.md          # 架構遷移技術文檔
 │   ├── DATABASE_GUIDE.md                  # 資料庫接入指南
 │   └── CLOUDFLARE_DEPLOY.md               # Cloudflare 部署教學
-└── Finbuddy_software_spec_v1.0.md         # 產品規格書
+└── README.md                              # 專案說明
 ```
 
 ---
