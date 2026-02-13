@@ -1,17 +1,9 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { getApiKey, createClient, generateWithFallback } from "@/lib/gemini";
 import { AnalysisResult, GICS_Sector } from "./types";
 
-const getApiKey = (): string => {
-  if (typeof window !== 'undefined') {
-    const userKey = localStorage.getItem('gemini_api_key');
-    if (userKey) return userKey;
-  }
-  return process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.API_KEY || '';
-};
-
 export const analyzeSectorPotential = async (sector: GICS_Sector, userQuery: string): Promise<AnalysisResult> => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const ai = createClient();
 
   const systemPrompt = `你是一位資深全球宏觀投資分析師。現在是 2026 年。
 你的任務是利用 Google Search 抓取最新資訊 (Bloomberg, Reuters, FT, WSJ)，分析「${sector}」產業。
@@ -49,8 +41,7 @@ ETF|建議標籤|理由
 [KEYWORDS]: (關鍵詞，逗號分隔)
 [REPORT_CONTENT]: (詳細分析內容，純文字，禁止 markdown)`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+  const response = await generateWithFallback(ai, {
     contents: `使用者提問：${userQuery}\n產業：${sector}`,
     config: {
       systemInstruction: systemPrompt,
@@ -107,7 +98,7 @@ ETF|建議標籤|理由
     cycleExpectations: parseCycle(extract("CYCLE_EXPECTATIONS")),
     suitabilities: parseSuitability(extract("INVESTMENT_SUITABILITY")),
     content: extract("REPORT_CONTENT"),
-    keywords: extract("KEYWORDS").split(',').map(s => s.trim()).filter(Boolean),
+    keywords: extract("KEYWORDS").split(',').map((s: string) => s.trim()).filter(Boolean),
     newsSources: newsSources.length > 0 ? newsSources : [
       { title: "Bloomberg - Outlook 2026", url: "https://bloomberg.com", source: "Bloomberg" },
       { title: "Reuters - Sector Trends", url: "https://reuters.com", source: "Reuters" }
@@ -116,9 +107,8 @@ ETF|建議標籤|理由
 };
 
 export const getDashboardSummary = async (): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+  const ai = createClient();
+  const response = await generateWithFallback(ai, {
     contents: "現在是 2026 年。請使用 Google Search 總結當前 11 大 GICS 產業熱點，不要 markdown，給出純文字。",
     config: { tools: [{ googleSearch: {} }] }
   });

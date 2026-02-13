@@ -1,21 +1,8 @@
-import { GoogleGenAI } from "@google/genai";
+import { createClient, generateWithFallback } from "@/lib/gemini";
 import { StockMarket, AnalysisResult } from "./types";
 
-const getApiKey = (): string => {
-  if (typeof window !== 'undefined') {
-    const userKey = localStorage.getItem('gemini_api_key');
-    if (userKey) return userKey;
-  }
-  return process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.API_KEY || '';
-};
-
 export const analyzeStock = async (symbol: string, market: StockMarket): Promise<AnalysisResult> => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error("請先至設定頁面輸入 Gemini API Key");
-  }
-  const ai = new GoogleGenAI({ apiKey });
-  const modelId = "gemini-3-pro-preview";
+  const ai = createClient();
 
   const marketName = market === StockMarket.TW ? "台股 (Taiwan Stock Market)" : "美股 (US Stock Market)";
 
@@ -44,8 +31,7 @@ export const analyzeStock = async (symbol: string, market: StockMarket): Promise
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: modelId,
+    const response = await generateWithFallback(ai, {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],

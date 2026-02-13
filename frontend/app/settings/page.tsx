@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { NAVIGATION_TOOLS } from '@/config/tools'
 import { ToolIcon } from '@/components/ToolIcons'
 import { useRouter } from 'next/navigation'
+import { AVAILABLE_MODELS, testAvailableModels } from '@/lib/gemini'
+import { Cpu, Check, X, Loader2 } from 'lucide-react'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -12,6 +14,9 @@ export default function SettingsPage() {
   const [showKey, setShowKey] = useState(false)
   const [keyStatus, setKeyStatus] = useState<'idle' | 'testing' | 'valid' | 'invalid'>('idle')
   const [keyError, setKeyError] = useState<string>('')
+  const [selectedModel, setSelectedModel] = useState<string>('gemini-2.0-flash')
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  const [modelTesting, setModelTesting] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem('homepage_tool')
@@ -21,6 +26,14 @@ export default function SettingsPage() {
     if (savedKey) {
       setApiKey(savedKey)
       setKeyStatus('valid')
+    }
+
+    const savedModel = localStorage.getItem('gemini_model')
+    if (savedModel) setSelectedModel(savedModel)
+
+    const savedAvailable = localStorage.getItem('gemini_available_models')
+    if (savedAvailable) {
+      try { setAvailableModels(JSON.parse(savedAvailable)) } catch { /* ignore */ }
     }
   }, [])
 
@@ -40,58 +53,84 @@ export default function SettingsPage() {
       localStorage.removeItem('gemini_api_key')
       setKeyStatus('idle')
       setKeyError('')
+      setAvailableModels([])
+      localStorage.removeItem('gemini_available_models')
       alert('已清除 API Key')
       return
     }
 
     setKeyStatus('testing')
     setKeyError('')
+    setModelTesting(true)
 
     try {
-      // 使用動態 import 以避免打包問題
-      const { GoogleGenAI } = await import('@google/genai')
-      const ai = new GoogleGenAI({ apiKey: apiKey.trim() })
+      // Test which models are available
+      const available = await testAvailableModels(apiKey.trim())
 
-      // 測試 API Key 是否有效，同時測試 Web Search 功能
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: 'Reply with exactly: OK',
-        config: {
-          tools: [{ googleSearch: {} }],
-          maxOutputTokens: 10,
-        },
-      })
-
-      if (response.text) {
+      if (available.length > 0) {
         localStorage.setItem('gemini_api_key', apiKey.trim())
+        setAvailableModels(available)
+        localStorage.setItem('gemini_available_models', JSON.stringify(available))
         setKeyStatus('valid')
-        alert('API Key 驗證成功！已儲存。Web Search 功能正常。')
+
+        // Auto-select the best available model
+        if (!available.includes(selectedModel)) {
+          const best = available[0]
+          setSelectedModel(best)
+          localStorage.setItem('gemini_model', best)
+        }
       } else {
-        throw new Error('未收到回應')
+        // No models available — key might still be valid but all quota exhausted
+        // Try basic validation
+        try {
+          const { GoogleGenAI } = await import('@google/genai')
+          const ai = new GoogleGenAI({ apiKey: apiKey.trim() })
+          await ai.models.generateContent({
+            model: 'gemini-2.0-flash',
+            contents: 'Reply with exactly: OK',
+            config: { maxOutputTokens: 10 },
+          })
+        } catch (err: any) {
+          const msg = err?.message || String(err)
+          if (msg.includes('API_KEY_INVALID') || msg.includes('401')) {
+            setKeyStatus('invalid')
+            setKeyError('API Key 無效，請確認是否正確。')
+            setModelTesting(false)
+            return
+          } else if (msg.includes('PERMISSION_DENIED') || msg.includes('403')) {
+            setKeyStatus('invalid')
+            setKeyError('API Key 權限不足，請確認是否已啟用 Gemini API。')
+            setModelTesting(false)
+            return
+          }
+          // 429 means key is valid but quota exhausted
+          localStorage.setItem('gemini_api_key', apiKey.trim())
+          setKeyStatus('valid')
+          setKeyError('API Key 有效，但所有模型配額已用完。請稍後再試。')
+        }
       }
     } catch (error: any) {
       setKeyStatus('invalid')
-      const msg = error?.message || String(error)
-      if (msg.includes('API_KEY_INVALID') || msg.includes('401')) {
-        setKeyError('API Key 無效，請確認是否正確。')
-      } else if (msg.includes('PERMISSION_DENIED') || msg.includes('403')) {
-        setKeyError('API Key 權限不足，請確認是否已啟用 Gemini API。')
-      } else if (msg.includes('QUOTA') || msg.includes('429')) {
-        // Quota 錯誤代表 key 本身是有效的
-        localStorage.setItem('gemini_api_key', apiKey.trim())
-        setKeyStatus('valid')
-        setKeyError('API Key 有效，但目前已達配額上限。已儲存。')
-      } else {
-        setKeyError(`驗證失敗：${msg}`)
-      }
+      setKeyError(`驗證失敗：${error?.message || String(error)}`)
+    } finally {
+      setModelTesting(false)
     }
+  }
+
+  const handleSelectModel = (modelId: string) => {
+    setSelectedModel(modelId)
+    localStorage.setItem('gemini_model', modelId)
   }
 
   const handleClearKey = () => {
     localStorage.removeItem('gemini_api_key')
+    localStorage.removeItem('gemini_model')
+    localStorage.removeItem('gemini_available_models')
     setApiKey('')
     setKeyStatus('idle')
     setKeyError('')
+    setAvailableModels([])
+    setSelectedModel('gemini-2.0-flash')
   }
 
   return (
@@ -151,7 +190,7 @@ export default function SettingsPage() {
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <span>API Key 已驗證且儲存 - Web Search 功能可用</span>
+              <span>API Key 已驗證且儲存{availableModels.length > 0 ? ` — ${availableModels.length} 個模型可用` : ''}</span>
               {keyError && <span className="text-amber-600 ml-2">({keyError})</span>}
             </div>
           )}
@@ -163,16 +202,6 @@ export default function SettingsPage() {
               <span>{keyError}</span>
             </div>
           )}
-
-          {/* Web Search 說明 */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-blue-800 mb-2">Web Search 功能說明</h3>
-            <ul className="text-sm text-blue-700 space-y-1">
-              <li>- 所有 AI 分析工具都使用 Google Search Grounding 取得即時數據</li>
-              <li>- API Key 需具備 Gemini API 權限即可自動啟用 Web Search</li>
-              <li>- 系統會驗證 API Key 時同時檢查 Web Search 是否可用</li>
-            </ul>
-          </div>
 
           <div className="flex gap-3">
             <button
@@ -188,11 +217,8 @@ export default function SettingsPage() {
             >
               {keyStatus === 'testing' ? (
                 <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  驗證中...
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {modelTesting ? '偵測可用模型中...' : '驗證中...'}
                 </span>
               ) : (
                 '驗證並儲存 API Key'
@@ -209,6 +235,76 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* 模型選擇 */}
+      {keyStatus === 'valid' && (
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8 mb-6 border border-surface-200/50">
+          <h2 className="text-xl font-semibold mb-2 text-gray-800 flex items-center gap-2">
+            <span className="w-1 h-6 bg-gradient-to-b from-emerald-500 to-teal-500 rounded-full"></span>
+            <Cpu className="w-5 h-5 text-emerald-600" />
+            AI 模型選擇
+          </h2>
+          <p className="text-gray-600 mb-2">
+            選擇 AI 分析使用的模型。若選擇的模型配額用盡，系統會自動降級至下一個可用模型。
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            驗證 API Key 時已自動偵測您的帳號可使用的模型。
+          </p>
+
+          <div className="space-y-3">
+            {AVAILABLE_MODELS.map((model) => {
+              const isAvailable = availableModels.includes(model.id)
+              const isSelected = selectedModel === model.id
+              return (
+                <button
+                  key={model.id}
+                  onClick={() => isAvailable && handleSelectModel(model.id)}
+                  disabled={!isAvailable}
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-200 text-left ${
+                    isSelected && isAvailable
+                      ? 'border-emerald-400 bg-emerald-50 shadow-sm'
+                      : isAvailable
+                      ? 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50 cursor-pointer'
+                      : 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      isSelected && isAvailable
+                        ? 'bg-emerald-500 text-white'
+                        : isAvailable
+                        ? 'bg-gray-100 text-gray-600'
+                        : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      <Cpu className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-800">{model.name}</div>
+                      <div className="text-sm text-gray-500">{model.desc}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isAvailable ? (
+                      <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                        <Check className="w-3 h-3" /> 可用
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                        <X className="w-3 h-3" /> 不可用
+                      </span>
+                    )}
+                    {isSelected && isAvailable && (
+                      <span className="text-xs font-medium text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">
+                        使用中
+                      </span>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 首頁設定 */}
       <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8 mb-6 border border-surface-200/50">

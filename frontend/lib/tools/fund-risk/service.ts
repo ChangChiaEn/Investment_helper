@@ -1,4 +1,5 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { Type, Schema } from "@google/genai";
+import { createClient, generateWithFallback } from "@/lib/gemini";
 import { FundAnalysis } from "./types";
 
 // Schema definition for structured JSON output
@@ -42,21 +43,8 @@ const fundAnalysisSchema: Schema = {
   required: ["fundName", "overallRisk", "overallTrend", "summary", "holdings"]
 };
 
-const getApiKey = (): string => {
-  if (typeof window !== 'undefined') {
-    const userKey = localStorage.getItem('gemini_api_key');
-    if (userKey) return userKey;
-  }
-  return process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.API_KEY || '';
-};
-
 export const analyzeFund = async (fundName: string): Promise<FundAnalysis> => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error("請先至設定頁面輸入 Gemini API Key");
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createClient();
 
   const prompt = `
     請針對基金 "${fundName}" (例如：安聯台灣科技基金) 進行即時分析。
@@ -72,8 +60,7 @@ export const analyzeFund = async (fundName: string): Promise<FundAnalysis> => {
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview", // Using a model that supports search grounding well
+    const response = await generateWithFallback(ai, {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }], // Enable Google Search for real-time data

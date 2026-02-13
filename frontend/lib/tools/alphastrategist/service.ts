@@ -1,4 +1,5 @@
-import { GoogleGenAI, Content, Part } from "@google/genai";
+import { Content, Part } from "@google/genai";
+import { getApiKey, createClient, generateWithFallback } from "@/lib/gemini";
 import { Message, Sender, GroundingChunk } from "./types";
 
 // Define the expert persona system instruction
@@ -46,14 +47,6 @@ const SYSTEM_INSTRUCTION = `
     * **策略:** 給出具體的價格區間。例如：「若回測季線 $XXX 元不破可進場，停損設於 $YYY。」或「基金建議定期定額扣款，若單筆建議等待拉回。」
 `;
 
-const getApiKey = (): string => {
-  if (typeof window !== 'undefined') {
-    const userKey = localStorage.getItem('gemini_api_key');
-    if (userKey) return userKey;
-  }
-  return process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.API_KEY || '';
-};
-
 export const sendMessageToGemini = async (
   history: Message[],
   newMessage: string
@@ -62,7 +55,7 @@ export const sendMessageToGemini = async (
   if (!apiKey) {
     return { text: "請先至設定頁面輸入 Gemini API Key", groundingChunks: [] };
   }
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createClient(apiKey);
 
   try {
     // Convert app history to Gemini Content format
@@ -79,8 +72,7 @@ export const sendMessageToGemini = async (
       parts: [{ text: newMessage } as Part],
     });
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview', // Using Gemini 3 Pro for deep analysis capability
+    const response = await generateWithFallback(ai, {
       contents: contents,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,

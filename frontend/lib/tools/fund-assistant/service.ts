@@ -1,13 +1,6 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { Type, Schema } from "@google/genai";
+import { createClient, generateWithFallback } from "@/lib/gemini";
 import { FundAnalysisResult, GroundingSource } from "./types";
-
-const getApiKey = (): string => {
-  if (typeof window !== 'undefined') {
-    const userKey = localStorage.getItem('gemini_api_key');
-    if (userKey) return userKey;
-  }
-  return process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.API_KEY || '';
-};
 
 // Define the fund object properties
 const fundProperties = {
@@ -43,13 +36,7 @@ const analysisSchema: Schema = {
 };
 
 export const analyzeFundWithGemini = async (query: string): Promise<{ result: FundAnalysisResult[]; sources: GroundingSource[] }> => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error("請先至設定頁面輸入 Gemini API Key");
-  }
-  const ai = new GoogleGenAI({ apiKey });
-
-  const modelId = "gemini-3-pro-preview";
+  const ai = createClient();
 
   const prompt = `
     你是一位頂尖的金融分析師。使用者的查詢是：「${query}」。
@@ -70,8 +57,7 @@ export const analyzeFundWithGemini = async (query: string): Promise<{ result: Fu
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: modelId,
+    const response = await generateWithFallback(ai, {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }], // Enable Google Search Grounding

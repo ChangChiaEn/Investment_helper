@@ -1,22 +1,10 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
+import { getApiKey, createClient, generateWithFallback } from "@/lib/gemini";
 import { Fund, SingleFundAnalysis, OverlapAnalysis } from "./types";
-
-// Helper to check for API key
-const getApiKey = (): string => {
-  if (typeof window !== 'undefined') {
-    const userKey = localStorage.getItem('gemini_api_key');
-    if (userKey) return userKey;
-  }
-  const key = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.API_KEY;
-  if (!key) {
-    throw new Error("請先至設定頁面輸入 Gemini API Key");
-  }
-  return key;
-};
 
 // 1. Fetch Funds Data (Supports both specific names and categories)
 export const fetchFundsData = async (query: string = ""): Promise<{ funds: Fund[], rawText: string }> => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const ai = createClient();
 
   const searchInput = query.trim();
   if (!searchInput) {
@@ -52,8 +40,7 @@ export const fetchFundsData = async (query: string = ""): Promise<{ funds: Fund[
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+    const response = await generateWithFallback(ai, {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
@@ -103,7 +90,7 @@ export const fetchFundsData = async (query: string = ""): Promise<{ funds: Fund[
 
 // 2. Analyze Fund Overlaps
 export const analyzeFundOverlaps = async (funds: Fund[]): Promise<OverlapAnalysis> => {
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    const ai = createClient();
 
     const fundsList = funds.map(f => f.name).join(", ");
 
@@ -136,8 +123,7 @@ export const analyzeFundOverlaps = async (funds: Fund[]): Promise<OverlapAnalysi
     `;
 
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-pro-preview',
+      const response = await generateWithFallback(ai, {
         contents: prompt,
         config: {
           tools: [{ googleSearch: {} }],
@@ -188,7 +174,7 @@ export const analyzeFundOverlaps = async (funds: Fund[]): Promise<OverlapAnalysi
 
 // 3. Single Fund Deep Analysis (Structured)
 export const analyzeSingleFund = async (fund: Fund): Promise<SingleFundAnalysis> => {
-  const ai = new GoogleGenAI({ apiKey: getApiKey() });
+  const ai = createClient();
 
   const fundInfo = `${fund.name} (Code: ${fund.code || 'N/A'}, 3M Return: ${fund.returnRate3Month})`;
 
@@ -223,8 +209,7 @@ export const analyzeSingleFund = async (fund: Fund): Promise<SingleFundAnalysis>
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+    const response = await generateWithFallback(ai, {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],

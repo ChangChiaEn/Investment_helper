@@ -1,5 +1,6 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { Type } from "@google/genai";
+import { getApiKey, createClient, generateWithFallback } from "@/lib/gemini";
 import { AssetEntry, InvestorProfile, AssetCategory, Language, InvestorProfileMode, CustomAllocation } from "./types";
 import { TRANSLATIONS } from "./constants";
 
@@ -11,17 +12,7 @@ export async function analyzePortfolio(
   lang: Language,
   currency: string
 ) {
-  const apiKey = (() => {
-    if (typeof window !== 'undefined') {
-      const userKey = localStorage.getItem('gemini_api_key');
-      if (userKey) return userKey;
-    }
-    return process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.API_KEY || '';
-  })();
-  if (!apiKey) {
-    throw new Error("請先至設定頁面輸入 Gemini API Key");
-  }
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = createClient();
   const t = TRANSLATIONS[lang];
   const portfolioSummary = assets
     .filter(a => a.amount > 0)
@@ -44,9 +35,8 @@ export async function analyzePortfolio(
     You must provide all text fields in ${lang === Language.ZH ? 'Traditional Chinese (繁體中文)' : 'English'}.
   `;
 
-  // Use gemini-3-pro-preview for complex reasoning and search grounding tasks
-  const response = await ai.models.generateContent({
-    model: "gemini-3-pro-preview",
+  // Use generateWithFallback with search grounding
+  const response = await generateWithFallback(ai, {
     contents: `
       Current Date Context: 2026.
       Analyze current wealth distribution versus targets for the year 2026.
