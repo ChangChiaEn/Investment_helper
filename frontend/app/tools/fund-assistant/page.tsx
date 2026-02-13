@@ -55,7 +55,7 @@ function FundCard({ fund, index, isMulti }: { fund: FundAnalysisResult; index: n
   const SentimentIcon = fund.marketSentiment === 'Bullish' ? TrendingUp : fund.marketSentiment === 'Bearish' ? TrendingDown : Minus
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 shadow-sm overflow-hidden">
       {/* Fund Header */}
       <div className="p-5 border-b border-gray-100">
         <div className="flex items-start justify-between gap-3">
@@ -193,25 +193,25 @@ function LoadingSkeleton() {
     <div className="space-y-6">
       <div className="flex items-center gap-3 justify-center py-6">
         <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-        <span className="text-gray-500 font-medium">AI 正在搜尋最新基金資訊並進行深度分析...</span>
+        <span className="text-surface-400 font-medium">AI 正在搜尋最新基金資訊並進行深度分析...</span>
       </div>
       {[1, 2].map(i => (
-        <div key={i} className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse space-y-4">
+        <div key={i} className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 animate-pulse space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gray-200 rounded-full" />
+            <div className="w-8 h-8 bg-surface-200 rounded-full" />
             <div className="space-y-2 flex-1">
-              <div className="h-5 bg-gray-200 rounded w-1/3" />
-              <div className="h-3 bg-gray-100 rounded w-1/4" />
+              <div className="h-5 bg-surface-200 rounded w-1/3" />
+              <div className="h-3 bg-surface-100 rounded w-1/4" />
             </div>
           </div>
-          <div className="h-3 bg-gray-100 rounded w-full" />
-          <div className="h-3 bg-gray-100 rounded w-5/6" />
+          <div className="h-3 bg-surface-100 rounded w-full" />
+          <div className="h-3 bg-surface-100 rounded w-5/6" />
           <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="h-20 bg-gray-50 rounded-lg" />
-            <div className="h-20 bg-gray-50 rounded-lg" />
+            <div className="h-20 bg-surface-100 rounded-lg" />
+            <div className="h-20 bg-surface-100 rounded-lg" />
           </div>
-          <div className="h-3 bg-gray-100 rounded w-full" />
-          <div className="h-3 bg-gray-100 rounded w-3/4" />
+          <div className="h-3 bg-surface-100 rounded w-full" />
+          <div className="h-3 bg-surface-100 rounded w-3/4" />
         </div>
       ))}
     </div>
@@ -263,22 +263,22 @@ export default function FundAssistantPage() {
   const isMultiFund = results && results.length > 1
 
   return (
-    <div className="min-h-full bg-gray-50/50">
+    <div className="min-h-full">
       <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Page Title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
             <Star className="w-7 h-7 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">AI 基金助手</h1>
-          <p className="text-gray-500 text-sm max-w-md mx-auto">
+          <h1 className="text-2xl font-bold text-surface-100 mb-2">AI 基金助手</h1>
+          <p className="text-surface-400 text-sm max-w-md mx-auto">
             搜尋基金名稱或讓 AI 推薦高潛力標的，獲取即時分析與進出場策略
           </p>
         </div>
 
         {/* Search Area */}
         <div className="max-w-2xl mx-auto mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -327,14 +327,14 @@ export default function FundAssistantPage() {
 
         {/* Popular Fund Tags */}
         <div className="max-w-2xl mx-auto mb-8">
-          <p className="text-xs text-gray-400 text-center mb-2">熱門基金快選</p>
+          <p className="text-xs text-surface-400 text-center mb-2">熱門基金快選</p>
           <div className="flex flex-wrap justify-center gap-2">
             {POPULAR_FUNDS.map(fund => (
               <button
                 key={fund}
                 onClick={() => handlePopularFund(fund)}
                 disabled={isLoading}
-                className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-full hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-50 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-surface-300 bg-surface-800 border border-surface-600 rounded-full hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-50 transition-colors"
               >
                 {fund}
               </button>

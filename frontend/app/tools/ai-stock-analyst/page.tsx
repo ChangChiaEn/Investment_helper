@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { TrendingUp, Globe, Search, Loader2, ArrowUpRight, Target, ShieldAlert, Zap, TrendingDown, Sparkles } from 'lucide-react'
+import { Loader } from '@/components/Loader'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { generateStockAnalysis } from '@/lib/tools/ai-stock-analyst/service'
 import type { StockRecommendation, SearchSource, Market, ChartDataPoint } from '@/lib/tools/ai-stock-analyst/types'
@@ -35,7 +36,7 @@ function StockChart({ data }: { data: ChartDataPoint[] }) {
 
 function StockCard({ stock }: { stock: StockRecommendation }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-blue-300 transition-all duration-300 hover:shadow-lg flex flex-col h-full">
+    <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 overflow-hidden hover:border-blue-300 transition-all duration-300 hover:shadow-lg flex flex-col h-full">
       <div className="p-5 border-b border-gray-100">
         <div className="flex justify-between items-start mb-2">
           <div>
@@ -135,11 +136,11 @@ export default function AIStockAnalystPage() {
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-600 text-xs font-semibold mb-4">
           <Sparkles className="w-3 h-3" />Powered by Gemini & Google Search
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">AI 潛力股<span className="text-blue-600">分析師</span></h1>
-        <p className="text-gray-500 max-w-2xl mx-auto">即時發掘市場價值。利用 Google 搜尋與 Gemini 深度分析，為您篩選出美股或台股市場中具有翻倍潛力的標的。</p>
+        <h1 className="text-3xl sm:text-4xl font-bold text-surface-100 mb-3">AI 潛力股<span className="text-blue-600">分析師</span></h1>
+        <p className="text-surface-400 max-w-2xl mx-auto">即時發掘市場價值。利用 Google 搜尋與 Gemini 深度分析，為您篩選出美股或台股市場中具有翻倍潛力的標的。</p>
       </div>
 
-      <form onSubmit={handleAnalyze} className="max-w-3xl mx-auto mb-10 bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <form onSubmit={handleAnalyze} className="max-w-3xl mx-auto mb-10 bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
         <div className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">選擇市場</label>
@@ -169,12 +170,7 @@ export default function AIStockAnalystPage() {
 
       {loading && !recommendations && (
         <div className="max-w-3xl mx-auto text-center py-16">
-          <div className="inline-block relative w-16 h-16 mb-4">
-            <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
-            <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">Gemini 正在即時搜索市場數據...</h3>
-          <p className="text-gray-500">正在分析即時新聞、財報與市場情緒</p>
+          <Loader size="md" text="Gemini 正在即時搜索市場數據..." />
         </div>
       )}
 
@@ -182,7 +178,7 @@ export default function AIStockAnalystPage() {
         <div className="space-y-8">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-50 rounded-lg"><TrendingUp className="w-6 h-6 text-blue-600" /></div>
-            <h2 className="text-2xl font-bold text-gray-900">Gemini 分析結果</h2>
+            <h2 className="text-2xl font-bold text-surface-100">Gemini 分析結果</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recommendations.map((stock) => <StockCard key={stock.ticker} stock={stock} />)}

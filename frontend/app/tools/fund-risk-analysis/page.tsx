@@ -13,6 +13,7 @@ import {
   BarChart3,
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { Loader } from '@/components/Loader'
 import { analyzeFund } from '@/lib/tools/fund-risk/service'
 import { FundAnalysis, Holding, AnalysisStatus } from '@/lib/tools/fund-risk/types'
 import { ErrorMessage } from '@/components/ErrorMessage'
@@ -58,7 +59,7 @@ function SentimentDot({ sentiment }: { sentiment: string }) {
 
 function HoldingCard({ holding, colorIndex }: { holding: Holding; colorIndex: number }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 hover:border-blue-300 hover:shadow-md transition-all">
+    <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 hover:border-blue-300 hover:shadow-md transition-all">
       <div className="flex items-start justify-between mb-3">
         <div>
           <h4 className="font-bold text-gray-900">{holding.name}</h4>
@@ -150,17 +151,17 @@ export default function FundRiskAnalysisPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
           <ShieldAlert className="w-7 h-7 text-blue-600" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
           基金<span className="text-blue-600">風險分析</span>
         </h1>
-        <p className="text-gray-500 text-sm max-w-lg mx-auto">
+        <p className="text-surface-400 text-sm max-w-lg mx-auto">
           輸入基金名稱，AI 即時搜尋持股成分、檢索新聞並評估風險等級
         </p>
       </div>
 
       {/* Search Form */}
       <div className="max-w-2xl mx-auto mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-4 shadow-sm">
           <div className="flex gap-3">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -193,7 +194,7 @@ export default function FundRiskAnalysisPage() {
                 key={fund}
                 onClick={() => handleAnalyze(fund)}
                 disabled={status === AnalysisStatus.LOADING}
-                className="px-3 py-1 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 text-gray-600 hover:text-blue-600 text-xs rounded-full transition-colors disabled:opacity-50"
+                className="px-3 py-1 bg-surface-800 hover:bg-blue-50 border border-surface-600 hover:border-blue-300 text-surface-300 hover:text-blue-600 text-xs rounded-full transition-colors disabled:opacity-50"
               >
                 {fund}
               </button>
@@ -205,26 +206,7 @@ export default function FundRiskAnalysisPage() {
       {/* Loading State */}
       {status === AnalysisStatus.LOADING && (
         <div className="max-w-2xl mx-auto text-center py-16">
-          <div className="inline-block relative w-16 h-16 mb-6">
-            <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
-            <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Gemini 正在分析基金風險...</h3>
-          <div className="space-y-2">
-            {LOADING_STEPS.map((step, idx) => (
-              <div
-                key={idx}
-                className={`text-sm transition-colors ${
-                  idx < loadingStep ? 'text-emerald-600 font-medium' :
-                  idx === loadingStep ? 'text-blue-600 font-medium' :
-                  'text-gray-400'
-                }`}
-              >
-                {idx < loadingStep ? '\u2713 ' : idx === loadingStep ? '\u25CB ' : '\u25CB '}
-                {step}
-              </div>
-            ))}
-          </div>
+          <Loader size="md" text={LOADING_STEPS[loadingStep]} />
         </div>
       )}
 
@@ -237,7 +219,7 @@ export default function FundRiskAnalysisPage() {
       {status === AnalysisStatus.SUCCESS && result && (
         <div className="space-y-8">
           {/* Overview Card */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-blue-50 rounded-xl">
@@ -278,7 +260,7 @@ export default function FundRiskAnalysisPage() {
 
           {/* Pie Chart */}
           {pieData.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
               <h3 className="text-lg font-bold text-gray-900 mb-4">持股權重分布</h3>
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
@@ -313,7 +295,7 @@ export default function FundRiskAnalysisPage() {
 
           {/* Holdings Grid */}
           <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-4">個別持股分析</h3>
+            <h3 className="text-lg font-bold text-surface-100 mb-4">個別持股分析</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {result.holdings.map((holding, idx) => (
                 <HoldingCard key={idx} holding={holding} colorIndex={idx} />

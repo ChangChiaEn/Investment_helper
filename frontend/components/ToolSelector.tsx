@@ -14,7 +14,7 @@ export function ToolSelector({ onSelect }: ToolSelectorProps) {
         <button
           key={tool.id}
           onClick={() => onSelect(tool.id)}
-          className="group p-6 bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 text-left border border-gray-200 hover:border-primary-400 hover:-translate-y-1"
+          className="group p-6 bg-white/95 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 text-left border border-surface-200/50 hover:border-primary-400 hover:-translate-y-1"
         >
           <div className="flex items-start space-x-4">
             <div className="p-3 bg-gradient-to-br from-primary-50 to-blue-50 rounded-xl group-hover:scale-110 transition-transform duration-300">
@@ -32,4 +32,3 @@ export function ToolSelector({ onSelect }: ToolSelectorProps) {
     </div>
   )
 }
-

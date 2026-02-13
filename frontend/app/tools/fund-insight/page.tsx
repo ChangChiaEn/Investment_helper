@@ -18,6 +18,7 @@ import { Fund, SingleFundAnalysis, OverlapAnalysis, AppState } from '@/lib/tools
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { SourcesSection } from '@/components/SourcesSection'
 import { Disclaimer } from '@/components/Disclaimer'
+import { Loader } from '@/components/Loader'
 
 export default function FundInsightPage() {
   const [query, setQuery] = useState('')
@@ -104,17 +105,17 @@ export default function FundInsightPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
           <Layers className="w-7 h-7 text-blue-600" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
           基金<span className="text-blue-600">透視鏡</span>
         </h1>
-        <p className="text-gray-500 text-sm max-w-lg mx-auto">
+        <p className="text-surface-400 text-sm max-w-lg mx-auto">
           輸入基金名稱，AI 即時分析持股、市場情緒與投資策略，掃描重疊強勢股
         </p>
       </div>
 
       {/* Search Area - always visible */}
       <div className="max-w-2xl mx-auto mb-8">
-        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-4 shadow-sm">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             輸入基金名稱（多支以逗號或空格分隔）
           </label>
@@ -142,17 +143,15 @@ export default function FundInsightPage() {
 
       {/* Loading States */}
       {(appState === AppState.SEARCHING || appState === AppState.ANALYZING || appState === AppState.ANALYZING_OVERLAPS) && (
-        <div className="text-center py-16">
-          <div className="inline-block relative w-16 h-16 mb-4">
-            <div className="absolute inset-0 rounded-full border-4 border-gray-200" />
-            <div className="absolute inset-0 rounded-full border-4 border-t-blue-500 animate-spin" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-1">
-            {appState === AppState.SEARCHING && 'Gemini 正在搜尋基金數據...'}
-            {appState === AppState.ANALYZING && '正在進行深度基金分析...'}
-            {appState === AppState.ANALYZING_OVERLAPS && '正在掃描重疊持股...'}
-          </h3>
-          <p className="text-gray-500 text-sm">AI 正在使用 Google Search 檢索最新資訊</p>
+        <div className="py-16">
+          <Loader
+            size="md"
+            text={
+              appState === AppState.SEARCHING ? 'Gemini 正在搜尋基金數據...' :
+              appState === AppState.ANALYZING ? '正在進行深度基金分析...' :
+              '正在掃描重疊持股...'
+            }
+          />
         </div>
       )}
 
@@ -175,7 +174,7 @@ export default function FundInsightPage() {
       {appState === AppState.FUNDS_LIST && funds.length > 0 && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-gray-900">
+            <h2 className="text-lg font-bold text-surface-100">
               找到 {funds.length} 支基金
             </h2>
             {funds.length >= 2 && (
@@ -193,7 +192,7 @@ export default function FundInsightPage() {
             {funds.map((fund, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-xl border border-gray-200 p-5 hover:border-blue-300 hover:shadow-md transition-all"
+                className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 hover:border-blue-300 hover:shadow-md transition-all"
               >
                 <h3 className="font-bold text-gray-900 mb-2 text-sm leading-tight">{fund.name}</h3>
                 <div className="space-y-1.5 mb-4">
@@ -242,7 +241,7 @@ export default function FundInsightPage() {
             返回基金列表
           </button>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
             <h2 className="text-xl font-bold text-gray-900 mb-1">{singleReport.fundName}</h2>
             <p className="text-gray-500 text-xs mb-4">AI 深度分析報告</p>
 
@@ -331,7 +330,7 @@ export default function FundInsightPage() {
             返回基金列表
           </button>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
             <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
               <Crosshair className="w-5 h-5 text-blue-600" />
               持股重疊交叉分析

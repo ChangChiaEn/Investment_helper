@@ -17,7 +17,7 @@ export function SourcesSection({ sources, className = '' }: SourcesSectionProps)
   if (!sources || sources.length === 0) return null
 
   return (
-    <div className={`bg-white rounded-xl border border-gray-200 p-6 ${className}`}>
+    <div className={`bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 ${className}`}>
       <div className="flex items-center gap-2 mb-4 text-gray-500">
         <Search className="w-4 h-4" />
         <h3 className="text-sm font-semibold uppercase tracking-wider">參考資料來源</h3>
@@ -32,7 +32,7 @@ export function SourcesSection({ sources, className = '' }: SourcesSectionProps)
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 text-xs text-gray-500 hover:text-blue-600 transition-colors p-2 hover:bg-gray-50 rounded-lg"
+              className="flex items-center gap-2 text-xs text-gray-500 hover:text-blue-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
             >
               <ExternalLink className="w-3 h-3 flex-shrink-0" />
               <span className="truncate">{source.title || new URL(href).hostname}</span>

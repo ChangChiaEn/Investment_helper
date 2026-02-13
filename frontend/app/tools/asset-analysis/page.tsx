@@ -218,7 +218,7 @@ export default function AssetAnalysisPage() {
         {/* Back button */}
         <button
           onClick={() => setShowDashboard(false)}
-          className="flex items-center gap-2 text-gray-500 hover:text-blue-600 text-sm mb-6 transition-colors"
+          className="flex items-center gap-2 text-surface-400 hover:text-blue-400 text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {t.editData}
@@ -226,13 +226,13 @@ export default function AssetAnalysisPage() {
 
         {/* Report Title */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">{t.reportTitle}</h1>
-          <p className="text-gray-500 text-sm">{currency} | {new Date().toLocaleDateString(lang === Language.ZH ? 'zh-TW' : 'en-US')}</p>
+          <h1 className="text-2xl font-bold text-surface-100 mb-1">{t.reportTitle}</h1>
+          <p className="text-surface-400 text-sm">{currency} | {new Date().toLocaleDateString(lang === Language.ZH ? 'zh-TW' : 'en-US')}</p>
         </div>
 
         <div className="space-y-6">
           {/* Total Wealth */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm text-center">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm text-center">
             <span className="text-xs text-gray-400 uppercase font-semibold">{t.totalWealth}</span>
             <div className="text-3xl font-bold text-gray-900 mt-1">
               {totalWealth.toLocaleString()} <span className="text-lg text-gray-400">{currency}</span>
@@ -240,7 +240,7 @@ export default function AssetAnalysisPage() {
           </div>
 
           {/* Risk Allocation Comparison */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-blue-600" />
               {t.deltaTitle}
@@ -258,7 +258,7 @@ export default function AssetAnalysisPage() {
 
           {/* AI Sections */}
           {result.riskAssessment && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
               <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-blue-600" />
                 {t.riskAssessment}
@@ -278,7 +278,7 @@ export default function AssetAnalysisPage() {
           )}
 
           {result.suggestedAllocation && result.suggestedAllocation.length > 0 && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
               <h3 className="text-lg font-bold text-gray-900 mb-4">{t.suggestedAllocation}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {result.suggestedAllocation.map((item, idx) => (
@@ -292,7 +292,7 @@ export default function AssetAnalysisPage() {
           )}
 
           {result.marketOutlook && (
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
               <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
                 <Globe className="w-5 h-5 text-blue-600" />
                 {t.marketOutlook}
@@ -327,10 +327,10 @@ export default function AssetAnalysisPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
           <DollarSign className="w-7 h-7 text-blue-600" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
           {t.title} - <span className="text-blue-600">{t.subtitle}</span>
         </h1>
-        <p className="text-gray-500 text-sm max-w-lg mx-auto">{t.tagline}</p>
+        <p className="text-surface-400 text-sm max-w-lg mx-auto">{t.tagline}</p>
       </div>
 
       {/* Language + Currency selectors */}
@@ -365,7 +365,7 @@ export default function AssetAnalysisPage() {
 
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Step 1: Investor Profile */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
           <h2 className="text-lg font-bold text-gray-900 mb-4">{t.step1}</h2>
 
           {/* Mode Toggle */}
@@ -457,7 +457,7 @@ export default function AssetAnalysisPage() {
         </div>
 
         {/* Step 2: Asset Details */}
-        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900">{t.step2}</h2>
             <button

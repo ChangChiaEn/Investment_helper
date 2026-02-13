@@ -28,12 +28,12 @@ export function HomeDashboard() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow p-6 border border-surface-200/50">
         <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-surface-200 rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
-            <div className="h-16 bg-gray-200 rounded"></div>
-            <div className="h-16 bg-gray-200 rounded"></div>
+            <div className="h-16 bg-surface-200 rounded"></div>
+            <div className="h-16 bg-surface-200 rounded"></div>
           </div>
         </div>
       </div>
@@ -41,7 +41,7 @@ export function HomeDashboard() {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+    <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-surface-200/50">
       <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
         <span className="w-1 h-6 bg-gradient-to-b from-primary-600 to-blue-600 rounded-full"></span>
         我的關注清單

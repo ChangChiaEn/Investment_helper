@@ -45,7 +45,7 @@ export default function ToolPage() {
     let ToolComponent: any = null
     
     const loadingComponent = (
-      <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="h-full w-full flex items-center justify-center">
         <Loader size="lg" text="載入工具中..." />
       </div>
     )
@@ -82,7 +82,7 @@ export default function ToolPage() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">{toolConfig.name}</h1>
-      <p className="text-gray-600">工具載入中或尚未整合...</p>
+      <p className="text-surface-400">工具載入中或尚未整合...</p>
     </div>
   )
 }

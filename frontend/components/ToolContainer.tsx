@@ -13,7 +13,7 @@ interface ToolContainerProps {
 
 export function ToolContainer({ children, className = '' }: ToolContainerProps) {
   return (
-    <div className={`h-full w-full overflow-auto bg-gray-50 ${className}`}>
+    <div className={`h-full w-full overflow-auto ${className}`}>
       {children}
     </div>
   )

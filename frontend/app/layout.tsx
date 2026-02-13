@@ -20,7 +20,7 @@ export default function RootLayout({
     <html lang="zh-TW">
       <body className={inter.className}>
         <ToolDataProvider>
-          <div className="flex h-screen bg-gray-50">
+          <div className="flex h-screen bg-surface-950">
             <Navigation />
             <main className="flex-1 overflow-auto">
               {children}

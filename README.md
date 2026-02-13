@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/app/icon.svg" width="80" alt="Sagafisc Logo" />
+  <img src="frontend/app/Sagafisc.png" width="80" alt="Sagafisc Logo" />
 </p>
 
 <h1 align="center">Sagafisc 智慧投研平台</h1>

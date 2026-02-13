@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 249, 250, 251;
-  --background-end-rgb: 255, 255, 255;
+  --foreground-rgb: 226, 232, 240;
+  --background-start: #0d1120;
+  --background-end: #0f172a;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, #0d1120 0%, #0f172a 50%, #0d1120 100%);
   min-height: 100vh;
 }
 
@@ -26,7 +26,32 @@ body {
   width: 100%;
 }
 
-/* 雷達掃描載入動畫 - From Uiverse.io by mrhyddenn */
+/* ===== Loader wrapper with Sagafisc branding ===== */
+.loader-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.loader-brand {
+  position: absolute;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  color: rgba(16, 185, 129, 0.1);
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.loader-brand-sm { font-size: 0.75rem; }
+.loader-brand-md { font-size: 1.25rem; }
+.loader-brand-lg { font-size: 1.5rem; }
+
+/* ===== 雷達掃描載入動畫 ===== */
 .loader {
   position: relative;
   width: 150px;
@@ -39,6 +64,7 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  z-index: 1;
 }
 
 .loader::before {
@@ -97,7 +123,21 @@ body {
   }
 }
 
-/* 立體按鈕樣式 - From Uiverse.io by marcelodolza */
+/* ===== Fintech card styles ===== */
+.fintech-card-border {
+  background: linear-gradient(135deg, rgba(255,255,255,0.1), #3a4b8a, rgba(255,255,255,0.06));
+  padding: 1px;
+  border-radius: 1rem;
+}
+
+.fintech-card {
+  background: linear-gradient(135deg, #0d1120 0%, #1a2744 43%, #0d1120 100%);
+  border-radius: calc(1rem - 1px);
+  box-shadow: 0px 0.75rem 1.25rem -0.75rem rgba(0, 0, 0, 0.6);
+  color: #bec4cf;
+}
+
+/* ===== 立體按鈕樣式 - From Uiverse.io by marcelodolza ===== */
 .button {
   --white: #ffe7ff;
   --bg: #080808;
@@ -220,4 +260,3 @@ body {
     0 3rem 3rem rgba(0, 0, 0, 0.3),
     0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
 }
-

@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
-  Search, TrendingUp, ArrowLeft, Download, Clock, Loader2, BarChart3, Shield, Zap, History
+  Search, TrendingUp, ArrowLeft, Download, Clock, Loader2, BarChart3, Shield, Zap, History, Key, Settings
 } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { analyzeSectorPotential, getDashboardSummary } from '@/lib/tools/trend-dashboard/service'
 import { GICS_Sector, ViewMode, AnalysisResult, HistoryItem, SectorDetail } from '@/lib/tools/trend-dashboard/types'
 import { SECTOR_DATA } from '@/lib/tools/trend-dashboard/mockData'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Disclaimer } from '@/components/Disclaimer'
+import { Loader } from '@/components/Loader'
+import Link from 'next/link'
 
 const HISTORY_KEY = 'investrend_history'
 const MAX_HISTORY = 5
@@ -69,6 +71,12 @@ export default function TrendDashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [showHistory, setShowHistory] = useState(false)
+  const [hasApiKey, setHasApiKey] = useState(false)
+
+  // Check API key
+  useEffect(() => {
+    setHasApiKey(!!localStorage.getItem('gemini_api_key'))
+  }, [])
 
   // Load history from localStorage
   useEffect(() => {
@@ -80,21 +88,22 @@ export default function TrendDashboardPage() {
     }
   }, [])
 
-  // Auto-load dashboard summary
+  // Auto-load dashboard summary (only when API key is set)
   useEffect(() => {
+    if (!hasApiKey) return
     const loadSummary = async () => {
       setSummaryLoading(true)
       try {
         const summary = await getDashboardSummary()
         setDashboardSummary(summary)
       } catch {
-        setDashboardSummary('2026 年市場聚焦於 AI 落地獲利與能源系統韌性。')
+        setDashboardSummary('')
       } finally {
         setSummaryLoading(false)
       }
     }
     loadSummary()
-  }, [])
+  }, [hasApiKey])
 
   const saveHistory = useCallback((item: HistoryItem) => {
     setHistory(prev => {
@@ -172,32 +181,6 @@ export default function TrendDashboardPage() {
     URL.revokeObjectURL(url)
   }, [analysisResult, selectedSector])
 
-  // Build chart data from all sector mock data
-  const chartData = useMemo(() => {
-    const years = SECTOR_DATA[GICS_Sector.IT].historicalCapex.map(d => d.year)
-    return years.map(year => {
-      const point: Record<string, any> = { year }
-      ALL_SECTORS.forEach(sector => {
-        const sectorData = SECTOR_DATA[sector]
-        const capex = sectorData.historicalCapex.find(d => d.year === year)
-        point[sector] = capex?.value || 0
-      })
-      return point
-    })
-  }, [])
-
-  // Alpha Rank: top 6 sectors by latest capex value
-  const alphaRank = useMemo(() => {
-    return ALL_SECTORS
-      .map(sector => {
-        const data = SECTOR_DATA[sector]
-        const latest = data.historicalCapex[data.historicalCapex.length - 1]
-        return { sector, value: latest?.value || 0, detail: data }
-      })
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 6)
-  }, [])
-
   // Z-Score chart data for current sector
   const zScoreData = useMemo(() => {
     if (!selectedSector) return []
@@ -212,7 +195,7 @@ export default function TrendDashboardPage() {
   }
 
   return (
-    <div className="min-h-full bg-gray-50/50">
+    <div className="min-h-full">
       <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -220,25 +203,25 @@ export default function TrendDashboardPage() {
             {viewMode === 'ANALYSIS' && (
               <button
                 onClick={() => { setViewMode('DASHBOARD'); setAnalysisResult(null); setError(null) }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-surface-700 rounded-lg transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <ArrowLeft className="w-5 h-5 text-surface-400" />
               </button>
             )}
             <div>
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-6 h-6 text-blue-600" />
-                <h1 className="text-xl font-bold text-gray-900">全球投資趨勢儀表板</h1>
+                <h1 className="text-xl font-bold text-surface-100">全球投資趨勢儀表板</h1>
               </div>
-              <p className="text-xs text-gray-500 mt-0.5">GICS 11 大產業 CapEx 趨勢與 AI 分析</p>
+              <p className="text-xs text-surface-400 mt-0.5">GICS 11 大產業 CapEx 趨勢與 AI 分析</p>
             </div>
           </div>
           <button
             onClick={() => setShowHistory(!showHistory)}
-            className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="relative p-2 hover:bg-surface-700 rounded-lg transition-colors"
             title="歷史紀錄"
           >
-            <History className="w-5 h-5 text-gray-600" />
+            <History className="w-5 h-5 text-surface-400" />
             {history.length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[10px] rounded-full flex items-center justify-center">
                 {history.length}
@@ -249,28 +232,28 @@ export default function TrendDashboardPage() {
 
         {/* History Sidebar */}
         {showHistory && (
-          <div className="mb-6 bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+          <div className="mb-6 bg-surface-800/90 backdrop-blur-sm rounded-xl border border-surface-600 p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-surface-200 mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               最近分析紀錄
             </h3>
             {history.length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">尚無歷史紀錄</p>
+              <p className="text-xs text-surface-500 text-center py-4">尚無歷史紀錄</p>
             ) : (
               <div className="space-y-2">
                 {history.map(item => (
                   <button
                     key={item.id}
                     onClick={() => handleViewHistory(item)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-gray-50 border border-gray-100 transition-colors"
+                    className="w-full text-left p-3 rounded-lg hover:bg-surface-700 border border-surface-600 transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-800">{item.sector}</span>
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-sm font-medium text-surface-200">{item.sector}</span>
+                      <span className="text-[10px] text-surface-500">
                         {new Date(item.timestamp).toLocaleString('zh-TW')}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1 truncate">{item.query}</p>
+                    <p className="text-xs text-surface-400 mt-1 truncate">{item.query}</p>
                   </button>
                 ))}
               </div>
@@ -288,7 +271,7 @@ export default function TrendDashboardPage() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors border ${
                   selectedSector === sector
                     ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                    : 'bg-surface-800 text-surface-300 border-surface-600 hover:bg-surface-700 hover:border-surface-500'
                 }`}
               >
                 {sector}
@@ -299,17 +282,17 @@ export default function TrendDashboardPage() {
 
         {/* Search Bar */}
         <div className="mb-6">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={`輸入「${selectedSector}」的趨勢對決分析問題...`}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2.5 bg-surface-800 border border-surface-600 rounded-lg text-surface-100 text-sm placeholder:text-surface-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <button
@@ -338,109 +321,65 @@ export default function TrendDashboardPage() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <Loader2 className="w-10 h-10 text-blue-500 animate-spin mx-auto mb-4" />
-              <p className="text-gray-500 text-sm">AI 正在搜尋最新全球數據並進行產業分析...</p>
-            </div>
+          <div className="py-20">
+            <Loader size="md" text="AI 正在搜尋最新全球數據並進行產業分析..." />
           </div>
         )}
 
         {/* DASHBOARD VIEW */}
         {viewMode === 'DASHBOARD' && !isLoading && (
           <div className="space-y-6">
-            {/* Summary */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-gray-700 mb-2">2026 全球產業熱點摘要</h2>
-              {summaryLoading ? (
-                <div className="animate-pulse space-y-2">
-                  <div className="h-4 bg-gray-100 rounded w-full" />
-                  <div className="h-4 bg-gray-100 rounded w-3/4" />
-                </div>
-              ) : (
-                <p className="text-sm text-gray-600 leading-relaxed">{dashboardSummary}</p>
-              )}
-            </div>
-
-            {/* CapEx Chart */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-gray-700 mb-4">11 大產業 CapEx 趨勢圖</h2>
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#6B7280' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #E5E7EB',
-                        borderRadius: '8px',
-                        fontSize: '12px',
-                      }}
-                    />
-                    <Legend
-                      wrapperStyle={{ fontSize: '11px' }}
-                    />
-                    {ALL_SECTORS.map(sector => (
-                      <Line
-                        key={sector}
-                        type="monotone"
-                        dataKey={sector}
-                        stroke={SECTOR_COLORS[sector]}
-                        strokeWidth={selectedSector === sector ? 3 : 1}
-                        opacity={selectedSector === sector ? 1 : 0.4}
-                        dot={false}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Alpha Rank Cards */}
-            <div>
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">Alpha Rank - 資本支出前 6 強</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {alphaRank.map((item, idx) => (
-                  <div
-                    key={item.sector}
-                    className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                    onClick={() => setSelectedSector(item.sector)}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-blue-600">#{idx + 1}</span>
-                      <span
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: SECTOR_COLORS[item.sector] }}
-                      />
-                    </div>
-                    <h3 className="text-sm font-semibold text-gray-800 mb-1">{item.sector}</h3>
-                    <p className="text-xs text-gray-500 mb-2 line-clamp-2">{item.detail.description}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400">CapEx</span>
-                      <span className="text-sm font-bold text-gray-900">{item.value}B</span>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {item.detail.examples.map(ex => (
-                        <span key={ex} className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
-                          {ex}
-                        </span>
-                      ))}
-                    </div>
+            {/* API Key Warning */}
+            {!hasApiKey && (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-amber-100 rounded-xl">
+                    <Key className="w-6 h-6 text-amber-600" />
                   </div>
-                ))}
+                  <div className="flex-1">
+                    <h2 className="text-lg font-semibold text-amber-800 mb-1">尚未設定 Gemini API Key</h2>
+                    <p className="text-amber-700 text-sm mb-3">
+                      趨勢儀表板需要 Gemini API Key 才能進行產業分析與取得即時數據。請先至設定頁面輸入您的 API Key。
+                    </p>
+                    <Link
+                      href="/settings"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                    >
+                      <Settings className="w-4 h-4" />
+                      前往設定
+                    </Link>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Selected Sector Detail */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <h2 className="text-sm font-semibold text-gray-700 mb-2">
-                {selectedSector} - 產業概況
-              </h2>
-              <p className="text-sm text-gray-600 mb-2">{SECTOR_DATA[selectedSector].description}</p>
-              <p className="text-xs text-gray-500 italic">{SECTOR_DATA[selectedSector].imfOutlook}</p>
-            </div>
+            {/* Summary (only when API key is set) */}
+            {hasApiKey && (
+              <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
+                <h2 className="text-sm font-semibold text-gray-700 mb-2">2026 全球產業熱點摘要</h2>
+                {summaryLoading ? (
+                  <div className="animate-pulse space-y-2">
+                    <div className="h-4 bg-gray-100 rounded w-full" />
+                    <div className="h-4 bg-gray-100 rounded w-3/4" />
+                  </div>
+                ) : dashboardSummary ? (
+                  <p className="text-sm text-gray-600 leading-relaxed">{dashboardSummary}</p>
+                ) : (
+                  <p className="text-sm text-gray-400">摘要載入失敗，請選擇產業並輸入問題開始分析。</p>
+                )}
+              </div>
+            )}
+
+            {/* Start Analyzing Prompt */}
+            {hasApiKey && (
+              <div className="bg-gradient-to-br from-blue-900/20 to-indigo-900/20 rounded-xl border border-blue-700/30 p-8 text-center">
+                <BarChart3 className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+                <h2 className="text-lg font-semibold text-surface-100 mb-2">選擇產業，開始 AI 趨勢分析</h2>
+                <p className="text-sm text-surface-400 max-w-md mx-auto">
+                  從上方選擇一個 GICS 產業，並在搜尋框輸入您想了解的趨勢問題，AI 將搜尋最新全球數據為您分析。
+                </p>
+              </div>
+            )}
 
             <Disclaimer />
           </div>
@@ -467,7 +406,7 @@ export default function TrendDashboardPage() {
 
             {/* Cycle Expectations Table */}
             {analysisResult.cycleExpectations.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+              <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-blue-500" />
                   三段式週期預期
@@ -500,7 +439,7 @@ export default function TrendDashboardPage() {
             )}
 
             {/* Risk Analysis */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-orange-500" />
                 風險分析
@@ -513,7 +452,7 @@ export default function TrendDashboardPage() {
             </div>
 
             {/* Z-Score Chart */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
               <h3 className="text-sm font-semibold text-gray-700 mb-3">
                 {selectedSector} - 估值 Z-Score 趨勢
               </h3>
@@ -546,7 +485,7 @@ export default function TrendDashboardPage() {
 
             {/* Suitabilities Table */}
             {analysisResult.suitabilities.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+              <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">投資工具適配性</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -573,7 +512,7 @@ export default function TrendDashboardPage() {
 
             {/* Report Content */}
             {analysisResult.content && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+              <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">詳細分析報告</h3>
                 <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                   {analysisResult.content}
@@ -594,7 +533,7 @@ export default function TrendDashboardPage() {
 
             {/* News Sources */}
             {analysisResult.newsSources.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+              <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
                 <h3 className="text-sm font-semibold text-gray-500 mb-3">參考資料來源</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {analysisResult.newsSources.map((ns, idx) => (
@@ -618,7 +557,7 @@ export default function TrendDashboardPage() {
             <div className="flex justify-end">
               <button
                 onClick={handleExport}
-                className="px-5 py-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                className="px-5 py-2 bg-surface-800 border border-surface-600 hover:bg-surface-700 text-surface-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 匯出報告

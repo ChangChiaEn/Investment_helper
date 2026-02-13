@@ -102,20 +102,20 @@ function LoadingSkeleton() {
     <div className="animate-pulse space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
-        <span className="text-gray-500 font-medium">AI 正在搜尋最新資訊並分析中...</span>
+        <span className="text-surface-400 font-medium">AI 正在搜尋最新資訊並分析中...</span>
       </div>
-      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
-        <div className="h-8 bg-gray-200 rounded w-3/4" />
-        <div className="h-4 bg-gray-100 rounded w-full" />
-        <div className="h-4 bg-gray-100 rounded w-5/6" />
-        <div className="h-4 bg-gray-100 rounded w-4/6" />
-        <div className="h-6 bg-gray-200 rounded w-1/2 mt-6" />
-        <div className="h-4 bg-gray-100 rounded w-full" />
-        <div className="h-4 bg-gray-100 rounded w-3/4" />
-        <div className="h-6 bg-gray-200 rounded w-1/2 mt-6" />
-        <div className="h-4 bg-gray-100 rounded w-full" />
-        <div className="h-4 bg-gray-100 rounded w-5/6" />
-        <div className="h-4 bg-gray-100 rounded w-2/3" />
+      <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 space-y-4">
+        <div className="h-8 bg-surface-200 rounded w-3/4" />
+        <div className="h-4 bg-surface-100 rounded w-full" />
+        <div className="h-4 bg-surface-100 rounded w-5/6" />
+        <div className="h-4 bg-surface-100 rounded w-4/6" />
+        <div className="h-6 bg-surface-200 rounded w-1/2 mt-6" />
+        <div className="h-4 bg-surface-100 rounded w-full" />
+        <div className="h-4 bg-surface-100 rounded w-3/4" />
+        <div className="h-6 bg-surface-200 rounded w-1/2 mt-6" />
+        <div className="h-4 bg-surface-100 rounded w-full" />
+        <div className="h-4 bg-surface-100 rounded w-5/6" />
+        <div className="h-4 bg-surface-100 rounded w-2/3" />
       </div>
     </div>
   )
@@ -153,22 +153,22 @@ export default function GeminiStockProphetPage() {
   }
 
   return (
-    <div className="min-h-full bg-gray-50/50">
+    <div className="min-h-full">
       <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Page Title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
             <TrendingUp className="w-7 h-7 text-blue-600" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Gemini 股票先知</h1>
-          <p className="text-gray-500 text-sm max-w-md mx-auto">
+          <h1 className="text-2xl font-bold text-surface-100 mb-2">Gemini 股票先知</h1>
+          <p className="text-surface-400 text-sm max-w-md mx-auto">
             輸入股票代號或名稱，AI 將搜尋最新資訊進行深度投資分析與走向預測
           </p>
         </div>
 
         {/* Search Form */}
         <div className="max-w-2xl mx-auto mb-8">
-          <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row gap-3">
               {/* Market Selector */}
               <div className="relative">
@@ -230,7 +230,7 @@ export default function GeminiStockProphetPage() {
         {result && !isLoading && (
           <div className="space-y-6">
             {/* Markdown Report */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 sm:p-8 shadow-sm">
+            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 sm:p-8 shadow-sm">
               <MarkdownRenderer text={result.markdownText} />
             </div>
 

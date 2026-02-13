@@ -95,16 +95,16 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+    <div className="p-8 max-w-4xl mx-auto min-h-screen">
       <div className="mb-8 text-center">
-        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary-600 to-blue-600 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">
           設定
         </h1>
-        <p className="text-gray-600">個人化您的 Sagafisc 體驗</p>
+        <p className="text-surface-400">個人化您的 Sagafisc 體驗</p>
       </div>
 
       {/* Gemini API Key 設定 */}
-      <div className="bg-white rounded-xl shadow-lg p-8 mb-6 border border-gray-100">
+      <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8 mb-6 border border-surface-200/50">
         <h2 className="text-xl font-semibold mb-2 text-gray-800 flex items-center gap-2">
           <span className="w-1 h-6 bg-gradient-to-b from-amber-500 to-orange-500 rounded-full"></span>
           Gemini API Key
@@ -211,7 +211,7 @@ export default function SettingsPage() {
       </div>
 
       {/* 首頁設定 */}
-      <div className="bg-white rounded-xl shadow-lg p-8 mb-6 border border-gray-100">
+      <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8 mb-6 border border-surface-200/50">
         <h2 className="text-xl font-semibold mb-2 text-gray-800 flex items-center gap-2">
           <span className="w-1 h-6 bg-gradient-to-b from-primary-600 to-blue-600 rounded-full"></span>
           首頁設定
