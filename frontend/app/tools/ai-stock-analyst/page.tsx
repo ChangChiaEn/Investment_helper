@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { TrendingUp, Globe, Search, Loader2, ArrowUpRight, Target, ShieldAlert, Zap, TrendingDown, Sparkles } from 'lucide-react'
 import { Loader } from '@/components/Loader'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -9,6 +9,8 @@ import type { StockRecommendation, SearchSource, Market, ChartDataPoint } from '
 import { SourcesSection } from '@/components/SourcesSection'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Disclaimer } from '@/components/Disclaimer'
+import { WatchlistButton } from '@/components/WatchlistButton'
+import { useToolCache } from '@/hooks/useToolCache'
 
 function StockChart({ data }: { data: ChartDataPoint[] }) {
   const color = '#10b981'
@@ -46,11 +48,19 @@ function StockCard({ stock }: { stock: StockRecommendation }) {
             </div>
             <p className="text-gray-500 text-sm mt-1">{stock.name}</p>
           </div>
-          <div className="text-right">
-            <div className="flex items-center justify-end gap-1 text-emerald-600 font-bold text-lg">
-              <ArrowUpRight className="w-5 h-5" />{stock.upsidePercentage}%
+          <div className="flex items-center gap-3">
+            <WatchlistButton
+              symbol={stock.ticker}
+              name={stock.name}
+              type="stock"
+              source="ai-stock-analyst"
+            />
+            <div className="text-right">
+              <div className="flex items-center justify-end gap-1 text-emerald-600 font-bold text-lg">
+                <ArrowUpRight className="w-5 h-5" />{stock.upsidePercentage}%
+              </div>
+              <span className="text-xs text-gray-400 uppercase font-semibold">潛在漲幅</span>
             </div>
-            <span className="text-xs text-gray-400 uppercase font-semibold">潛在漲幅</span>
           </div>
         </div>
         <div className="flex items-center gap-6 mt-3">
@@ -104,12 +114,25 @@ function StockCard({ stock }: { stock: StockRecommendation }) {
 }
 
 export default function AIStockAnalystPage() {
-  const [market, setMarket] = useState<Market>('US')
-  const [strategy, setStrategy] = useState('')
-  const [recommendations, setRecommendations] = useState<StockRecommendation[] | null>(null)
-  const [sources, setSources] = useState<SearchSource[]>([])
+  const { cached, save } = useToolCache<{
+    market: Market
+    strategy: string
+    recommendations: StockRecommendation[] | null
+    sources: SearchSource[]
+  }>('ai-stock-analyst')
+
+  const [market, setMarket] = useState<Market>(cached?.market ?? 'US')
+  const [strategy, setStrategy] = useState(cached?.strategy ?? '')
+  const [recommendations, setRecommendations] = useState<StockRecommendation[] | null>(cached?.recommendations ?? null)
+  const [sources, setSources] = useState<SearchSource[]>(cached?.sources ?? [])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (recommendations) {
+      save({ market, strategy, recommendations, sources })
+    }
+  }, [recommendations, sources, market, strategy, save])
 
   const handleAnalyze = async (e?: React.FormEvent) => {
     e?.preventDefault()

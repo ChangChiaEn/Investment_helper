@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Search,
   Loader2,
@@ -9,6 +9,7 @@ import {
   TrendingUp,
   ShieldAlert,
   Layers,
+  BookOpen,
   ExternalLink,
   Crosshair,
   FileText,
@@ -19,14 +20,30 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { SourcesSection } from '@/components/SourcesSection'
 import { Disclaimer } from '@/components/Disclaimer'
 import { Loader } from '@/components/Loader'
+import { WatchlistButton } from '@/components/WatchlistButton'
+import { useToolCache } from '@/hooks/useToolCache'
 
 export default function FundInsightPage() {
-  const [query, setQuery] = useState('')
-  const [appState, setAppState] = useState<AppState>(AppState.IDLE)
-  const [funds, setFunds] = useState<Fund[]>([])
-  const [singleReport, setSingleReport] = useState<SingleFundAnalysis | null>(null)
-  const [overlapReport, setOverlapReport] = useState<OverlapAnalysis | null>(null)
+  const { cached, save } = useToolCache<{
+    query: string
+    appState: AppState
+    funds: Fund[]
+    singleReport: SingleFundAnalysis | null
+    overlapReport: OverlapAnalysis | null
+  }>('fund-insight')
+
+  const [query, setQuery] = useState(cached?.query ?? '')
+  const [appState, setAppState] = useState<AppState>(cached?.appState ?? AppState.IDLE)
+  const [funds, setFunds] = useState<Fund[]>(cached?.funds ?? [])
+  const [singleReport, setSingleReport] = useState<SingleFundAnalysis | null>(cached?.singleReport ?? null)
+  const [overlapReport, setOverlapReport] = useState<OverlapAnalysis | null>(cached?.overlapReport ?? null)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (funds.length > 0 || singleReport || overlapReport) {
+      save({ query, appState, funds, singleReport, overlapReport })
+    }
+  }, [query, appState, funds, singleReport, overlapReport, save])
 
   const handleSearch = async () => {
     const trimmed = query.trim()
@@ -103,7 +120,7 @@ export default function FundInsightPage() {
       {/* Header */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
-          <Layers className="w-7 h-7 text-blue-600" />
+          <BookOpen className="w-7 h-7 text-blue-600" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
           基金<span className="text-blue-600">透視鏡</span>
@@ -194,7 +211,17 @@ export default function FundInsightPage() {
                 key={idx}
                 className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 hover:border-blue-300 hover:shadow-md transition-all"
               >
-                <h3 className="font-bold text-gray-900 mb-2 text-sm leading-tight">{fund.name}</h3>
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <h3 className="font-bold text-gray-900 text-sm leading-tight">{fund.name}</h3>
+                  <WatchlistButton
+                    symbol={fund.code || fund.name}
+                    name={fund.name}
+                    type="fund"
+                    source="fund-insight"
+                    showAnalyze={false}
+                    className="flex-shrink-0"
+                  />
+                </div>
                 <div className="space-y-1.5 mb-4">
                   {fund.code && (
                     <div className="flex items-center justify-between text-xs">

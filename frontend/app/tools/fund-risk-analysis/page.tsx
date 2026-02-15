@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Search,
   Loader2,
@@ -8,6 +9,7 @@ import {
   TrendingDown,
   Minus,
   ShieldAlert,
+  AlertTriangle,
   Calendar,
   Newspaper,
   BarChart3,
@@ -18,6 +20,7 @@ import { analyzeFund } from '@/lib/tools/fund-risk/service'
 import { FundAnalysis, Holding, AnalysisStatus } from '@/lib/tools/fund-risk/types'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Disclaimer } from '@/components/Disclaimer'
+import { useToolCache } from '@/hooks/useToolCache'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b']
 
@@ -106,13 +109,20 @@ function HoldingCard({ holding, colorIndex }: { holding: Holding; colorIndex: nu
 }
 
 export default function FundRiskAnalysisPage() {
-  const [query, setQuery] = useState('安聯台灣科技基金')
-  const [status, setStatus] = useState<AnalysisStatus>(AnalysisStatus.IDLE)
-  const [loadingStep, setLoadingStep] = useState(0)
-  const [result, setResult] = useState<FundAnalysis | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const { cached, save } = useToolCache<{
+    query: string
+    result: FundAnalysis | null
+  }>('fund-risk-analysis')
 
-  const handleAnalyze = async (fundName?: string) => {
+  const [query, setQuery] = useState(cached?.query ?? '安聯台灣科技基金')
+  const [status, setStatus] = useState<AnalysisStatus>(cached?.result ? AnalysisStatus.SUCCESS : AnalysisStatus.IDLE)
+  const [loadingStep, setLoadingStep] = useState(0)
+  const [result, setResult] = useState<FundAnalysis | null>(cached?.result ?? null)
+  const [error, setError] = useState<string | null>(null)
+  const [autoTriggered, setAutoTriggered] = useState(false)
+
+  const handleAnalyze = useCallback(async (fundName?: string) => {
     const name = fundName || query.trim()
     if (!name) return
     if (fundName) setQuery(fundName)
@@ -122,7 +132,6 @@ export default function FundRiskAnalysisPage() {
     setResult(null)
     setLoadingStep(0)
 
-    // Simulate step progression
     const interval = setInterval(() => {
       setLoadingStep((prev) => (prev < 2 ? prev + 1 : prev))
     }, 3000)
@@ -137,7 +146,27 @@ export default function FundRiskAnalysisPage() {
     } finally {
       clearInterval(interval)
     }
-  }
+  }, [query])
+
+  // Auto-fill from URL params and trigger analysis
+  useEffect(() => {
+    if (autoTriggered) return
+    const paramSymbol = searchParams.get('symbol')
+    const paramName = searchParams.get('name')
+    if (paramSymbol || paramName) {
+      const name = decodeURIComponent(paramName || paramSymbol || '')
+      setQuery(name)
+      setAutoTriggered(true)
+      handleAnalyze(name)
+    }
+  }, [searchParams, autoTriggered, handleAnalyze])
+
+  // Save to cache
+  useEffect(() => {
+    if (result) {
+      save({ query, result })
+    }
+  }, [result, query, save])
 
   const pieData = result?.holdings.map((h) => ({
     name: h.name,
@@ -149,7 +178,7 @@ export default function FundRiskAnalysisPage() {
       {/* Header */}
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
-          <ShieldAlert className="w-7 h-7 text-blue-600" />
+          <AlertTriangle className="w-7 h-7 text-blue-600" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
           基金<span className="text-blue-600">風險分析</span>

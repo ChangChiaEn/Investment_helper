@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search, TrendingUp, ChevronDown, Loader2 } from 'lucide-react'
 import { analyzeStock } from '@/lib/tools/gemini-stock-prophet/service'
 import { StockMarket, AnalysisResult } from '@/lib/tools/gemini-stock-prophet/types'
 import { SourcesSection } from '@/components/SourcesSection'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Disclaimer } from '@/components/Disclaimer'
+import { useToolCache } from '@/hooks/useToolCache'
 
 // Simple Markdown renderer for the analysis report
 function MarkdownRenderer({ text }: { text: string }) {
@@ -122,14 +124,22 @@ function LoadingSkeleton() {
 }
 
 export default function GeminiStockProphetPage() {
-  const [market, setMarket] = useState<StockMarket>(StockMarket.TW)
-  const [symbol, setSymbol] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [result, setResult] = useState<AnalysisResult | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const { cached, save } = useToolCache<{
+    market: StockMarket
+    symbol: string
+    result: AnalysisResult | null
+  }>('gemini-stock-prophet')
 
-  const handleSubmit = useCallback(async () => {
-    const trimmed = symbol.trim()
+  const [market, setMarket] = useState<StockMarket>(cached?.market ?? StockMarket.TW)
+  const [symbol, setSymbol] = useState(cached?.symbol ?? '')
+  const [isLoading, setIsLoading] = useState(false)
+  const [result, setResult] = useState<AnalysisResult | null>(cached?.result ?? null)
+  const [error, setError] = useState<string | null>(null)
+  const [autoTriggered, setAutoTriggered] = useState(false)
+
+  const handleSubmit = useCallback(async (overrideSymbol?: string, overrideMarket?: StockMarket) => {
+    const trimmed = (overrideSymbol ?? symbol).trim()
     if (!trimmed) return
 
     setIsLoading(true)
@@ -137,7 +147,7 @@ export default function GeminiStockProphetPage() {
     setError(null)
 
     try {
-      const data = await analyzeStock(trimmed, market)
+      const data = await analyzeStock(trimmed, overrideMarket ?? market)
       setResult(data)
     } catch (err: any) {
       setError(err.message || '分析過程中發生錯誤')
@@ -145,6 +155,26 @@ export default function GeminiStockProphetPage() {
       setIsLoading(false)
     }
   }, [symbol, market])
+
+  // Auto-fill from URL params and trigger analysis
+  useEffect(() => {
+    if (autoTriggered) return
+    const paramSymbol = searchParams.get('symbol')
+    const paramName = searchParams.get('name')
+    if (paramSymbol || paramName) {
+      const sym = paramSymbol || paramName || ''
+      setSymbol(decodeURIComponent(sym))
+      setAutoTriggered(true)
+      handleSubmit(decodeURIComponent(sym))
+    }
+  }, [searchParams, autoTriggered, handleSubmit])
+
+  // Save to cache when results change
+  useEffect(() => {
+    if (result) {
+      save({ market, symbol, result })
+    }
+  }, [result, market, symbol, save])
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !isLoading) {
@@ -198,7 +228,7 @@ export default function GeminiStockProphetPage() {
 
               {/* Submit Button */}
               <button
-                onClick={handleSubmit}
+                onClick={() => handleSubmit()}
                 disabled={isLoading || !symbol.trim()}
                 className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
               >
@@ -223,7 +253,7 @@ export default function GeminiStockProphetPage() {
 
         {/* Error State */}
         {error && !isLoading && (
-          <ErrorMessage message={error} onRetry={handleSubmit} />
+          <ErrorMessage message={error} onRetry={() => handleSubmit()} />
         )}
 
         {/* Result */}

@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   Search, Loader2, TrendingUp, TrendingDown, Minus, CheckCircle, XCircle,
-  ArrowUpRight, ArrowDownRight, Newspaper, Star, Zap, Sparkles
+  ArrowUpRight, ArrowDownRight, Newspaper, Briefcase, Zap, Sparkles
 } from 'lucide-react'
 import { analyzeFundWithGemini } from '@/lib/tools/fund-assistant/service'
 import { FundAnalysisResult, GroundingSource, PopularFund } from '@/lib/tools/fund-assistant/types'
 import { SourcesSection } from '@/components/SourcesSection'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Disclaimer } from '@/components/Disclaimer'
+import { WatchlistButton } from '@/components/WatchlistButton'
+import { useToolCache } from '@/hooks/useToolCache'
 
 const POPULAR_FUNDS = Object.values(PopularFund)
 
@@ -87,12 +89,20 @@ function FundCard({ fund, index, isMulti }: { fund: FundAnalysisResult; index: n
               </div>
             </div>
           </div>
-          {fund.navPrice && fund.navPrice !== 'N/A' && (
-            <div className="text-right flex-shrink-0">
-              <span className="text-xs text-gray-400">最新淨值</span>
-              <p className="text-lg font-bold text-gray-900">{fund.navPrice}</p>
-            </div>
-          )}
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <WatchlistButton
+              symbol={fund.fundName}
+              name={fund.fundName}
+              type="fund"
+              source="fund-assistant"
+            />
+            {fund.navPrice && fund.navPrice !== 'N/A' && (
+              <div className="text-right">
+                <span className="text-xs text-gray-400">最新淨值</span>
+                <p className="text-lg font-bold text-gray-900">{fund.navPrice}</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -219,11 +229,23 @@ function LoadingSkeleton() {
 }
 
 export default function FundAssistantPage() {
-  const [query, setQuery] = useState('')
+  const { cached, save } = useToolCache<{
+    query: string
+    results: FundAnalysisResult[] | null
+    sources: GroundingSource[]
+  }>('fund-assistant')
+
+  const [query, setQuery] = useState(cached?.query ?? '')
   const [isLoading, setIsLoading] = useState(false)
-  const [results, setResults] = useState<FundAnalysisResult[] | null>(null)
-  const [sources, setSources] = useState<GroundingSource[]>([])
+  const [results, setResults] = useState<FundAnalysisResult[] | null>(cached?.results ?? null)
+  const [sources, setSources] = useState<GroundingSource[]>(cached?.sources ?? [])
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (results) {
+      save({ query, results, sources })
+    }
+  }, [results, sources, query, save])
 
   const handleAnalyze = useCallback(async (searchQuery?: string) => {
     const q = (searchQuery || query).trim()
@@ -268,7 +290,7 @@ export default function FundAssistantPage() {
         {/* Page Title */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
-            <Star className="w-7 h-7 text-blue-600" />
+            <Briefcase className="w-7 h-7 text-blue-600" />
           </div>
           <h1 className="text-2xl font-bold text-surface-100 mb-2">AI 基金助手</h1>
           <p className="text-surface-400 text-sm max-w-md mx-auto">

@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Navigation } from '@/components/Navigation'
 import { ToolDataProvider } from '@/contexts/ToolDataContext'
+import { WatchlistProvider } from '@/contexts/WatchlistContext'
+import { ToolCacheProvider } from '@/contexts/ToolCacheContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -20,12 +22,16 @@ export default function RootLayout({
     <html lang="zh-TW">
       <body className={inter.className}>
         <ToolDataProvider>
-          <div className="flex h-screen bg-surface-950">
-            <Navigation />
-            <main className="flex-1 overflow-auto">
-              {children}
-            </main>
-          </div>
+          <WatchlistProvider>
+            <ToolCacheProvider>
+              <div className="flex h-screen bg-surface-950">
+                <Navigation />
+                <main className="flex-1 overflow-auto">
+                  {children}
+                </main>
+              </div>
+            </ToolCacheProvider>
+          </WatchlistProvider>
         </ToolDataProvider>
       </body>
     </html>

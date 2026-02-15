@@ -11,6 +11,7 @@ import { SECTOR_DATA } from '@/lib/tools/trend-dashboard/mockData'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Disclaimer } from '@/components/Disclaimer'
 import { Loader } from '@/components/Loader'
+import { useToolCache } from '@/hooks/useToolCache'
 import Link from 'next/link'
 
 const HISTORY_KEY = 'investrend_history'
@@ -61,13 +62,21 @@ function getRatingBadge(rating: string) {
 }
 
 export default function TrendDashboardPage() {
-  const [viewMode, setViewMode] = useState<ViewMode>('DASHBOARD')
-  const [selectedSector, setSelectedSector] = useState<GICS_Sector>(GICS_Sector.IT)
-  const [searchQuery, setSearchQuery] = useState('')
+  const { cached, save } = useToolCache<{
+    viewMode: ViewMode
+    selectedSector: GICS_Sector
+    searchQuery: string
+    analysisResult: AnalysisResult | null
+    dashboardSummary: string
+  }>('trend-dashboard')
+
+  const [viewMode, setViewMode] = useState<ViewMode>(cached?.viewMode ?? 'DASHBOARD')
+  const [selectedSector, setSelectedSector] = useState<GICS_Sector>(cached?.selectedSector ?? GICS_Sector.IT)
+  const [searchQuery, setSearchQuery] = useState(cached?.searchQuery ?? '')
   const [isLoading, setIsLoading] = useState(false)
   const [summaryLoading, setSummaryLoading] = useState(false)
-  const [dashboardSummary, setDashboardSummary] = useState<string>('')
-  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null)
+  const [dashboardSummary, setDashboardSummary] = useState<string>(cached?.dashboardSummary ?? '')
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(cached?.analysisResult ?? null)
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [showHistory, setShowHistory] = useState(false)
@@ -88,9 +97,10 @@ export default function TrendDashboardPage() {
     }
   }, [])
 
-  // Auto-load dashboard summary (only when API key is set)
+  // Auto-load dashboard summary (only when API key is set and no cached summary)
   useEffect(() => {
     if (!hasApiKey) return
+    if (dashboardSummary) return // already have cached or loaded summary
     const loadSummary = async () => {
       setSummaryLoading(true)
       try {
@@ -103,7 +113,12 @@ export default function TrendDashboardPage() {
       }
     }
     loadSummary()
-  }, [hasApiKey])
+  }, [hasApiKey, dashboardSummary])
+
+  // Save to cache
+  useEffect(() => {
+    save({ viewMode, selectedSector, searchQuery, analysisResult, dashboardSummary })
+  }, [viewMode, selectedSector, searchQuery, analysisResult, dashboardSummary, save])
 
   const saveHistory = useCallback((item: HistoryItem) => {
     setHistory(prev => {
