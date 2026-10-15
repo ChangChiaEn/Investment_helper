@@ -61,6 +61,14 @@ export const TOOL_CONFIGS: Record<string, ToolConfig> = {
     localPath: 'wealthvision---yearly-asset-analysis',
     inNavigation: true,
   },
+  'decision-tree': {
+    id: 'decision-tree',
+    name: '決策樹',
+    description: '自訂指標與視覺化決策樹，輸出進出場建議',
+    category: 'stock',
+    localPath: 'decision-tree',
+    inNavigation: true,
+  },
   // 進階功能（不在導覽列）
   'alphastrategist': {
     id: 'alphastrategist',

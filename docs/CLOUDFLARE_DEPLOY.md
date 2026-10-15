@@ -58,11 +58,24 @@
 
 ```
 frontend/
-├── app/tools/         ← 8 個工具的 UI 頁面
-├── lib/tools/         ← 8 個工具的商業邏輯（Gemini API 呼叫）
+├── app/tools/         ← 工具 UI 頁面（含 decision-tree）
+├── lib/tools/         ← 工具商業邏輯（Gemini／決策樹引擎）
 ├── components/        ← 共用元件
-└── next.config.js     ← 乾淨的設定檔，無 webpack alias
+├── functions/api/     ← 可選：Pages Root=frontend 時的 Functions
+└── next.config.js
+
+functions/api/         ← 建議：Pages Root=/ 時的市場資料 GET 代理
 ```
+
+### 市場資料代理（Pages Functions）
+
+決策樹工具需轉發 TWSE／TPEx／MOPS 的 **GET**（不存庫、不算指標）。
+
+1. 將 repo 根目錄的 `functions/api/market-proxy.ts` 一併部署（Build output 為 `frontend/out`、Root 為 `/` 時）。
+2. 路由：`GET /api/market-proxy?source=twse_openapi|twse_rwd|tpex|mops&path=/...&query=...`
+3. 僅允許 allowlist 主機，拒絕任意 URL。
+4. 本機開發：Next.js `app/api/market-proxy/route.ts` 提供同等行為。
+5. 設定頁「市場資料代理」可測連線。
 
 ### Step 1：修改 next.config.js
 

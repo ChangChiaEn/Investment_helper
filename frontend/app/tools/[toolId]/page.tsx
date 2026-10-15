@@ -37,6 +37,7 @@ const TOOL_PAGE_COMPONENTS: Record<string, ComponentType> = {
   'fund-assistant': createToolPage(() => import('@/app/tools/fund-assistant/page')),
   'fund-risk-analysis': createToolPage(() => import('@/app/tools/fund-risk-analysis/page')),
   'asset-analysis': createToolPage(() => import('@/app/tools/asset-analysis/page')),
+  'decision-tree': createToolPage(() => import('@/app/tools/decision-tree/page')),
   alphastrategist: createToolPage(() => import('@/app/tools/alphastrategist/page')),
   'fund-insight': createToolPage(() => import('@/app/tools/fund-insight/page')),
 }

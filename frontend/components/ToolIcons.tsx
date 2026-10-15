@@ -12,7 +12,8 @@ import {
   AlertTriangle, 
   Wallet, 
   Bot, 
-  BookOpen 
+  BookOpen,
+  GitBranch,
 } from 'lucide-react'
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -22,6 +23,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   'fund-assistant': Briefcase,
   'fund-risk-analysis': AlertTriangle,
   'asset-analysis': Wallet,
+  'decision-tree': GitBranch,
   'alphastrategist': Bot,
   'fund-insight': BookOpen,
 }

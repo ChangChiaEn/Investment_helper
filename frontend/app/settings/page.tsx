@@ -5,7 +5,8 @@ import { NAVIGATION_TOOLS } from '@/config/tools'
 import { ToolIcon } from '@/components/ToolIcons'
 import { useRouter } from 'next/navigation'
 import { AVAILABLE_MODELS, testAvailableModels } from '@/lib/gemini'
-import { Cpu, Check, X, Loader2 } from 'lucide-react'
+import { testMarketProxyConnection } from '@/lib/tools/decision-tree/marketClient'
+import { Cpu, Check, X, Loader2, Globe } from 'lucide-react'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -17,6 +18,8 @@ export default function SettingsPage() {
   const [selectedModel, setSelectedModel] = useState<string>('gemini-2.0-flash')
   const [availableModels, setAvailableModels] = useState<string[]>([])
   const [modelTesting, setModelTesting] = useState(false)
+  const [proxyStatus, setProxyStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle')
+  const [proxyMessage, setProxyMessage] = useState('')
 
   useEffect(() => {
     const saved = localStorage.getItem('homepage_tool')
@@ -131,6 +134,17 @@ export default function SettingsPage() {
     setKeyError('')
     setAvailableModels([])
     setSelectedModel('gemini-2.0-flash')
+  }
+
+  /**
+   * 測試市場資料代理（TWSE OpenAPI 一筆已知端點）。
+   */
+  const handleTestMarketProxy = async () => {
+    setProxyStatus('testing')
+    setProxyMessage('')
+    const result = await testMarketProxyConnection()
+    setProxyStatus(result.ok ? 'ok' : 'fail')
+    setProxyMessage(result.message + (result.upstream ? `（${result.upstream}）` : ''))
   }
 
   return (
@@ -305,6 +319,51 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* 市場資料代理 */}
+      <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8 mb-6 border border-surface-200/50">
+        <h2 className="text-xl font-semibold mb-2 text-gray-800 flex items-center gap-2">
+          <span className="w-1 h-6 bg-gradient-to-b from-sky-500 to-cyan-500 rounded-full"></span>
+          <Globe className="w-5 h-5 text-sky-600" />
+          市場資料代理
+        </h2>
+        <p className="text-gray-600 mb-2">
+          決策樹工具透過極薄代理轉發證交所／櫃買／公開資訊觀測站 GET（不存庫）。本機開發使用 Next API Route；正式環境需部署 Cloudflare Pages Function。
+        </p>
+        <p className="text-sm text-gray-500 mb-6">
+          測試會呼叫上市證券基本資料端點，確認代理與上游是否可用。
+        </p>
+        <button
+          onClick={handleTestMarketProxy}
+          disabled={proxyStatus === 'testing'}
+          className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+            proxyStatus === 'testing'
+              ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-sky-500 to-cyan-500 text-white hover:from-sky-600 hover:to-cyan-600 shadow-md hover:shadow-lg'
+          }`}
+        >
+          {proxyStatus === 'testing' ? (
+            <span className="flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              測試中...
+            </span>
+          ) : (
+            '測試市場資料連線'
+          )}
+        </button>
+        {proxyStatus === 'ok' && (
+          <div className="mt-4 flex items-start gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg">
+            <Check className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{proxyMessage}</span>
+          </div>
+        )}
+        {proxyStatus === 'fail' && (
+          <div className="mt-4 flex items-start gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+            <X className="w-4 h-4 mt-0.5 shrink-0" />
+            <span>{proxyMessage}</span>
+          </div>
+        )}
+      </div>
 
       {/* 首頁設定 */}
       <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-8 mb-6 border border-surface-200/50">
