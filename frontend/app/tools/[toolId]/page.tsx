@@ -54,6 +54,7 @@ export default function ToolPage() {
     const toolPageMap: Record<string, () => Promise<any>> = {
       'ai-stock-analyst': () => import('@/app/tools/ai-stock-analyst/page'),
       'gemini-stock-prophet': () => import('@/app/tools/gemini-stock-prophet/page'),
+      'tw-stock-target': () => import('@/app/tools/tw-stock-target/page'),
       'trend-dashboard': () => import('@/app/tools/trend-dashboard/page'),
       'fund-assistant': () => import('@/app/tools/fund-assistant/page'),
       'fund-risk-analysis': () => import('@/app/tools/fund-risk-analysis/page'),

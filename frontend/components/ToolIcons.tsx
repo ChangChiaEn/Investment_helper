@@ -12,13 +12,15 @@ import {
   AlertTriangle, 
   Wallet, 
   Bot, 
-  BookOpen 
+  BookOpen,
+  Crosshair
 } from 'lucide-react'
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   'trend-dashboard': BarChart3,
   'ai-stock-analyst': Search,
   'gemini-stock-prophet': TrendingUp,
+  'tw-stock-target': Crosshair,
   'fund-assistant': Briefcase,
   'fund-risk-analysis': AlertTriangle,
   'asset-analysis': Wallet,

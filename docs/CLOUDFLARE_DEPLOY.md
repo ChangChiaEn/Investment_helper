@@ -2,6 +2,8 @@
 
 本文件說明如何將 Sagafisc 部署至 Cloudflare Pages（前端）以及搭配後端服務的完整方案。
 
+> **台股目標價追蹤器的部署差異：** 新工具的 `/api/tw-stock-target/*` 使用 Node.js 伺服器取得 Yahoo Finance 與證交所資料，無法透過本文件的純靜態匯出方式運作。要使用完整平台，請保留目前 `next.config.js` 的伺服器模式，以 Node.js 20+ 執行 `npm run build` 與 `npm start`，或部署到支援 Next.js Node.js API routes 的平台。詳見 [工具部署說明](TW_STOCK_TARGET.md)。
+
 ---
 
 ## 目錄

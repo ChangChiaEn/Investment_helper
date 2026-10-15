@@ -37,6 +37,14 @@ export const TOOL_CONFIGS: Record<string, ToolConfig> = {
     localPath: 'gemini-stock-prophet',
     inNavigation: true,
   },
+  'tw-stock-target': {
+    id: 'tw-stock-target',
+    name: '台股目標價追蹤器',
+    description: '追蹤多組目標價與外資買超潛力股',
+    category: 'stock',
+    localPath: 'tw-stock-target',
+    inNavigation: true,
+  },
   'fund-assistant': {
     id: 'fund-assistant',
     name: '智能基金分析助手',
