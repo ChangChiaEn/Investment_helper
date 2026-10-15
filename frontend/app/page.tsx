@@ -6,22 +6,32 @@ import { ToolSelector } from '@/components/ToolSelector'
 import { ADVANCED_TOOLS, NAVIGATION_TOOLS } from '@/config/tools'
 import { ToolIcon } from '@/components/ToolIcons'
 import { Loader } from '@/components/Loader'
+import { useRouteLoading } from '@/components/RouteLoadingOverlay'
 import Link from 'next/link'
 import { Settings, Key } from 'lucide-react'
 
+/**
+ * 平台首頁：顯示快速入口與首頁工具選擇。
+ * localStorage（API Key、預設首頁）僅在 useEffect 讀取，預設值與 SSR 一致以避免 hydration 問題。
+ * @returns 首頁內容，或導向預設工具時的載入畫面
+ */
 export default function Home() {
   const router = useRouter()
+  const { startRouteLoading } = useRouteLoading()
   const [isRedirecting, setIsRedirecting] = useState(false)
+  // 預設 false，與伺服器 render 相同；掛載後再依 localStorage 更新
   const [hasApiKey, setHasApiKey] = useState(false)
 
   useEffect(() => {
     const savedHomepage = localStorage.getItem('homepage_tool')
     if (savedHomepage) {
       setIsRedirecting(true)
+      // 預設首頁自動導向：同步啟動路由載入覆蓋層
+      startRouteLoading()
       router.push(`/tools/${savedHomepage}`)
     }
     setHasApiKey(!!localStorage.getItem('gemini_api_key'))
-  }, [router])
+  }, [router, startRouteLoading])
 
   if (isRedirecting) {
     return (

@@ -2,6 +2,7 @@
 
 import { Bookmark, BookmarkCheck, ArrowRight } from 'lucide-react'
 import { useWatchlist } from '@/contexts/WatchlistContext'
+import { useRouteLoading } from '@/components/RouteLoadingOverlay'
 import { navigateToTool, getAnalysisTool } from '@/utils/navigation'
 import { useRouter } from 'next/navigation'
 
@@ -14,18 +15,32 @@ interface WatchlistButtonProps {
   showAnalyze?: boolean
 }
 
+/**
+ * 關注清單加入／移除，以及導向深度分析工具的按鈕列。
+ * @param symbol - 標的代號
+ * @param name - 標的名稱
+ * @param type - 股票或基金
+ * @param source - 可選來源標記
+ * @param className - 外層額外 class
+ * @param showAnalyze - 是否顯示深度分析按鈕
+ * @returns 關注與分析按鈕組
+ */
 export function WatchlistButton({ symbol, name, type, source, className = '', showAnalyze = true }: WatchlistButtonProps) {
   const { has, toggle } = useWatchlist()
   const router = useRouter()
+  const { startRouteLoading } = useRouteLoading()
   const isWatched = has(symbol, type)
 
+  /** 切換是否加入關注清單 */
   const handleToggle = () => {
     toggle({ symbol, name, type, source })
   }
 
+  /** 導向對應深度分析頁；先顯示載入中再換頁 */
   const handleAnalyze = () => {
     const analysisTool = getAnalysisTool(type)
     const url = navigateToTool(analysisTool, { symbol, name, type, source })
+    startRouteLoading()
     router.push(url)
   }
 

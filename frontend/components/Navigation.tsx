@@ -1,21 +1,25 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { NAVIGATION_TOOLS, ADVANCED_TOOLS } from '@/config/tools'
 import { Home, Settings, Star, ChevronDown, ChevronRight, ArrowRight, Trash2 } from 'lucide-react'
 import { ToolIcon } from '@/components/ToolIcons'
 import { useWatchlist } from '@/contexts/WatchlistContext'
+import { useRouteLoading } from '@/components/RouteLoadingOverlay'
 import { navigateToTool, getAnalysisTool } from '@/utils/navigation'
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 
 function WatchlistPanel() {
   const { items, remove } = useWatchlist()
   const [expanded, setExpanded] = useState(true)
   const router = useRouter()
+  const { startRouteLoading } = useRouteLoading()
 
+  /**
+   * 導向深度分析工具；先顯示載入中再 router.push，避免主內容空白。
+   * @param item - 關注清單項目
+   */
   const handleAnalyze = (item: typeof items[0]) => {
     const analysisTool = getAnalysisTool(item.type)
     const url = navigateToTool(analysisTool, {
@@ -24,6 +28,7 @@ function WatchlistPanel() {
       type: item.type,
       source: item.source,
     })
+    startRouteLoading()
     router.push(url)
   }
 
@@ -88,15 +93,20 @@ function WatchlistPanel() {
   )
 }
 
+/**
+ * 左側導覽列：Logo、主要／進階工具、設定與關注清單。
+ * 由 AppShell 在客戶端掛載後才渲染，無需再自行處理 hydration 防護。
+ * @returns 全站共用導覽元件
+ */
 export function Navigation() {
   const pathname = usePathname()
 
   return (
     <nav className="w-64 bg-gradient-to-b from-surface-900 to-surface-950 border-r border-surface-700/50 flex flex-col h-screen shadow-2xl">
-      {/* Logo */}
+      {/* Logo：靜態資源來自 public/Sagafisc.png */}
       <div className="p-6 border-b border-surface-700/50 bg-gradient-to-r from-surface-900 to-surface-800">
         <Link href="/" className="flex items-center space-x-2 group">
-          <Image
+          <img
             src="/Sagafisc.png"
             alt="Sagafisc"
             width={40}
@@ -191,7 +201,6 @@ export function Navigation() {
           </>
         )}
 
-        {/* 關注清單 */}
         <WatchlistPanel />
       </div>
 
