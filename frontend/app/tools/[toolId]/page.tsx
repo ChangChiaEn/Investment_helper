@@ -33,6 +33,7 @@ function createToolPage(loader: () => Promise<{ default: ComponentType }>) {
 const TOOL_PAGE_COMPONENTS: Record<string, ComponentType> = {
   'ai-stock-analyst': createToolPage(() => import('@/app/tools/ai-stock-analyst/page')),
   'gemini-stock-prophet': createToolPage(() => import('@/app/tools/gemini-stock-prophet/page')),
+  'tw-stock-target': createToolPage(() => import('@/app/tools/tw-stock-target/page')),
   'trend-dashboard': createToolPage(() => import('@/app/tools/trend-dashboard/page')),
   'fund-assistant': createToolPage(() => import('@/app/tools/fund-assistant/page')),
   'fund-risk-analysis': createToolPage(() => import('@/app/tools/fund-risk-analysis/page')),

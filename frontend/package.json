@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:tw-stock-target": "node --test tests/tw-stock-target.test.cjs"
   },
   "dependencies": {
     "@google/genai": "^1.40.0",
@@ -27,6 +28,7 @@
     "tailwindcss": "^3.4.0",
     "typescript": "^5.3.3",
     "xlsx": "^0.18.5",
+    "yahoo-finance2": "3.13.2",
     "zustand": "^4.4.7"
   },
   "devDependencies": {

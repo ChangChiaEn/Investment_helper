@@ -5,7 +5,7 @@
 <h1 align="center">Sagafisc 智慧投研平台</h1>
 
 <p align="center">
-  整合 8 個 AI 分析工具的一站式投資理財平台<br/>
+  整合 9 個投資研究工具（含 8 個 AI 分析工具）的一站式投資理財平台<br/>
   涵蓋投資四階段：<strong>市場掃描 → 目標篩選 → 深度診斷 → 資產管理</strong>
 </p>
 
@@ -27,6 +27,7 @@
 | **目標篩選（股票）** | AI 潛力股分析師 | 輸入投資主題，AI 推薦潛力股並附目標價與止損點 |
 | **目標篩選（基金）** | 智能基金分析助手 | 搜尋基金並給出進出場策略與情緒評分 |
 | **深度診斷（股票）** | Gemini Stock Prophet | 個股走勢預測，涵蓋基本面、技術面、籌碼面 |
+| **股票追蹤** | 台股目標價追蹤器 | 追蹤多組目標價、股價距離與近 5 日外資買超潛力股，無需 AI API Key |
 | **深度診斷（基金）** | 即時基金風險分析 | 分析基金持股結構與新聞風險 |
 | **資產管理** | 財產分布分析 | 個人資產健診與再平衡建議 |
 | **進階：綜合顧問** | AlphaStrategist AI | 多輪對話式投資顧問，20 年策略師角色 |
@@ -37,6 +38,7 @@
 - **跨工具資料傳遞** — 在趨勢分析中看到看好的標的，一鍵帶入深度分析
 - **前端輸入 API Key** — 使用者在設定頁面輸入自己的 Gemini API Key，無需部署時硬編碼
 - **Watchlist 標記系統** — 跨工具共享關注標的（需連接資料庫）
+- **台股目標價追蹤器** — 每 30 秒更新 Yahoo Finance 報價，以證交所交易資料掃描上市潛力股；[使用與部署說明](docs/TW_STOCK_TARGET.md)
 
 ---
 
@@ -55,7 +57,7 @@ AI：     Google Gemini API（@google/genai）+ Google Search Grounding
 
 ### 環境需求
 
-- Node.js 18+
+- Node.js 20+（建議 22 LTS）
 - Python 3.11+
 - 一組 [Gemini API Key](https://aistudio.google.com/apikey)
 
@@ -113,10 +115,11 @@ Investment_helper/
 │   ├── app/                               # App Router 頁面
 │   │   ├── page.tsx                       # 首頁 Dashboard
 │   │   ├── settings/page.tsx              # 設定（API Key + 首頁選擇）
-│   │   └── tools/                         # 8 大 AI 工具頁面
+│   │   └── tools/                         # 9 個研究工具頁面
 │   │       ├── [toolId]/page.tsx          # 動態路由（fallback）
 │   │       ├── ai-stock-analyst/          # AI 潛力股分析師
 │   │       ├── gemini-stock-prophet/      # 股票走勢預測
+│   │       ├── tw-stock-target/           # 台股目標價追蹤器
 │   │       ├── trend-dashboard/           # 產業趨勢儀表板
 │   │       ├── fund-assistant/            # 智能基金分析助手
 │   │       ├── fund-risk-analysis/        # 基金風險分析
@@ -126,6 +129,7 @@ Investment_helper/
 │   ├── lib/tools/                         # 工具商業邏輯層
 │   │   ├── ai-stock-analyst/             #   service.ts + types.ts
 │   │   ├── gemini-stock-prophet/
+│   │   ├── tw-stock-target/               # 報價、外資掃描與本機資料驗證
 │   │   ├── trend-dashboard/              #   + mockData.ts
 │   │   ├── fund-assistant/
 │   │   ├── fund-risk/
