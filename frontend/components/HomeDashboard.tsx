@@ -28,7 +28,7 @@ export function HomeDashboard() {
 
   if (loading) {
     return (
-      <div className="bg-white/95 backdrop-blur-sm rounded-lg shadow p-6 border border-surface-200/50">
+      <div className="bg-card/95 backdrop-blur-sm rounded-lg shadow p-6 border border-border/50">
         <div className="animate-pulse">
           <div className="h-4 bg-surface-200 rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
@@ -41,13 +41,13 @@ export function HomeDashboard() {
   }
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-surface-200/50">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-        <span className="w-1 h-6 bg-gradient-to-b from-primary-600 to-blue-600 rounded-full"></span>
+    <div className="bg-card/95 backdrop-blur-sm rounded-xl shadow-lg p-6 border border-border/50">
+      <h2 className="text-xl font-semibold mb-4 text-card-fg flex items-center gap-2">
+        <span className="w-1 h-6 bg-gradient-to-b from-primary to-accent rounded-full"></span>
         我的關注清單
       </h2>
       {watchlist.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div className="text-center py-8 text-muted-fg">
           <p>還沒有關注任何標的</p>
           <p className="text-sm mt-2">開始使用工具來標記您感興趣的股票或基金</p>
         </div>
@@ -57,12 +57,12 @@ export function HomeDashboard() {
             <Link
               key={item.id}
               href={`/tools/${item.type === 'stock' ? 'gemini-stock-prophet' : 'fund-risk-analysis'}?symbol=${item.symbol}&name=${item.name}&type=${item.type}`}
-              className="block p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              className="block p-4 border border-border rounded-lg hover:bg-muted transition-colors"
             >
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium">{item.name}</div>
-                  <div className="text-sm text-gray-500">{item.symbol}</div>
+                  <div className="text-sm text-muted-fg">{item.symbol}</div>
                 </div>
                 {item.price && (
                   <div className="text-right">
@@ -70,7 +70,7 @@ export function HomeDashboard() {
                     {item.change_pct && (
                       <div
                         className={`text-sm ${
-                          item.change_pct >= 0 ? 'text-green-600' : 'text-red-600'
+                          item.change_pct >= 0 ? 'text-success' : 'text-danger'
                         }`}
                       >
                         {item.change_pct >= 0 ? '+' : ''}

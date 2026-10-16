@@ -6,7 +6,7 @@ export function Disclaimer() {
   return (
     <div className="mt-12 border-t border-surface-700/50 pt-6 pb-4 text-center">
       <div className="max-w-2xl mx-auto px-4">
-        <div className="flex items-center justify-center gap-2 text-amber-600 mb-2">
+        <div className="flex items-center justify-center gap-2 text-warning mb-2">
           <AlertTriangle className="w-4 h-4" />
           <span className="font-semibold text-xs uppercase">免責聲明</span>
         </div>

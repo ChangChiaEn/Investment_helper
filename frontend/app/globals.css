@@ -2,15 +2,50 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * 預設（駭客風）CSS 變數：FOUC script / ThemeProvider 會覆寫。
+ * 色值格式為 R G B，供 rgb(var(--color-*) / alpha) 使用。
+ */
 :root {
-  --foreground-rgb: 226, 232, 240;
-  --background-start: #0d1120;
-  --background-end: #0f172a;
+  --color-bg: 13 17 32;
+  --color-bg-end: 15 23 42;
+  --color-fg: 226 232 240;
+  --color-card: 30 41 59;
+  --color-card-fg: 226 232 240;
+  --color-muted: 15 23 42;
+  --color-muted-fg: 148 163 184;
+  --color-border: 51 65 85;
+  --color-primary: 16 185 129;
+  --color-primary-fg: 2 6 23;
+  --color-primary-soft: 6 78 59;
+  --color-accent: 52 211 153;
+  --color-sidebar: 2 6 23;
+  --color-sidebar-alt: 15 23 42;
+  --color-sidebar-fg: 203 213 225;
+  --color-sidebar-muted: 100 116 139;
+  --color-sidebar-border: 30 41 59;
+  --color-sidebar-hover: 30 41 59;
+  --color-danger: 248 113 113;
+  --color-danger-soft: 69 10 10;
+  --color-success: 52 211 153;
+  --color-success-soft: 6 78 59;
+  --color-warning: 251 191 36;
+  --color-warning-soft: 69 26 3;
+  --color-ring: 16 185 129;
+  --color-chart-1: 16 185 129;
+  --color-chart-2: 56 189 248;
+  --color-chart-3: 251 191 36;
+  --color-chart-4: 248 113 113;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(135deg, #0d1120 0%, #0f172a 50%, #0d1120 100%);
+  color: rgb(var(--color-fg));
+  background: linear-gradient(
+    135deg,
+    rgb(var(--color-bg)) 0%,
+    rgb(var(--color-bg-end)) 50%,
+    rgb(var(--color-bg)) 100%
+  );
   min-height: 100vh;
 }
 
@@ -40,7 +75,7 @@ body {
   font-size: 1.25rem;
   font-weight: 800;
   letter-spacing: 0.2em;
-  color: rgba(16, 185, 129, 0.1);
+  color: rgb(var(--color-accent) / 0.12);
   text-transform: uppercase;
   pointer-events: none;
   user-select: none;
@@ -58,8 +93,8 @@ body {
   height: 150px;
   background: transparent;
   border-radius: 50%;
-  box-shadow: 25px 25px 75px rgba(0,0,0,0.55);
-  border: 1px solid #333;
+  box-shadow: 25px 25px 75px rgb(0 0 0 / 0.55);
+  border: 1px solid rgb(var(--color-border));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,10 +107,10 @@ body {
   position: absolute;
   inset: 20px;
   background: transparent;
-  border: 1px dashed #444;
+  border: 1px dashed rgb(var(--color-border));
   border-radius: 50%;
-  box-shadow: inset -5px -5px 25px rgba(0,0,0,0.25),
-  inset 5px 5px 35px rgba(0,0,0,0.25);
+  box-shadow: inset -5px -5px 25px rgb(0 0 0 / 0.25),
+  inset 5px 5px 35px rgb(0 0 0 / 0.25);
 }
 
 .loader::after {
@@ -84,9 +119,9 @@ body {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  border: 1px dashed #444;
-  box-shadow: inset -5px -5px 25px rgba(0,0,0,0.25),
-  inset 5px 5px 35px rgba(0,0,0,0.25);
+  border: 1px dashed rgb(var(--color-border));
+  box-shadow: inset -5px -5px 25px rgb(0 0 0 / 0.25),
+  inset 5px 5px 35px rgb(0 0 0 / 0.25);
 }
 
 .loader span {
@@ -98,7 +133,7 @@ body {
   background: transparent;
   transform-origin: top left;
   animation: radar81 2s linear infinite;
-  border-top: 1px dashed #fff;
+  border-top: 1px dashed rgb(var(--color-fg));
 }
 
 .loader span::before {
@@ -108,10 +143,10 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background: #10b981;
+  background: rgb(var(--color-accent));
   transform-origin: top left;
   transform: rotate(-55deg);
-  filter: blur(30px) drop-shadow(20px 20px 20px #10b981);
+  filter: blur(30px) drop-shadow(0 0 20px rgb(var(--color-accent)));
 }
 
 @keyframes radar81 {
@@ -125,29 +160,39 @@ body {
 
 /* ===== Fintech card styles ===== */
 .fintech-card-border {
-  background: linear-gradient(135deg, rgba(255,255,255,0.1), #3a4b8a, rgba(255,255,255,0.06));
+  background: linear-gradient(
+    135deg,
+    rgb(var(--color-fg) / 0.1),
+    rgb(var(--color-primary) / 0.45),
+    rgb(var(--color-fg) / 0.06)
+  );
   padding: 1px;
   border-radius: 1rem;
 }
 
 .fintech-card {
-  background: linear-gradient(135deg, #0d1120 0%, #1a2744 43%, #0d1120 100%);
+  background: linear-gradient(
+    135deg,
+    rgb(var(--color-bg)) 0%,
+    rgb(var(--color-sidebar-alt)) 43%,
+    rgb(var(--color-bg)) 100%
+  );
   border-radius: calc(1rem - 1px);
-  box-shadow: 0px 0.75rem 1.25rem -0.75rem rgba(0, 0, 0, 0.6);
-  color: #bec4cf;
+  box-shadow: 0px 0.75rem 1.25rem -0.75rem rgb(0 0 0 / 0.6);
+  color: rgb(var(--color-muted-fg));
 }
 
 /* ===== 立體按鈕樣式 - From Uiverse.io by marcelodolza ===== */
 .button {
   --white: #ffe7ff;
-  --bg: #080808;
+  --btn-bg: rgb(var(--color-sidebar));
   --radius: 100px;
   outline: none;
   cursor: pointer;
   border: 0;
   position: relative;
   border-radius: var(--radius);
-  background-color: var(--bg);
+  background-color: var(--btn-bg);
   transition: all 0.2s ease;
   box-shadow:
     inset 0 0.3rem 0.9rem rgba(255, 255, 255, 0.3),
@@ -157,12 +202,14 @@ body {
     0 1rem 1rem -0.6rem rgba(0, 0, 0, 0.8);
 }
 
+.button.bg-primary,
 .button.bg-primary-600 {
-  --bg: #2563eb;
+  --btn-bg: rgb(var(--color-primary));
 }
 
+.button.bg-muted,
 .button.bg-gray-600 {
-  --bg: #4b5563;
+  --btn-bg: rgb(var(--color-muted-fg));
 }
 
 .button .wrap {

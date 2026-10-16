@@ -35,8 +35,8 @@ export function WatchlistButton({ symbol, name, type, source, className = '', sh
         onClick={handleToggle}
         className={`p-2 rounded-lg transition-all duration-200 ${
           isWatched
-            ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
-            : 'bg-surface-700/50 text-surface-400 hover:bg-surface-600/50 hover:text-surface-300'
+            ? 'bg-warning/20 text-warning hover:bg-warning/30'
+            : 'bg-muted/50 text-muted-fg hover:bg-muted hover:text-fg'
         }`}
         title={isWatched ? '從關注清單移除' : '加入關注清單'}
       >
@@ -49,7 +49,7 @@ export function WatchlistButton({ symbol, name, type, source, className = '', sh
       {showAnalyze && (
         <button
           onClick={handleAnalyze}
-          className="px-3 py-1.5 bg-primary-600/80 text-white rounded-lg hover:bg-primary-500 transition-colors text-xs font-medium flex items-center gap-1"
+          className="px-3 py-1.5 bg-primary/80 text-primary-fg rounded-lg hover:bg-primary transition-colors text-xs font-medium flex items-center gap-1"
         >
           深度分析
           <ArrowRight className="w-3 h-3" />

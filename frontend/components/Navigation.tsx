@@ -11,11 +11,15 @@ import { navigateToTool, getAnalysisTool } from '@/utils/navigation'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
+/**
+ * 側欄關注清單面板：展開／收合、跳轉分析、移除項目。
+ */
 function WatchlistPanel() {
   const { items, remove } = useWatchlist()
   const [expanded, setExpanded] = useState(true)
   const router = useRouter()
 
+  /** 導向對應分析工具並帶入標的參數。 */
   const handleAnalyze = (item: typeof items[0]) => {
     const analysisTool = getAnalysisTool(item.type)
     const url = navigateToTool(analysisTool, {
@@ -33,10 +37,10 @@ function WatchlistPanel() {
     <div className="mt-4">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center justify-between w-full px-4 py-2 text-xs font-semibold text-surface-500 uppercase tracking-wider hover:text-surface-300 transition-colors"
+        className="flex items-center justify-between w-full px-4 py-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider hover:text-sidebar-fg transition-colors"
       >
         <span className="flex items-center gap-1.5">
-          <Star className="w-3 h-3 text-amber-400" />
+          <Star className="w-3 h-3 text-warning" />
           關注清單 ({items.length})
         </span>
         {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
@@ -47,34 +51,34 @@ function WatchlistPanel() {
           {items.map(item => (
             <div
               key={item.id}
-              className="group flex items-center gap-2 px-4 py-2 hover:bg-surface-800/50 rounded-lg mx-1 transition-colors"
+              className="group flex items-center gap-2 px-4 py-2 hover:bg-sidebar-hover/50 rounded-lg mx-1 transition-colors"
             >
               <div className="flex-1 min-w-0">
-                <div className="text-sm text-surface-300 truncate font-medium">
+                <div className="text-sm text-sidebar-fg truncate font-medium">
                   {item.name}
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
                     item.type === 'stock'
-                      ? 'bg-blue-500/20 text-blue-400'
-                      : 'bg-emerald-500/20 text-emerald-400'
+                      ? 'bg-primary/20 text-primary'
+                      : 'bg-success/20 text-success'
                   }`}>
                     {item.type === 'stock' ? '股票' : '基金'}
                   </span>
-                  <span className="text-[10px] text-surface-500 truncate">{item.symbol}</span>
+                  <span className="text-[10px] text-sidebar-muted truncate">{item.symbol}</span>
                 </div>
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => handleAnalyze(item)}
-                  className="p-1 text-primary-400 hover:text-primary-300 hover:bg-primary-900/30 rounded transition-colors"
+                  className="p-1 text-primary hover:bg-primary/20 rounded transition-colors"
                   title="深度分析"
                 >
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => remove(item.id)}
-                  className="p-1 text-surface-500 hover:text-red-400 hover:bg-red-900/20 rounded transition-colors"
+                  className="p-1 text-sidebar-muted hover:text-danger hover:bg-danger/20 rounded transition-colors"
                   title="移除"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -88,13 +92,16 @@ function WatchlistPanel() {
   )
 }
 
+/**
+ * 左側導覽列：首頁、工具列表、進階功能、關注清單與設定入口。
+ */
 export function Navigation() {
   const pathname = usePathname()
 
   return (
-    <nav className="w-64 bg-gradient-to-b from-surface-900 to-surface-950 border-r border-surface-700/50 flex flex-col h-screen shadow-2xl">
+    <nav className="w-64 bg-gradient-to-b from-sidebar-alt to-sidebar border-r border-sidebar-border/50 flex flex-col h-screen shadow-2xl">
       {/* Logo */}
-      <div className="p-6 border-b border-surface-700/50 bg-gradient-to-r from-surface-900 to-surface-800">
+      <div className="p-6 border-b border-sidebar-border/50 bg-gradient-to-r from-sidebar to-sidebar-alt">
         <Link href="/" className="flex items-center space-x-2 group">
           <Image
             src="/Sagafisc.png"
@@ -103,7 +110,7 @@ export function Navigation() {
             height={40}
             className="w-10 h-10 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300"
           />
-          <span className="font-bold text-xl bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">
+          <span className="font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Sagafisc
           </span>
         </Link>
@@ -116,8 +123,8 @@ export function Navigation() {
             href="/"
             className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
               pathname === '/'
-                ? 'bg-primary-900/30 text-primary-300 font-medium border border-primary-700/30'
-                : 'text-surface-300 hover:bg-surface-800/50'
+                ? 'bg-primary/20 text-primary font-medium border border-primary/30'
+                : 'text-sidebar-fg hover:bg-sidebar-hover/50'
             }`}
           >
             <Home className="w-5 h-5" />
@@ -126,7 +133,7 @@ export function Navigation() {
         </div>
 
         <div className="mb-2">
-          <h3 className="px-4 py-2 text-xs font-semibold text-surface-500 uppercase tracking-wider">
+          <h3 className="px-4 py-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider">
             主要功能
           </h3>
         </div>
@@ -140,14 +147,14 @@ export function Navigation() {
                 href={`/tools/${tool.id}`}
                 className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? 'bg-gradient-to-r from-primary-900/30 to-blue-900/20 text-primary-300 font-medium shadow-sm border border-primary-600/30'
-                    : 'text-surface-300 hover:bg-surface-800/50 hover:shadow-sm'
+                    ? 'bg-gradient-to-r from-primary/20 to-accent/10 text-primary font-medium shadow-sm border border-primary/30'
+                    : 'text-sidebar-fg hover:bg-sidebar-hover/50 hover:shadow-sm'
                 }`}
               >
                 <ToolIcon toolId={tool.id} className="w-5 h-5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium">{tool.name}</div>
-                  <div className="text-xs text-surface-500 truncate">
+                  <div className="text-xs text-sidebar-muted truncate">
                     {tool.description}
                   </div>
                 </div>
@@ -160,7 +167,7 @@ export function Navigation() {
         {ADVANCED_TOOLS.length > 0 && (
           <>
             <div className="mt-6 mb-2">
-              <h3 className="px-4 py-2 text-xs font-semibold text-surface-500 uppercase tracking-wider">
+              <h3 className="px-4 py-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider">
                 進階功能
               </h3>
             </div>
@@ -173,14 +180,14 @@ export function Navigation() {
                     href={`/tools/${tool.id}`}
                     className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
                       isActive
-                        ? 'bg-primary-900/30 text-primary-300 font-medium border border-primary-600/30'
-                        : 'text-surface-300 hover:bg-surface-800/50'
+                        ? 'bg-primary/20 text-primary font-medium border border-primary/30'
+                        : 'text-sidebar-fg hover:bg-sidebar-hover/50'
                     }`}
                   >
                     <ToolIcon toolId={tool.id} className="w-5 h-5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium">{tool.name}</div>
-                      <div className="text-xs text-surface-500 truncate">
+                      <div className="text-xs text-sidebar-muted truncate">
                         {tool.description}
                       </div>
                     </div>
@@ -196,10 +203,10 @@ export function Navigation() {
       </div>
 
       {/* 底部設定 */}
-      <div className="p-4 border-t border-surface-700/50">
+      <div className="p-4 border-t border-sidebar-border/50">
         <Link
           href="/settings"
-          className="flex items-center space-x-3 px-4 py-3 rounded-lg text-surface-300 hover:bg-surface-800/50 transition-colors"
+          className="flex items-center space-x-3 px-4 py-3 rounded-lg text-sidebar-fg hover:bg-sidebar-hover/50 transition-colors"
         >
           <Settings className="w-5 h-5" />
           <span>設定</span>

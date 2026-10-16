@@ -88,26 +88,26 @@ function AllocationBar({ label, actual, target }: { label: string; actual: numbe
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-sm">
-        <span className="text-gray-600 font-medium">{label}</span>
+        <span className="text-muted-fg font-medium">{label}</span>
         <div className="flex items-center gap-3">
-          <span className="text-gray-900 font-bold">{actual}%</span>
-          <span className="text-gray-400">/</span>
-          <span className="text-blue-600 font-medium">{target}%</span>
+          <span className="text-card-fg font-bold">{actual}%</span>
+          <span className="text-muted-fg">/</span>
+          <span className="text-primary font-medium">{target}%</span>
           <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
-            diff > 0 ? 'bg-red-50 text-red-600' : diff < 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-50 text-gray-500'
+            diff > 0 ? 'bg-danger-soft text-danger' : diff < 0 ? 'bg-success-soft text-success' : 'bg-muted text-muted-fg'
           }`}>
             {diff > 0 ? '+' : ''}{diff}%
           </span>
         </div>
       </div>
-      <div className="relative h-3 bg-gray-100 rounded-full overflow-hidden">
+      <div className="relative h-3 bg-muted rounded-full overflow-hidden">
         <div
-          className="absolute top-0 left-0 h-full bg-blue-200 rounded-full"
+          className="absolute top-0 left-0 h-full bg-primary-soft rounded-full"
           style={{ width: `${Math.min(target, 100)}%` }}
         />
         <div
           className={`absolute top-0 left-0 h-full rounded-full ${
-            diff > 5 ? 'bg-red-400' : diff < -5 ? 'bg-emerald-400' : 'bg-blue-500'
+            diff > 5 ? 'bg-red-400' : diff < -5 ? 'bg-success' : 'bg-primary'
           }`}
           style={{ width: `${Math.min(actual, 100)}%` }}
         />
@@ -218,7 +218,7 @@ export default function AssetAnalysisPage() {
         {/* Back button */}
         <button
           onClick={() => setShowDashboard(false)}
-          className="flex items-center gap-2 text-surface-400 hover:text-blue-400 text-sm mb-6 transition-colors"
+          className="flex items-center gap-2 text-surface-400 hover:text-primary text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {t.editData}
@@ -232,17 +232,17 @@ export default function AssetAnalysisPage() {
 
         <div className="space-y-6">
           {/* Total Wealth */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm text-center">
-            <span className="text-xs text-gray-400 uppercase font-semibold">{t.totalWealth}</span>
-            <div className="text-3xl font-bold text-gray-900 mt-1">
-              {totalWealth.toLocaleString()} <span className="text-lg text-gray-400">{currency}</span>
+          <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm text-center">
+            <span className="text-xs text-muted-fg uppercase font-semibold">{t.totalWealth}</span>
+            <div className="text-3xl font-bold text-card-fg mt-1">
+              {totalWealth.toLocaleString()} <span className="text-lg text-muted-fg">{currency}</span>
             </div>
           </div>
 
           {/* Risk Allocation Comparison */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
+          <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-card-fg mb-4 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
               {t.deltaTitle}
             </h3>
             <div className="space-y-4">
@@ -250,41 +250,41 @@ export default function AssetAnalysisPage() {
               <AllocationBar label={t.medRisk} actual={result.actualAllocation.medRisk} target={result.targetAllocation.medRisk} />
               <AllocationBar label={t.highRisk} actual={result.actualAllocation.highRisk} target={result.targetAllocation.highRisk} />
             </div>
-            <div className="flex items-center gap-4 mt-4 text-xs text-gray-400">
-              <div className="flex items-center gap-1"><span className="w-3 h-1.5 bg-blue-500 rounded" /> {t.actual}</div>
-              <div className="flex items-center gap-1"><span className="w-3 h-1.5 bg-blue-200 rounded" /> {t.target}</div>
+            <div className="flex items-center gap-4 mt-4 text-xs text-muted-fg">
+              <div className="flex items-center gap-1"><span className="w-3 h-1.5 bg-primary rounded" /> {t.actual}</div>
+              <div className="flex items-center gap-1"><span className="w-3 h-1.5 bg-primary-soft rounded" /> {t.target}</div>
             </div>
           </div>
 
           {/* AI Sections */}
           {result.riskAssessment && (
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-blue-600" />
+            <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-card-fg mb-3 flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-primary" />
                 {t.riskAssessment}
               </h3>
-              <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">{result.riskAssessment}</p>
+              <p className="text-card-fg text-sm leading-relaxed whitespace-pre-line">{result.riskAssessment}</p>
             </div>
           )}
 
           {result.rebalancingAdvice && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+            <div className="bg-primary-soft border border-primary/40 rounded-xl p-6">
               <h3 className="text-lg font-bold text-blue-800 mb-3 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5" />
                 {t.rebalanceAdvice}
               </h3>
-              <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">{result.rebalancingAdvice}</p>
+              <p className="text-card-fg text-sm leading-relaxed whitespace-pre-line">{result.rebalancingAdvice}</p>
             </div>
           )}
 
           {result.suggestedAllocation && result.suggestedAllocation.length > 0 && (
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">{t.suggestedAllocation}</h3>
+            <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-card-fg mb-4">{t.suggestedAllocation}</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {result.suggestedAllocation.map((item, idx) => (
-                  <div key={idx} className="bg-gray-50 rounded-lg p-3 text-center">
-                    <div className="text-xl font-bold text-blue-600">{item.percentage}%</div>
-                    <div className="text-xs text-gray-500 mt-1">{item.category}</div>
+                  <div key={idx} className="bg-muted rounded-lg p-3 text-center">
+                    <div className="text-xl font-bold text-primary">{item.percentage}%</div>
+                    <div className="text-xs text-muted-fg mt-1">{item.category}</div>
                   </div>
                 ))}
               </div>
@@ -292,12 +292,12 @@ export default function AssetAnalysisPage() {
           )}
 
           {result.marketOutlook && (
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <Globe className="w-5 h-5 text-blue-600" />
+            <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-card-fg mb-3 flex items-center gap-2">
+                <Globe className="w-5 h-5 text-primary" />
                 {t.marketOutlook}
               </h3>
-              <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">{result.marketOutlook}</p>
+              <p className="text-card-fg text-sm leading-relaxed whitespace-pre-line">{result.marketOutlook}</p>
             </div>
           )}
 
@@ -324,27 +324,27 @@ export default function AssetAnalysisPage() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
-          <DollarSign className="w-7 h-7 text-blue-600" />
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-soft border border-primary/30 mb-4">
+          <DollarSign className="w-7 h-7 text-primary" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
-          {t.title} - <span className="text-blue-600">{t.subtitle}</span>
+          {t.title} - <span className="text-primary">{t.subtitle}</span>
         </h1>
         <p className="text-surface-400 text-sm max-w-lg mx-auto">{t.tagline}</p>
       </div>
 
       {/* Language + Currency selectors */}
       <div className="max-w-3xl mx-auto mb-6 flex items-center justify-end gap-3">
-        <div className="flex items-center gap-1 bg-white border border-gray-200 rounded-lg p-0.5">
+        <div className="flex items-center gap-1 bg-card border border-border rounded-lg p-0.5">
           <button
             onClick={() => setLang(Language.ZH)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${lang === Language.ZH ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${lang === Language.ZH ? 'bg-primary text-white' : 'text-muted-fg hover:bg-muted'}`}
           >
             繁中
           </button>
           <button
             onClick={() => setLang(Language.EN)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${lang === Language.EN ? 'bg-blue-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${lang === Language.EN ? 'bg-primary text-white' : 'text-muted-fg hover:bg-muted'}`}
           >
             English
           </button>
@@ -353,20 +353,20 @@ export default function AssetAnalysisPage() {
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
-            className="appearance-none px-3 py-1.5 pr-8 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+            className="appearance-none px-3 py-1.5 pr-8 bg-card border border-border rounded-lg text-sm text-card-fg font-medium focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
           >
             {CURRENCIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-fg pointer-events-none" />
         </div>
       </div>
 
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Step 1: Investor Profile */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">{t.step1}</h2>
+        <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
+          <h2 className="text-lg font-bold text-card-fg mb-4">{t.step1}</h2>
 
           {/* Mode Toggle */}
           <div className="flex items-center gap-2 mb-4">
@@ -374,8 +374,8 @@ export default function AssetAnalysisPage() {
               onClick={() => setProfileMode(InvestorProfileMode.CATEGORICAL)}
               className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
                 profileMode === InvestorProfileMode.CATEGORICAL
-                  ? 'bg-blue-50 border-blue-400 text-blue-700'
-                  : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                  ? 'bg-primary-soft border-primary text-primary'
+                  : 'border-border text-muted-fg hover:bg-muted'
               }`}
             >
               {t.modeCategorical}
@@ -384,8 +384,8 @@ export default function AssetAnalysisPage() {
               onClick={() => setProfileMode(InvestorProfileMode.CUSTOM)}
               className={`px-4 py-2 text-sm font-medium rounded-lg border transition-colors ${
                 profileMode === InvestorProfileMode.CUSTOM
-                  ? 'bg-blue-50 border-blue-400 text-blue-700'
-                  : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+                  ? 'bg-primary-soft border-primary text-primary'
+                  : 'border-border text-muted-fg hover:bg-muted'
               }`}
             >
               {t.modeCustom}
@@ -400,14 +400,14 @@ export default function AssetAnalysisPage() {
                   onClick={() => setProfile(p)}
                   className={`p-4 rounded-lg border text-left transition-all ${
                     profile === p
-                      ? 'bg-blue-50 border-blue-400 ring-1 ring-blue-400'
-                      : 'border-gray-200 hover:bg-gray-50'
+                      ? 'bg-primary-soft border-primary ring-1 ring-primary'
+                      : 'border-border hover:bg-muted'
                   }`}
                 >
-                  <div className={`font-bold text-sm ${profile === p ? 'text-blue-700' : 'text-gray-900'}`}>
+                  <div className={`font-bold text-sm ${profile === p ? 'text-primary' : 'text-card-fg'}`}>
                     {t.profiles[p]}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">{t.profileDesc[p]}</div>
+                  <div className="text-xs text-muted-fg mt-1">{t.profileDesc[p]}</div>
                 </button>
               ))}
             </div>
@@ -420,8 +420,8 @@ export default function AssetAnalysisPage() {
               ]).map(({ key, label }) => (
                 <div key={key}>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-gray-600">{label}</span>
-                    <span className="font-bold text-gray-900">{customAlloc[key]}%</span>
+                    <span className="text-muted-fg">{label}</span>
+                    <span className="font-bold text-card-fg">{customAlloc[key]}%</span>
                   </div>
                   <input
                     type="range"
@@ -429,40 +429,40 @@ export default function AssetAnalysisPage() {
                     max={100}
                     value={customAlloc[key]}
                     onChange={(e) => handleCustomSlider(key, parseInt(e.target.value))}
-                    className="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-blue-600"
+                    className="w-full h-2 bg-muted rounded-full appearance-none cursor-pointer accent-blue-600"
                   />
                 </div>
               ))}
-              <div className="text-right text-xs text-gray-400">
+              <div className="text-right text-xs text-muted-fg">
                 {t.allocationTotal}: {customAlloc.lowRisk + customAlloc.medRisk + customAlloc.highRisk}%
               </div>
             </div>
           )}
 
           {/* AI Toggle */}
-          <div className="mt-4 flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+          <div className="mt-4 flex items-center gap-3 p-3 bg-muted rounded-lg">
             <button
               onClick={() => setEnableAI(!enableAI)}
-              className={`relative w-10 h-5 rounded-full transition-colors ${enableAI ? 'bg-blue-600' : 'bg-gray-300'}`}
+              className={`relative w-10 h-5 rounded-full transition-colors ${enableAI ? 'bg-primary' : 'bg-gray-300'}`}
             >
               <span
-                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${enableAI ? 'translate-x-5' : ''}`}
+                className={`absolute top-0.5 left-0.5 w-4 h-4 bg-card rounded-full shadow transition-transform ${enableAI ? 'translate-x-5' : ''}`}
               />
             </button>
             <div className="flex items-center gap-1.5">
-              <Sparkles className={`w-4 h-4 ${enableAI ? 'text-blue-600' : 'text-gray-400'}`} />
-              <span className={`text-sm ${enableAI ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>{t.enableAI}</span>
+              <Sparkles className={`w-4 h-4 ${enableAI ? 'text-primary' : 'text-muted-fg'}`} />
+              <span className={`text-sm ${enableAI ? 'text-card-fg font-medium' : 'text-muted-fg'}`}>{t.enableAI}</span>
             </div>
           </div>
         </div>
 
         {/* Step 2: Asset Details */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
+        <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900">{t.step2}</h2>
+            <h2 className="text-lg font-bold text-card-fg">{t.step2}</h2>
             <button
               onClick={addEntry}
-              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 font-medium"
+              className="flex items-center gap-1 text-sm text-primary hover:text-primary font-medium"
             >
               <Plus className="w-4 h-4" /> {t.addEntry}
             </button>
@@ -470,13 +470,13 @@ export default function AssetAnalysisPage() {
 
           <div className="space-y-4">
             {assets.map((entry, idx) => (
-              <div key={idx} className="bg-gray-50 rounded-lg p-4 border border-gray-100">
+              <div key={idx} className="bg-muted rounded-lg p-4 border border-border">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-semibold text-gray-400">#{idx + 1}</span>
+                  <span className="text-xs font-semibold text-muted-fg">#{idx + 1}</span>
                   {assets.length > 1 && (
                     <button
                       onClick={() => removeEntry(idx)}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
+                      className="text-muted-fg hover:text-danger transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -485,11 +485,11 @@ export default function AssetAnalysisPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {/* Bank */}
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">{t.bank}</label>
+                    <label className="block text-xs text-muted-fg mb-1">{t.bank}</label>
                     <select
                       value={entry.bankCode}
                       onChange={(e) => updateEntry(idx, 'bankCode', e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-card-fg focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       {TAIWAN_BANKS.map((b) => (
                         <option key={b.code} value={b.code}>{b.name}</option>
@@ -498,11 +498,11 @@ export default function AssetAnalysisPage() {
                   </div>
                   {/* Purpose */}
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">{t.purpose}</label>
+                    <label className="block text-xs text-muted-fg mb-1">{t.purpose}</label>
                     <select
                       value={entry.purpose}
                       onChange={(e) => updateEntry(idx, 'purpose', e.target.value as AccountPurpose)}
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-card-fg focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       {Object.values(AccountPurpose).map((p) => (
                         <option key={p} value={p}>{t.purposes[p]}</option>
@@ -511,11 +511,11 @@ export default function AssetAnalysisPage() {
                   </div>
                   {/* Category */}
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">{t.category}</label>
+                    <label className="block text-xs text-muted-fg mb-1">{t.category}</label>
                     <select
                       value={entry.category}
                       onChange={(e) => updateEntry(idx, 'category', e.target.value as AssetCategory)}
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-card-fg focus:outline-none focus:ring-2 focus:ring-ring"
                     >
                       {Object.values(AssetCategory).map((c) => (
                         <option key={c} value={c}>{t.categories[c]}</option>
@@ -524,24 +524,24 @@ export default function AssetAnalysisPage() {
                   </div>
                   {/* Amount */}
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">{t.amount} ({currency})</label>
+                    <label className="block text-xs text-muted-fg mb-1">{t.amount} ({currency})</label>
                     <input
                       type="number"
                       value={entry.amount || ''}
                       onChange={(e) => updateEntry(idx, 'amount', parseFloat(e.target.value) || 0)}
                       placeholder="0"
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-card-fg focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
                   {/* Notes */}
                   <div className="sm:col-span-2">
-                    <label className="block text-xs text-gray-500 mb-1">{t.notes}</label>
+                    <label className="block text-xs text-muted-fg mb-1">{t.notes}</label>
                     <input
                       type="text"
                       value={entry.notes}
                       onChange={(e) => updateEntry(idx, 'notes', e.target.value)}
                       placeholder={lang === Language.ZH ? '選填備註...' : 'Optional notes...'}
-                      className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-card-fg focus:outline-none focus:ring-2 focus:ring-ring"
                     />
                   </div>
                 </div>
@@ -550,8 +550,8 @@ export default function AssetAnalysisPage() {
           </div>
 
           {/* Total */}
-          <div className="mt-4 flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-            <span className="text-sm font-medium text-blue-700">{t.totalWealth}</span>
+          <div className="mt-4 flex items-center justify-between p-3 bg-primary-soft rounded-lg">
+            <span className="text-sm font-medium text-primary">{t.totalWealth}</span>
             <span className="text-lg font-bold text-blue-800">{totalWealth.toLocaleString()} {currency}</span>
           </div>
         </div>
@@ -563,7 +563,7 @@ export default function AssetAnalysisPage() {
         <button
           onClick={handleSubmit}
           disabled={isLoading}
-          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+          className="w-full py-3.5 bg-primary hover:bg-primary disabled:bg-muted disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
         >
           {isLoading ? (
             <>

@@ -35,7 +35,7 @@ export default function ToolPage() {
   if (!toolConfig) {
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-red-600">工具不存在</h1>
+        <h1 className="text-2xl font-bold text-danger">工具不存在</h1>
       </div>
     )
   }

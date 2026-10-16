@@ -21,8 +21,7 @@ import { FundAnalysis, Holding, AnalysisStatus } from '@/lib/tools/fund-risk/typ
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Disclaimer } from '@/components/Disclaimer'
 import { useToolCache } from '@/hooks/useToolCache'
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b']
+import { useThemeColors } from '@/hooks/useThemeColors'
 
 const QUICK_FUNDS = ['安聯台灣科技基金', '統一黑馬基金', '元大台灣高股息', '野村優質基金']
 
@@ -33,16 +32,17 @@ const LOADING_STEPS = [
 ]
 
 function TrendIcon({ trend }: { trend: string }) {
-  if (trend === 'Bullish') return <TrendingUp className="w-5 h-5 text-emerald-600" />
-  if (trend === 'Bearish') return <TrendingDown className="w-5 h-5 text-red-500" />
-  return <Minus className="w-5 h-5 text-gray-400" />
+  if (trend === 'Bullish') return <TrendingUp className="w-5 h-5 text-success" />
+  if (trend === 'Bearish') return <TrendingDown className="w-5 h-5 text-danger" />
+  return <Minus className="w-5 h-5 text-muted-fg" />
 }
 
+/** 風險等級徽章（語意色）。 */
 function RiskBadge({ level }: { level: string }) {
   const config: Record<string, { bg: string; text: string; label: string }> = {
-    High: { bg: 'bg-red-100', text: 'text-red-700', label: '高風險' },
-    Medium: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: '中風險' },
-    Low: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: '低風險' },
+    High: { bg: 'bg-danger-soft', text: 'text-danger', label: '高風險' },
+    Medium: { bg: 'bg-warning-soft', text: 'text-warning', label: '中風險' },
+    Low: { bg: 'bg-success-soft', text: 'text-success', label: '低風險' },
   }
   const c = config[level] || config.Medium
   return (
@@ -53,27 +53,30 @@ function RiskBadge({ level }: { level: string }) {
   )
 }
 
+/** 新聞情緒圓點。 */
 function SentimentDot({ sentiment }: { sentiment: string }) {
   const color =
-    sentiment === 'positive' ? 'bg-emerald-500' :
-    sentiment === 'negative' ? 'bg-red-500' : 'bg-gray-400'
+    sentiment === 'positive' ? 'bg-success' :
+    sentiment === 'negative' ? 'bg-danger' : 'bg-muted-fg'
   return <span className={`inline-block w-2 h-2 rounded-full ${color} flex-shrink-0 mt-1.5`} />
 }
 
-function HoldingCard({ holding, colorIndex }: { holding: Holding; colorIndex: number }) {
+/** 單一持股分析卡。 */
+function HoldingCard({ holding, colorIndex, chartColors }: { holding: Holding; colorIndex: number; chartColors: string[] }) {
+  const swatch = chartColors[colorIndex % chartColors.length]
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 hover:border-blue-300 hover:shadow-md transition-all">
+    <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 hover:border-primary hover:shadow-md transition-all">
       <div className="flex items-start justify-between mb-3">
         <div>
-          <h4 className="font-bold text-gray-900">{holding.name}</h4>
+          <h4 className="font-bold text-card-fg">{holding.name}</h4>
           {holding.ticker && (
-            <span className="text-xs text-gray-500 font-mono">{holding.ticker}</span>
+            <span className="text-xs text-muted-fg font-mono">{holding.ticker}</span>
           )}
         </div>
         <div className="flex items-center gap-2">
           <span
             className="text-sm font-bold px-2 py-0.5 rounded-md"
-            style={{ backgroundColor: COLORS[colorIndex % COLORS.length] + '20', color: COLORS[colorIndex % COLORS.length] }}
+            style={{ backgroundColor: swatch + '33', color: swatch }}
           >
             {holding.weight.toFixed(1)}%
           </span>
@@ -82,21 +85,21 @@ function HoldingCard({ holding, colorIndex }: { holding: Holding; colorIndex: nu
       <div className="flex items-center gap-3 mb-3">
         <div className="flex items-center gap-1">
           <TrendIcon trend={holding.trend} />
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-muted-fg">
             {holding.trend === 'Bullish' ? '看多' : holding.trend === 'Bearish' ? '看空' : '中性'}
           </span>
         </div>
         <RiskBadge level={holding.riskLevel} />
       </div>
-      <p className="text-sm text-gray-600 leading-relaxed mb-3">{holding.analysis}</p>
+      <p className="text-sm text-muted-fg leading-relaxed mb-3">{holding.analysis}</p>
       {holding.recentNews && holding.recentNews.length > 0 && (
-        <div className="border-t border-gray-100 pt-3">
-          <h5 className="text-xs font-semibold text-gray-400 uppercase mb-2 flex items-center gap-1">
+        <div className="border-t border-border pt-3">
+          <h5 className="text-xs font-semibold text-muted-fg uppercase mb-2 flex items-center gap-1">
             <Newspaper className="w-3 h-3" /> 近期新聞
           </h5>
           <ul className="space-y-1.5">
             {holding.recentNews.map((news, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs text-gray-600">
+              <li key={i} className="flex items-start gap-2 text-xs text-muted-fg">
                 <SentimentDot sentiment={news.sentiment} />
                 <span>{news.headline}</span>
               </li>
@@ -108,7 +111,12 @@ function HoldingCard({ holding, colorIndex }: { holding: Holding; colorIndex: nu
   )
 }
 
+/**
+ * 基金風險分析工具頁。
+ */
 export default function FundRiskAnalysisPage() {
+  const themeColors = useThemeColors()
+  const chartColors = themeColors.chart
   const searchParams = useSearchParams()
   const { cached, save } = useToolCache<{
     query: string
@@ -177,11 +185,11 @@ export default function FundRiskAnalysisPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
-          <AlertTriangle className="w-7 h-7 text-blue-600" />
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-soft border border-primary/30 mb-4">
+          <AlertTriangle className="w-7 h-7 text-primary" />
         </div>
         <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
-          基金<span className="text-blue-600">風險分析</span>
+          基金<span className="text-primary">風險分析</span>
         </h1>
         <p className="text-surface-400 text-sm max-w-lg mx-auto">
           輸入基金名稱，AI 即時搜尋持股成分、檢索新聞並評估風險等級
@@ -190,24 +198,24 @@ export default function FundRiskAnalysisPage() {
 
       {/* Search Form */}
       <div className="max-w-2xl mx-auto mb-6">
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-4 shadow-sm">
+        <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-4 shadow-sm">
           <div className="flex gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && status !== AnalysisStatus.LOADING && handleAnalyze()}
                 placeholder="輸入基金名稱，例如：安聯台灣科技基金"
-                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-card-fg text-sm placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
                 disabled={status === AnalysisStatus.LOADING}
               />
             </div>
             <button
               onClick={() => handleAnalyze()}
               disabled={status === AnalysisStatus.LOADING || !query.trim()}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap"
+              className="px-6 py-2.5 bg-primary hover:bg-primary disabled:bg-muted disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap"
             >
               {status === AnalysisStatus.LOADING ? (
                 <><Loader2 className="w-4 h-4 animate-spin" />分析中</>
@@ -223,7 +231,7 @@ export default function FundRiskAnalysisPage() {
                 key={fund}
                 onClick={() => handleAnalyze(fund)}
                 disabled={status === AnalysisStatus.LOADING}
-                className="px-3 py-1 bg-surface-800 hover:bg-blue-50 border border-surface-600 hover:border-blue-300 text-surface-300 hover:text-blue-600 text-xs rounded-full transition-colors disabled:opacity-50"
+                className="px-3 py-1 bg-surface-800 hover:bg-primary-soft border border-surface-600 hover:border-primary text-surface-300 hover:text-primary text-xs rounded-full transition-colors disabled:opacity-50"
               >
                 {fund}
               </button>
@@ -248,16 +256,16 @@ export default function FundRiskAnalysisPage() {
       {status === AnalysisStatus.SUCCESS && result && (
         <div className="space-y-8">
           {/* Overview Card */}
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
+          <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-50 rounded-xl">
+                <div className="p-3 bg-primary-soft rounded-xl">
                   <TrendIcon trend={result.overallTrend} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">{result.fundName}</h2>
+                  <h2 className="text-xl font-bold text-card-fg">{result.fundName}</h2>
                   {result.updatedDate && (
-                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                    <div className="flex items-center gap-1 text-xs text-muted-fg mt-1">
                       <Calendar className="w-3 h-3" />
                       <span>更新日期：{result.updatedDate}</span>
                     </div>
@@ -266,10 +274,10 @@ export default function FundRiskAnalysisPage() {
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <span className="text-xs text-gray-400 block">趨勢</span>
+                  <span className="text-xs text-muted-fg block">趨勢</span>
                   <span className={`text-sm font-bold ${
-                    result.overallTrend === 'Bullish' ? 'text-emerald-600' :
-                    result.overallTrend === 'Bearish' ? 'text-red-500' : 'text-gray-500'
+                    result.overallTrend === 'Bullish' ? 'text-success' :
+                    result.overallTrend === 'Bearish' ? 'text-danger' : 'text-muted-fg'
                   }`}>
                     {result.overallTrend === 'Bullish' ? '看多' : result.overallTrend === 'Bearish' ? '看空' : '中性'}
                   </span>
@@ -280,17 +288,17 @@ export default function FundRiskAnalysisPage() {
           </div>
 
           {/* Summary */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-            <h3 className="text-sm font-semibold text-blue-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <div className="bg-primary-soft/50 border border-primary/30 rounded-xl p-6">
+            <h3 className="text-sm font-semibold text-primary uppercase tracking-wider mb-3 flex items-center gap-2">
               <BarChart3 className="w-4 h-4" /> 分析摘要
             </h3>
-            <p className="text-gray-700 leading-relaxed text-sm">{result.summary}</p>
+            <p className="text-card-fg leading-relaxed text-sm">{result.summary}</p>
           </div>
 
           {/* Pie Chart */}
           {pieData.length > 0 && (
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">持股權重分布</h3>
+            <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
+              <h3 className="text-lg font-bold text-card-fg mb-4">持股權重分布</h3>
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -304,15 +312,16 @@ export default function FundRiskAnalysisPage() {
                       dataKey="value"
                     >
                       {pieData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
                       ))}
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #e2e8f0',
+                        backgroundColor: themeColors.card,
+                        border: `1px solid ${themeColors.border}`,
                         borderRadius: '8px',
                         fontSize: '12px',
+                        color: themeColors.cardFg,
                       }}
                       formatter={(value: any) => [`${Number(value).toFixed(1)}%`, '權重']}
                     />
@@ -324,10 +333,10 @@ export default function FundRiskAnalysisPage() {
 
           {/* Holdings Grid */}
           <div>
-            <h3 className="text-lg font-bold text-surface-100 mb-4">個別持股分析</h3>
+            <h3 className="text-lg font-bold text-fg mb-4">個別持股分析</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {result.holdings.map((holding, idx) => (
-                <HoldingCard key={idx} holding={holding} colorIndex={idx} />
+                <HoldingCard key={idx} holding={holding} colorIndex={idx} chartColors={chartColors} />
               ))}
             </div>
           </div>
@@ -339,10 +348,10 @@ export default function FundRiskAnalysisPage() {
       {/* Empty State */}
       {status === AnalysisStatus.IDLE && (
         <div className="text-center py-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-            <Search className="w-8 h-8 text-gray-300" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+            <Search className="w-8 h-8 text-muted-fg" />
           </div>
-          <p className="text-gray-400 text-sm">選擇或輸入基金名稱，開始 AI 風險分析</p>
+          <p className="text-muted-fg text-sm">選擇或輸入基金名稱，開始 AI 風險分析</p>
         </div>
       )}
     </div>

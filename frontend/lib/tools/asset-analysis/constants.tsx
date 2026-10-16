@@ -255,4 +255,5 @@ export const ASSET_ICONS: Record<AssetCategory, React.ReactNode> = {
   [AssetCategory.OTHER]: <MoreHorizontal className="w-5 h-5" />
 };
 
+/** @deprecated 圖表色請改用 useThemeColors().chart，此陣列僅作後備。 */
 export const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'];

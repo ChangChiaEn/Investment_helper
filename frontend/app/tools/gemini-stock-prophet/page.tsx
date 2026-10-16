@@ -27,7 +27,7 @@ function MarkdownRenderer({ text }: { text: string }) {
         // H1
         if (trimmed.startsWith('# ')) {
           return (
-            <h1 key={idx} className="text-2xl font-bold text-gray-900 mt-6 mb-3 pb-2 border-b border-gray-200">
+            <h1 key={idx} className="text-2xl font-bold text-card-fg mt-6 mb-3 pb-2 border-b border-border">
               {renderInline(trimmed.slice(2))}
             </h1>
           )
@@ -36,7 +36,7 @@ function MarkdownRenderer({ text }: { text: string }) {
         // H2
         if (trimmed.startsWith('## ')) {
           return (
-            <h2 key={idx} className="text-xl font-semibold text-gray-800 mt-5 mb-2">
+            <h2 key={idx} className="text-xl font-semibold text-card-fg mt-5 mb-2">
               {renderInline(trimmed.slice(3))}
             </h2>
           )
@@ -45,7 +45,7 @@ function MarkdownRenderer({ text }: { text: string }) {
         // H3
         if (trimmed.startsWith('### ')) {
           return (
-            <h3 key={idx} className="text-lg font-semibold text-gray-700 mt-4 mb-2">
+            <h3 key={idx} className="text-lg font-semibold text-card-fg mt-4 mb-2">
               {renderInline(trimmed.slice(4))}
             </h3>
           )
@@ -55,8 +55,8 @@ function MarkdownRenderer({ text }: { text: string }) {
         if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
           return (
             <div key={idx} className="flex items-start gap-2 ml-4 my-1">
-              <span className="text-blue-500 mt-1.5 text-xs">&#9679;</span>
-              <span className="text-gray-700 leading-relaxed">{renderInline(trimmed.slice(2))}</span>
+              <span className="text-primary mt-1.5 text-xs">&#9679;</span>
+              <span className="text-card-fg leading-relaxed">{renderInline(trimmed.slice(2))}</span>
             </div>
           )
         }
@@ -66,15 +66,15 @@ function MarkdownRenderer({ text }: { text: string }) {
         if (numberedMatch) {
           return (
             <div key={idx} className="flex items-start gap-2 ml-4 my-1">
-              <span className="text-blue-600 font-semibold min-w-[1.5rem]">{numberedMatch[1]}.</span>
-              <span className="text-gray-700 leading-relaxed">{renderInline(numberedMatch[2])}</span>
+              <span className="text-primary font-semibold min-w-[1.5rem]">{numberedMatch[1]}.</span>
+              <span className="text-card-fg leading-relaxed">{renderInline(numberedMatch[2])}</span>
             </div>
           )
         }
 
         // Regular paragraph
         return (
-          <p key={idx} className="text-gray-700 leading-relaxed my-1">
+          <p key={idx} className="text-card-fg leading-relaxed my-1">
             {renderInline(trimmed)}
           </p>
         )
@@ -89,7 +89,7 @@ function renderInline(text: string): React.ReactNode {
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return (
-        <strong key={i} className="font-semibold text-gray-900">
+        <strong key={i} className="font-semibold text-card-fg">
           {part.slice(2, -2)}
         </strong>
       )
@@ -103,10 +103,10 @@ function LoadingSkeleton() {
   return (
     <div className="animate-pulse space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+        <Loader2 className="w-6 h-6 text-primary animate-spin" />
         <span className="text-surface-400 font-medium">AI 正在搜尋最新資訊並分析中...</span>
       </div>
-      <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 space-y-4">
+      <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 space-y-4">
         <div className="h-8 bg-surface-200 rounded w-3/4" />
         <div className="h-4 bg-surface-100 rounded w-full" />
         <div className="h-4 bg-surface-100 rounded w-5/6" />
@@ -187,8 +187,8 @@ export default function GeminiStockProphetPage() {
       <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Page Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
-            <TrendingUp className="w-7 h-7 text-blue-600" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-soft border border-primary/30 mb-4">
+            <TrendingUp className="w-7 h-7 text-primary" />
           </div>
           <h1 className="text-2xl font-bold text-surface-100 mb-2">Gemini 股票先知</h1>
           <p className="text-surface-400 text-sm max-w-md mx-auto">
@@ -198,31 +198,31 @@ export default function GeminiStockProphetPage() {
 
         {/* Search Form */}
         <div className="max-w-2xl mx-auto mb-8">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-4 shadow-sm">
+          <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row gap-3">
               {/* Market Selector */}
               <div className="relative">
                 <select
                   value={market}
                   onChange={(e) => setMarket(e.target.value as StockMarket)}
-                  className="appearance-none w-full sm:w-36 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 font-medium text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 cursor-pointer pr-10"
+                  className="appearance-none w-full sm:w-36 px-4 py-2.5 bg-muted border border-border rounded-lg text-card-fg font-medium text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary cursor-pointer pr-10"
                 >
                   <option value={StockMarket.TW}>&#127481;&#127484; 台股</option>
                   <option value={StockMarket.US}>&#127482;&#127480; 美股</option>
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg pointer-events-none" />
               </div>
 
               {/* Symbol Input */}
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
                 <input
                   type="text"
                   value={symbol}
                   onChange={(e) => setSymbol(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={market === StockMarket.TW ? '輸入股票代號或名稱，例如：2330 或 台積電' : '輸入股票代號或名稱，例如：AAPL 或 Apple'}
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-card-fg text-sm placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
                 />
               </div>
 
@@ -230,7 +230,7 @@ export default function GeminiStockProphetPage() {
               <button
                 onClick={() => handleSubmit()}
                 disabled={isLoading || !symbol.trim()}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                className="px-6 py-2.5 bg-primary hover:bg-primary disabled:bg-muted disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 {isLoading ? (
                   <>
@@ -260,7 +260,7 @@ export default function GeminiStockProphetPage() {
         {result && !isLoading && (
           <div className="space-y-6">
             {/* Markdown Report */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 sm:p-8 shadow-sm">
+            <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 sm:p-8 shadow-sm">
               <MarkdownRenderer text={result.markdownText} />
             </div>
 
@@ -275,10 +275,10 @@ export default function GeminiStockProphetPage() {
         {/* Empty state - no result yet */}
         {!result && !isLoading && !error && (
           <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-              <Search className="w-8 h-8 text-gray-300" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+              <Search className="w-8 h-8 text-muted-fg" />
             </div>
-            <p className="text-gray-400 text-sm">輸入股票代號並點擊分析，開始獲取 AI 投資分析報告</p>
+            <p className="text-muted-fg text-sm">輸入股票代號並點擊分析，開始獲取 AI 投資分析報告</p>
           </div>
         )}
       </div>
