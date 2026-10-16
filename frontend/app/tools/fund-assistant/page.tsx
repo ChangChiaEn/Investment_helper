@@ -17,16 +17,17 @@ const POPULAR_FUNDS = Object.values(PopularFund)
 
 function getSentimentColor(sentiment: string) {
   switch (sentiment) {
-    case 'Bullish': return { bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-200', label: '看漲' }
-    case 'Bearish': return { bg: 'bg-red-50', text: 'text-red-700', border: 'border-red-200', label: '看跌' }
-    default: return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200', label: '中性' }
+    case 'Bullish': return { bg: 'bg-success-soft', text: 'text-success', border: 'border-success/40', label: '看漲' }
+    case 'Bearish': return { bg: 'bg-danger-soft', text: 'text-danger', border: 'border-danger/40', label: '看跌' }
+    default: return { bg: 'bg-muted', text: 'text-card-fg', border: 'border-border', label: '中性' }
   }
 }
 
+/** 情緒分數對應進度條語意色。 */
 function getSentimentBarColor(score: number) {
-  if (score >= 70) return 'bg-green-500'
-  if (score >= 40) return 'bg-yellow-500'
-  return 'bg-red-500'
+  if (score >= 70) return 'bg-success'
+  if (score >= 40) return 'bg-warning'
+  return 'bg-danger'
 }
 
 function SentimentGauge({ score, sentiment }: { score: number; sentiment: string }) {
@@ -34,16 +35,16 @@ function SentimentGauge({ score, sentiment }: { score: number; sentiment: string
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">市場情緒</span>
+        <span className="text-xs text-muted-fg">市場情緒</span>
         <span className={`text-xs font-semibold ${colors.text}`}>{colors.label} ({score}/100)</span>
       </div>
-      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+      <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${getSentimentBarColor(score)}`}
           style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
         />
       </div>
-      <div className="flex justify-between text-[10px] text-gray-400">
+      <div className="flex justify-between text-[10px] text-muted-fg">
         <span>極度看跌</span>
         <span>中性</span>
         <span>極度看漲</span>
@@ -57,26 +58,26 @@ function FundCard({ fund, index, isMulti }: { fund: FundAnalysisResult; index: n
   const SentimentIcon = fund.marketSentiment === 'Bullish' ? TrendingUp : fund.marketSentiment === 'Bearish' ? TrendingDown : Minus
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 shadow-sm overflow-hidden">
+    <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 shadow-sm overflow-hidden">
       {/* Fund Header */}
-      <div className="p-5 border-b border-gray-100">
+      <div className="p-5 border-b border-border">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             {isMulti && (
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white text-sm font-bold flex-shrink-0">
+              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white text-sm font-bold flex-shrink-0">
                 {index + 1}
               </span>
             )}
             <div>
-              <h3 className="text-lg font-bold text-gray-900">{fund.fundName}</h3>
+              <h3 className="text-lg font-bold text-card-fg">{fund.fundName}</h3>
               <div className="flex items-center gap-2 mt-1">
                 {fund.isAvailableOnAnue ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full font-medium">
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-success-soft text-success border border-success/40 rounded-full font-medium">
                     <CheckCircle className="w-3 h-3" />
                     鉅亨網可購買
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-gray-50 text-gray-500 border border-gray-200 rounded-full font-medium">
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-muted text-muted-fg border border-border rounded-full font-medium">
                     <XCircle className="w-3 h-3" />
                     鉅亨網未上架
                   </span>
@@ -98,8 +99,8 @@ function FundCard({ fund, index, isMulti }: { fund: FundAnalysisResult; index: n
             />
             {fund.navPrice && fund.navPrice !== 'N/A' && (
               <div className="text-right">
-                <span className="text-xs text-gray-400">最新淨值</span>
-                <p className="text-lg font-bold text-gray-900">{fund.navPrice}</p>
+                <span className="text-xs text-muted-fg">最新淨值</span>
+                <p className="text-lg font-bold text-card-fg">{fund.navPrice}</p>
               </div>
             )}
           </div>
@@ -107,47 +108,47 @@ function FundCard({ fund, index, isMulti }: { fund: FundAnalysisResult; index: n
       </div>
 
       {/* Sentiment Gauge */}
-      <div className="px-5 py-4 border-b border-gray-100">
+      <div className="px-5 py-4 border-b border-border">
         <SentimentGauge score={fund.sentimentScore} sentiment={fund.marketSentiment} />
       </div>
 
       {/* Entry / Exit Strategy Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-b border-gray-100">
-        <div className="p-4 sm:border-r border-b sm:border-b-0 border-gray-100">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-b border-border">
+        <div className="p-4 sm:border-r border-b sm:border-b-0 border-border">
           <div className="flex items-center gap-2 mb-2">
-            <div className="p-1 bg-green-50 rounded">
-              <ArrowUpRight className="w-4 h-4 text-green-600" />
+            <div className="p-1 bg-success-soft rounded">
+              <ArrowUpRight className="w-4 h-4 text-success" />
             </div>
-            <span className="text-xs font-semibold text-green-700 uppercase tracking-wider">進場策略</span>
+            <span className="text-xs font-semibold text-success uppercase tracking-wider">進場策略</span>
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed">{fund.entryStrategy}</p>
+          <p className="text-sm text-card-fg leading-relaxed">{fund.entryStrategy}</p>
         </div>
         <div className="p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="p-1 bg-red-50 rounded">
-              <ArrowDownRight className="w-4 h-4 text-red-600" />
+            <div className="p-1 bg-danger-soft rounded">
+              <ArrowDownRight className="w-4 h-4 text-danger" />
             </div>
-            <span className="text-xs font-semibold text-red-700 uppercase tracking-wider">出場策略</span>
+            <span className="text-xs font-semibold text-danger uppercase tracking-wider">出場策略</span>
           </div>
-          <p className="text-sm text-gray-700 leading-relaxed">{fund.exitStrategy}</p>
+          <p className="text-sm text-card-fg leading-relaxed">{fund.exitStrategy}</p>
         </div>
       </div>
 
       {/* Expert Summary */}
-      <div className="px-5 py-4 border-b border-gray-100">
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">專家摘要</h4>
-        <p className="text-sm text-gray-700 leading-relaxed">{fund.expertSummary}</p>
+      <div className="px-5 py-4 border-b border-border">
+        <h4 className="text-xs font-semibold text-muted-fg uppercase tracking-wider mb-2">專家摘要</h4>
+        <p className="text-sm text-card-fg leading-relaxed">{fund.expertSummary}</p>
       </div>
 
       {/* Pros & Cons */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-b border-gray-100">
-        <div className="p-4 sm:border-r border-b sm:border-b-0 border-gray-100">
-          <h4 className="text-xs font-semibold text-green-600 uppercase tracking-wider mb-2 flex items-center gap-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 border-b border-border">
+        <div className="p-4 sm:border-r border-b sm:border-b-0 border-border">
+          <h4 className="text-xs font-semibold text-success uppercase tracking-wider mb-2 flex items-center gap-1">
             <CheckCircle className="w-3 h-3" /> 優勢
           </h4>
           <ul className="space-y-1.5">
             {fund.pros.map((pro, idx) => (
-              <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
+              <li key={idx} className="flex items-start gap-2 text-sm text-card-fg">
                 <span className="text-green-500 mt-0.5 flex-shrink-0">+</span>
                 <span>{pro}</span>
               </li>
@@ -155,13 +156,13 @@ function FundCard({ fund, index, isMulti }: { fund: FundAnalysisResult; index: n
           </ul>
         </div>
         <div className="p-4">
-          <h4 className="text-xs font-semibold text-red-600 uppercase tracking-wider mb-2 flex items-center gap-1">
+          <h4 className="text-xs font-semibold text-danger uppercase tracking-wider mb-2 flex items-center gap-1">
             <XCircle className="w-3 h-3" /> 風險
           </h4>
           <ul className="space-y-1.5">
             {fund.cons.map((con, idx) => (
-              <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                <span className="text-red-500 mt-0.5 flex-shrink-0">-</span>
+              <li key={idx} className="flex items-start gap-2 text-sm text-card-fg">
+                <span className="text-danger mt-0.5 flex-shrink-0">-</span>
                 <span>{con}</span>
               </li>
             ))}
@@ -170,23 +171,23 @@ function FundCard({ fund, index, isMulti }: { fund: FundAnalysisResult; index: n
       </div>
 
       {/* Trend Prediction */}
-      <div className="px-5 py-4 border-b border-gray-100">
-        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+      <div className="px-5 py-4 border-b border-border">
+        <h4 className="text-xs font-semibold text-muted-fg uppercase tracking-wider mb-2 flex items-center gap-1">
           <SentimentIcon className="w-3 h-3" /> 趨勢預測 (3-6 個月)
         </h4>
-        <p className="text-sm text-gray-700 leading-relaxed">{fund.trendPrediction}</p>
+        <p className="text-sm text-card-fg leading-relaxed">{fund.trendPrediction}</p>
       </div>
 
       {/* News Highlights */}
       {fund.newsHighlights && fund.newsHighlights.length > 0 && (
         <div className="px-5 py-4">
-          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+          <h4 className="text-xs font-semibold text-muted-fg uppercase tracking-wider mb-2 flex items-center gap-1">
             <Newspaper className="w-3 h-3" /> 相關新聞
           </h4>
           <div className="space-y-1.5">
             {fund.newsHighlights.map((news, idx) => (
-              <div key={idx} className="flex items-start gap-2 text-sm text-gray-600">
-                <span className="text-blue-400 mt-1.5 text-[6px]">&#9679;</span>
+              <div key={idx} className="flex items-start gap-2 text-sm text-muted-fg">
+                <span className="text-primary mt-1.5 text-[6px]">&#9679;</span>
                 <span>{news}</span>
               </div>
             ))}
@@ -202,26 +203,26 @@ function LoadingSkeleton() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 justify-center py-6">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-        <span className="text-surface-400 font-medium">AI 正在搜尋最新基金資訊並進行深度分析...</span>
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <span className="text-muted-fg font-medium">AI 正在搜尋最新基金資訊並進行深度分析...</span>
       </div>
       {[1, 2].map(i => (
-        <div key={i} className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 animate-pulse space-y-4">
+        <div key={i} className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 animate-pulse space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-surface-200 rounded-full" />
+            <div className="w-8 h-8 bg-border rounded-full" />
             <div className="space-y-2 flex-1">
-              <div className="h-5 bg-surface-200 rounded w-1/3" />
-              <div className="h-3 bg-surface-100 rounded w-1/4" />
+              <div className="h-5 bg-border rounded w-1/3" />
+              <div className="h-3 bg-muted rounded w-1/4" />
             </div>
           </div>
-          <div className="h-3 bg-surface-100 rounded w-full" />
-          <div className="h-3 bg-surface-100 rounded w-5/6" />
+          <div className="h-3 bg-muted rounded w-full" />
+          <div className="h-3 bg-muted rounded w-5/6" />
           <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="h-20 bg-surface-100 rounded-lg" />
-            <div className="h-20 bg-surface-100 rounded-lg" />
+            <div className="h-20 bg-muted rounded-lg" />
+            <div className="h-20 bg-muted rounded-lg" />
           </div>
-          <div className="h-3 bg-surface-100 rounded w-full" />
-          <div className="h-3 bg-surface-100 rounded w-3/4" />
+          <div className="h-3 bg-muted rounded w-full" />
+          <div className="h-3 bg-muted rounded w-3/4" />
         </div>
       ))}
     </div>
@@ -289,34 +290,34 @@ export default function FundAssistantPage() {
       <div className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Page Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
-            <Briefcase className="w-7 h-7 text-blue-600" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-soft border border-primary/30 mb-4">
+            <Briefcase className="w-7 h-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-surface-100 mb-2">AI 基金助手</h1>
-          <p className="text-surface-400 text-sm max-w-md mx-auto">
+          <h1 className="text-2xl font-bold text-fg mb-2">AI 基金助手</h1>
+          <p className="text-muted-fg text-sm max-w-md mx-auto">
             搜尋基金名稱或讓 AI 推薦高潛力標的，獲取即時分析與進出場策略
           </p>
         </div>
 
         {/* Search Area */}
         <div className="max-w-2xl mx-auto mb-6">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-4 shadow-sm">
+          <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
                 <input
                   type="text"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="輸入基金名稱，例如：安聯台灣科技基金"
-                  className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-card-fg text-sm placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
                 />
               </div>
               <button
                 onClick={() => handleAnalyze()}
                 disabled={isLoading || !query.trim()}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                className="px-6 py-2.5 bg-primary hover:bg-primary disabled:bg-muted disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 {isLoading ? (
                   <>
@@ -349,14 +350,14 @@ export default function FundAssistantPage() {
 
         {/* Popular Fund Tags */}
         <div className="max-w-2xl mx-auto mb-8">
-          <p className="text-xs text-surface-400 text-center mb-2">熱門基金快選</p>
+          <p className="text-xs text-muted-fg text-center mb-2">熱門基金快選</p>
           <div className="flex flex-wrap justify-center gap-2">
             {POPULAR_FUNDS.map(fund => (
               <button
                 key={fund}
                 onClick={() => handlePopularFund(fund)}
                 disabled={isLoading}
-                className="px-3 py-1.5 text-xs font-medium text-surface-300 bg-surface-800 border border-surface-600 rounded-full hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-50 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-fg bg-muted border border-border rounded-full hover:bg-primary-soft hover:text-primary hover:border-primary/40 disabled:opacity-50 transition-colors"
               >
                 {fund}
               </button>
@@ -377,12 +378,12 @@ export default function FundAssistantPage() {
           <div className="space-y-6">
             {/* Multi-fund Banner */}
             {isMultiFund && (
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+              <div className="bg-primary-soft border border-primary/40 rounded-xl p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
-                  <Sparkles className="w-5 h-5 text-blue-600" />
-                  <h2 className="text-lg font-bold text-blue-800">AI 精選推薦</h2>
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <h2 className="text-lg font-bold text-fg">AI 精選推薦</h2>
                 </div>
-                <p className="text-sm text-blue-600">
+                <p className="text-sm text-primary">
                   根據您的搜尋條件，AI 推薦以下 {results.length} 支基金
                 </p>
               </div>
@@ -411,10 +412,10 @@ export default function FundAssistantPage() {
         {/* Empty state */}
         {!results && !isLoading && !error && (
           <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-              <Search className="w-8 h-8 text-gray-300" />
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+              <Search className="w-8 h-8 text-muted-fg" />
             </div>
-            <p className="text-gray-400 text-sm">搜尋基金名稱或點擊熱門標籤，開始獲取 AI 分析報告</p>
+            <p className="text-fg text-base">搜尋基金名稱或點擊熱門標籤，開始獲取 AI 分析報告</p>
           </div>
         )}
       </div>

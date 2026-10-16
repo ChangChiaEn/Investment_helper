@@ -12,11 +12,13 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { Disclaimer } from '@/components/Disclaimer'
 import { Loader } from '@/components/Loader'
 import { useToolCache } from '@/hooks/useToolCache'
+import { useThemeColors } from '@/hooks/useThemeColors'
 import Link from 'next/link'
 
 const HISTORY_KEY = 'investrend_history'
 const MAX_HISTORY = 5
 
+/** 產業區隔用色（相對穩定的辨識色，主線條另由主題 chart 色補強）。 */
 const SECTOR_COLORS: Record<string, string> = {
   [GICS_Sector.IT]: '#3B82F6',
   [GICS_Sector.FINANCIALS]: '#10B981',
@@ -33,35 +35,42 @@ const SECTOR_COLORS: Record<string, string> = {
 
 const ALL_SECTORS = Object.values(GICS_Sector)
 
+/** 風險等級對應的語意 class。 */
 function getRiskColor(level: string) {
   switch (level) {
-    case '低': return 'text-green-600 bg-green-50 border-green-200'
-    case '中': return 'text-yellow-600 bg-yellow-50 border-yellow-200'
-    case '高': return 'text-orange-600 bg-orange-50 border-orange-200'
-    case '極高': return 'text-red-600 bg-red-50 border-red-200'
-    default: return 'text-gray-600 bg-gray-50 border-gray-200'
+    case '低': return 'text-success bg-success-soft border-success/40'
+    case '中': return 'text-warning bg-warning-soft border-warning/40'
+    case '高': return 'text-warning bg-warning-soft border-warning/40'
+    case '極高': return 'text-danger bg-danger-soft border-danger/40'
+    default: return 'text-muted-fg bg-muted border-border'
   }
 }
 
+/** 結論標籤語意 class。 */
 function getConclusionStyle(conclusion: string) {
   switch (conclusion) {
-    case '長期前景': return 'bg-green-50 text-green-700 border-green-200'
-    case '短期前景': return 'bg-blue-50 text-blue-700 border-blue-200'
-    case '夕陽產業': return 'bg-red-50 text-red-700 border-red-200'
-    default: return 'bg-gray-50 text-gray-700 border-gray-200'
+    case '長期前景': return 'bg-success-soft text-success border-success/40'
+    case '短期前景': return 'bg-primary-soft text-primary border-primary/40'
+    case '夕陽產業': return 'bg-danger-soft text-danger border-danger/40'
+    default: return 'bg-muted text-card-fg border-border'
   }
 }
 
+/** 評等徽章語意 class。 */
 function getRatingBadge(rating: string) {
   switch (rating) {
-    case '低': return 'bg-green-100 text-green-700'
-    case '中': return 'bg-yellow-100 text-yellow-700'
-    case '高': return 'bg-red-100 text-red-700'
-    default: return 'bg-gray-100 text-gray-700'
+    case '低': return 'bg-success-soft text-success'
+    case '中': return 'bg-warning-soft text-warning'
+    case '高': return 'bg-danger-soft text-danger'
+    default: return 'bg-muted text-card-fg'
   }
 }
 
+/**
+ * 產業趨勢儀表板工具頁。
+ */
 export default function TrendDashboardPage() {
+  const themeColors = useThemeColors()
   const { cached, save } = useToolCache<{
     viewMode: ViewMode
     selectedSector: GICS_Sector
@@ -218,27 +227,27 @@ export default function TrendDashboardPage() {
             {viewMode === 'ANALYSIS' && (
               <button
                 onClick={() => { setViewMode('DASHBOARD'); setAnalysisResult(null); setError(null) }}
-                className="p-2 hover:bg-surface-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-surface-400" />
+                <ArrowLeft className="w-5 h-5 text-muted-fg" />
               </button>
             )}
             <div>
               <div className="flex items-center gap-2">
-                <BarChart3 className="w-6 h-6 text-blue-600" />
-                <h1 className="text-xl font-bold text-surface-100">全球投資趨勢儀表板</h1>
+                <BarChart3 className="w-6 h-6 text-primary" />
+                <h1 className="text-xl font-bold text-fg">全球投資趨勢儀表板</h1>
               </div>
-              <p className="text-xs text-surface-400 mt-0.5">GICS 11 大產業 CapEx 趨勢與 AI 分析</p>
+              <p className="text-xs text-muted-fg mt-0.5">GICS 11 大產業 CapEx 趨勢與 AI 分析</p>
             </div>
           </div>
           <button
             onClick={() => setShowHistory(!showHistory)}
-            className="relative p-2 hover:bg-surface-700 rounded-lg transition-colors"
+            className="relative p-2 hover:bg-muted rounded-lg transition-colors"
             title="歷史紀錄"
           >
-            <History className="w-5 h-5 text-surface-400" />
+            <History className="w-5 h-5 text-muted-fg" />
             {history.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white text-[10px] rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[10px] rounded-full flex items-center justify-center">
                 {history.length}
               </span>
             )}
@@ -247,28 +256,28 @@ export default function TrendDashboardPage() {
 
         {/* History Sidebar */}
         {showHistory && (
-          <div className="mb-6 bg-surface-800/90 backdrop-blur-sm rounded-xl border border-surface-600 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-surface-200 mb-3 flex items-center gap-2">
+          <div className="mb-6 bg-muted/90 backdrop-blur-sm rounded-xl border border-border p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-fg mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               最近分析紀錄
             </h3>
             {history.length === 0 ? (
-              <p className="text-xs text-surface-500 text-center py-4">尚無歷史紀錄</p>
+              <p className="text-xs text-muted-fg text-center py-4">尚無歷史紀錄</p>
             ) : (
               <div className="space-y-2">
                 {history.map(item => (
                   <button
                     key={item.id}
                     onClick={() => handleViewHistory(item)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-surface-700 border border-surface-600 transition-colors"
+                    className="w-full text-left p-3 rounded-lg hover:bg-muted border border-border transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-surface-200">{item.sector}</span>
-                      <span className="text-[10px] text-surface-500">
+                      <span className="text-sm font-medium text-fg">{item.sector}</span>
+                      <span className="text-[10px] text-muted-fg">
                         {new Date(item.timestamp).toLocaleString('zh-TW')}
                       </span>
                     </div>
-                    <p className="text-xs text-surface-400 mt-1 truncate">{item.query}</p>
+                    <p className="text-xs text-muted-fg mt-1 truncate">{item.query}</p>
                   </button>
                 ))}
               </div>
@@ -285,8 +294,8 @@ export default function TrendDashboardPage() {
                 onClick={() => setSelectedSector(sector)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors border ${
                   selectedSector === sector
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-surface-800 text-surface-300 border-surface-600 hover:bg-surface-700 hover:border-surface-500'
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-muted text-fg border-border hover:bg-muted hover:border-border'
                 }`}
               >
                 {sector}
@@ -297,23 +306,23 @@ export default function TrendDashboardPage() {
 
         {/* Search Bar */}
         <div className="mb-6">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-4 shadow-sm">
+          <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={`輸入「${selectedSector}」的趨勢對決分析問題...`}
-                  className="w-full pl-10 pr-4 py-2.5 bg-surface-800 border border-surface-600 rounded-lg text-surface-100 text-sm placeholder:text-surface-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-fg text-sm placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
                 />
               </div>
               <button
                 onClick={handleAnalyze}
                 disabled={isLoading || !searchQuery.trim()}
-                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
+                className="px-6 py-2.5 bg-primary hover:bg-primary disabled:bg-muted disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 {isLoading ? (
                   <>
@@ -346,19 +355,19 @@ export default function TrendDashboardPage() {
           <div className="space-y-6">
             {/* API Key Warning */}
             {!hasApiKey && (
-              <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-6 shadow-sm">
+              <div className="bg-warning-soft border-2 border-warning/40 rounded-xl p-6 shadow-sm">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-amber-100 rounded-xl">
-                    <Key className="w-6 h-6 text-amber-600" />
+                  <div className="p-3 bg-warning-soft rounded-xl">
+                    <Key className="w-6 h-6 text-warning" />
                   </div>
                   <div className="flex-1">
-                    <h2 className="text-lg font-semibold text-amber-800 mb-1">尚未設定 Gemini API Key</h2>
-                    <p className="text-amber-700 text-sm mb-3">
+                    <h2 className="text-lg font-semibold text-card-fg mb-1">尚未設定 Gemini API Key</h2>
+                    <p className="text-warning text-sm mb-3">
                       趨勢儀表板需要 Gemini API Key 才能進行產業分析與取得即時數據。請先至設定頁面輸入您的 API Key。
                     </p>
                     <Link
                       href="/settings"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-warning text-white rounded-lg hover:bg-warning transition-colors text-sm font-medium"
                     >
                       <Settings className="w-4 h-4" />
                       前往設定
@@ -370,27 +379,27 @@ export default function TrendDashboardPage() {
 
             {/* Summary (only when API key is set) */}
             {hasApiKey && (
-              <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
-                <h2 className="text-sm font-semibold text-gray-700 mb-2">2026 全球產業熱點摘要</h2>
+              <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 shadow-sm">
+                <h2 className="text-sm font-semibold text-card-fg mb-2">2026 全球產業熱點摘要</h2>
                 {summaryLoading ? (
                   <div className="animate-pulse space-y-2">
-                    <div className="h-4 bg-gray-100 rounded w-full" />
-                    <div className="h-4 bg-gray-100 rounded w-3/4" />
+                    <div className="h-4 bg-muted rounded w-full" />
+                    <div className="h-4 bg-muted rounded w-3/4" />
                   </div>
                 ) : dashboardSummary ? (
-                  <p className="text-sm text-gray-600 leading-relaxed">{dashboardSummary}</p>
+                  <p className="text-sm text-muted-fg leading-relaxed">{dashboardSummary}</p>
                 ) : (
-                  <p className="text-sm text-gray-400">摘要載入失敗，請選擇產業並輸入問題開始分析。</p>
+                  <p className="text-sm text-muted-fg">摘要載入失敗，請選擇產業並輸入問題開始分析。</p>
                 )}
               </div>
             )}
 
             {/* Start Analyzing Prompt */}
             {hasApiKey && (
-              <div className="bg-gradient-to-br from-blue-900/20 to-indigo-900/20 rounded-xl border border-blue-700/30 p-8 text-center">
-                <BarChart3 className="w-12 h-12 text-blue-500 mx-auto mb-4" />
-                <h2 className="text-lg font-semibold text-surface-100 mb-2">選擇產業，開始 AI 趨勢分析</h2>
-                <p className="text-sm text-surface-400 max-w-md mx-auto">
+              <div className="bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl border border-primary/30 p-8 text-center">
+                <BarChart3 className="w-12 h-12 text-primary mx-auto mb-4" />
+                <h2 className="text-lg font-semibold text-fg mb-2">選擇產業，開始 AI 趨勢分析</h2>
+                <p className="text-sm text-muted-fg max-w-md mx-auto">
                   從上方選擇一個 GICS 產業，並在搜尋框輸入您想了解的趨勢問題，AI 將搜尋最新全球數據為您分析。
                 </p>
               </div>
@@ -421,30 +430,30 @@ export default function TrendDashboardPage() {
 
             {/* Cycle Expectations Table */}
             {analysisResult.cycleExpectations.length > 0 && (
-              <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-blue-500" />
+              <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-card-fg mb-3 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-primary" />
                   三段式週期預期
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">週期</th>
-                        <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">評級</th>
-                        <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">核心邏輯</th>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 px-3 text-muted-fg font-medium text-xs">週期</th>
+                        <th className="text-left py-2 px-3 text-muted-fg font-medium text-xs">評級</th>
+                        <th className="text-left py-2 px-3 text-muted-fg font-medium text-xs">核心邏輯</th>
                       </tr>
                     </thead>
                     <tbody>
                       {analysisResult.cycleExpectations.map((cycle, idx) => (
-                        <tr key={idx} className="border-b border-gray-100 last:border-0">
-                          <td className="py-2.5 px-3 text-gray-800 font-medium whitespace-nowrap">{cycle.period}</td>
+                        <tr key={idx} className="border-b border-border last:border-0">
+                          <td className="py-2.5 px-3 text-card-fg font-medium whitespace-nowrap">{cycle.period}</td>
                           <td className="py-2.5 px-3">
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getRatingBadge(cycle.rating)}`}>
                               {cycle.rating}
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 text-gray-600">{cycle.logic}</td>
+                          <td className="py-2.5 px-3 text-muted-fg">{cycle.logic}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -454,43 +463,44 @@ export default function TrendDashboardPage() {
             )}
 
             {/* Risk Analysis */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-card-fg mb-3 flex items-center gap-2">
                 <Shield className="w-4 h-4 text-orange-500" />
                 風險分析
               </h3>
               <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-semibold mb-3 ${getRiskColor(analysisResult.riskFactor.level)}`}>
                 風險等級：{analysisResult.riskFactor.level}
               </div>
-              <p className="text-sm text-gray-600 mb-2">{analysisResult.riskFactor.description}</p>
-              <p className="text-xs text-gray-500 bg-gray-50 rounded-lg p-3">{analysisResult.riskFactor.offsetCoefficient}</p>
+              <p className="text-sm text-muted-fg mb-2">{analysisResult.riskFactor.description}</p>
+              <p className="text-xs text-muted-fg bg-muted rounded-lg p-3">{analysisResult.riskFactor.offsetCoefficient}</p>
             </div>
 
             {/* Z-Score Chart */}
-            <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+            <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 shadow-sm">
+              <h3 className="text-sm font-semibold text-card-fg mb-3">
                 {selectedSector} - 估值 Z-Score 趨勢
               </h3>
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={zScoreData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#6B7280' }} />
-                    <YAxis tick={{ fontSize: 11, fill: '#6B7280' }} domain={[-3, 3]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={themeColors.border} />
+                    <XAxis dataKey="year" tick={{ fontSize: 11, fill: themeColors.mutedFg }} />
+                    <YAxis tick={{ fontSize: 11, fill: themeColors.mutedFg }} domain={[-3, 3]} />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #E5E7EB',
+                        backgroundColor: themeColors.card,
+                        border: `1px solid ${themeColors.border}`,
                         borderRadius: '8px',
                         fontSize: '12px',
+                        color: themeColors.cardFg,
                       }}
                     />
                     <Line
                       type="monotone"
                       dataKey="zScore"
-                      stroke={SECTOR_COLORS[selectedSector] || '#3B82F6'}
+                      stroke={SECTOR_COLORS[selectedSector] || themeColors.chart1}
                       strokeWidth={2}
-                      dot={{ r: 3, fill: SECTOR_COLORS[selectedSector] || '#3B82F6' }}
+                      dot={{ r: 3, fill: SECTOR_COLORS[selectedSector] || themeColors.chart1 }}
                       name="Z-Score"
                     />
                   </LineChart>
@@ -500,23 +510,23 @@ export default function TrendDashboardPage() {
 
             {/* Suitabilities Table */}
             {analysisResult.suitabilities.length > 0 && (
-              <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">投資工具適配性</h3>
+              <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-card-fg mb-3">投資工具適配性</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">工具</th>
-                        <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">建議</th>
-                        <th className="text-left py-2 px-3 text-gray-500 font-medium text-xs">理由</th>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 px-3 text-muted-fg font-medium text-xs">工具</th>
+                        <th className="text-left py-2 px-3 text-muted-fg font-medium text-xs">建議</th>
+                        <th className="text-left py-2 px-3 text-muted-fg font-medium text-xs">理由</th>
                       </tr>
                     </thead>
                     <tbody>
                       {analysisResult.suitabilities.map((s, idx) => (
-                        <tr key={idx} className="border-b border-gray-100 last:border-0">
-                          <td className="py-2.5 px-3 text-gray-800 font-medium">{s.tool}</td>
+                        <tr key={idx} className="border-b border-border last:border-0">
+                          <td className="py-2.5 px-3 text-card-fg font-medium">{s.tool}</td>
                           <td className="py-2.5 px-3 whitespace-nowrap">{s.recommendation}</td>
-                          <td className="py-2.5 px-3 text-gray-600">{s.reason}</td>
+                          <td className="py-2.5 px-3 text-muted-fg">{s.reason}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -527,9 +537,9 @@ export default function TrendDashboardPage() {
 
             {/* Report Content */}
             {analysisResult.content && (
-              <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">詳細分析報告</h3>
-                <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-card-fg mb-3">詳細分析報告</h3>
+                <div className="text-sm text-card-fg leading-relaxed whitespace-pre-wrap">
                   {analysisResult.content}
                 </div>
               </div>
@@ -539,7 +549,7 @@ export default function TrendDashboardPage() {
             {analysisResult.keywords.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {analysisResult.keywords.map((kw, idx) => (
-                  <span key={idx} className="text-xs px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full border border-blue-100">
+                  <span key={idx} className="text-xs px-2.5 py-1 bg-primary-soft text-primary rounded-full border border-primary/30">
                     {kw}
                   </span>
                 ))}
@@ -548,8 +558,8 @@ export default function TrendDashboardPage() {
 
             {/* News Sources */}
             {analysisResult.newsSources.length > 0 && (
-              <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 shadow-sm">
-                <h3 className="text-sm font-semibold text-gray-500 mb-3">參考資料來源</h3>
+              <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 shadow-sm">
+                <h3 className="text-sm font-semibold text-muted-fg mb-3">參考資料來源</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {analysisResult.newsSources.map((ns, idx) => (
                     <a
@@ -557,11 +567,11 @@ export default function TrendDashboardPage() {
                       href={ns.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-xs text-gray-500 hover:text-blue-600 transition-colors p-2 hover:bg-gray-50 rounded-lg"
+                      className="flex items-center gap-2 text-xs text-muted-fg hover:text-primary transition-colors p-2 hover:bg-muted rounded-lg"
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                       <span className="truncate">{ns.title}</span>
-                      <span className="text-[10px] text-gray-400 ml-auto">({ns.source})</span>
+                      <span className="text-[10px] text-muted-fg ml-auto">({ns.source})</span>
                     </a>
                   ))}
                 </div>
@@ -572,7 +582,7 @@ export default function TrendDashboardPage() {
             <div className="flex justify-end">
               <button
                 onClick={handleExport}
-                className="px-5 py-2 bg-surface-800 border border-surface-600 hover:bg-surface-700 text-surface-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                className="px-5 py-2 bg-muted border border-border hover:bg-muted text-fg text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 匯出報告

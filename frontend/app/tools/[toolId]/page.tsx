@@ -74,7 +74,7 @@ export default function ToolPage() {
   if (!toolConfig) {
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-red-600">工具不存在</h1>
+        <h1 className="text-2xl font-bold text-danger">工具不存在</h1>
       </div>
     )
   }
@@ -92,7 +92,7 @@ export default function ToolPage() {
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">{toolConfig.name}</h1>
-      <p className="text-surface-400">工具載入中或尚未整合...</p>
+      <p className="text-muted-fg">工具載入中或尚未整合...</p>
     </div>
   )
 }

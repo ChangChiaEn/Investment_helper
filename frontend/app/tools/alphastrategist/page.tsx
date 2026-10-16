@@ -25,7 +25,7 @@ function renderMarkdown(text: string): React.ReactNode {
 
     if (trimmed.startsWith('### ')) {
       return (
-        <h3 key={idx} className="text-base font-semibold text-gray-800 mt-3 mb-1">
+        <h3 key={idx} className="text-base font-semibold text-card-fg mt-3 mb-1">
           {renderInline(trimmed.slice(4))}
         </h3>
       )
@@ -33,7 +33,7 @@ function renderMarkdown(text: string): React.ReactNode {
 
     if (trimmed.startsWith('## ')) {
       return (
-        <h2 key={idx} className="text-lg font-bold text-gray-900 mt-4 mb-2">
+        <h2 key={idx} className="text-lg font-bold text-card-fg mt-4 mb-2">
           {renderInline(trimmed.slice(3))}
         </h2>
       )
@@ -42,8 +42,8 @@ function renderMarkdown(text: string): React.ReactNode {
     if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
       return (
         <div key={idx} className="flex items-start gap-2 ml-3 my-0.5">
-          <span className="text-blue-500 mt-1.5 text-xs leading-none">{'\u2022'}</span>
-          <span className="text-gray-700 text-sm leading-relaxed">{renderInline(trimmed.slice(2))}</span>
+          <span className="text-primary mt-1.5 text-xs leading-none">{'\u2022'}</span>
+          <span className="text-card-fg text-sm leading-relaxed">{renderInline(trimmed.slice(2))}</span>
         </div>
       )
     }
@@ -52,14 +52,14 @@ function renderMarkdown(text: string): React.ReactNode {
     if (numberedMatch) {
       return (
         <div key={idx} className="flex items-start gap-2 ml-3 my-0.5">
-          <span className="text-blue-600 font-semibold text-sm min-w-[1.25rem]">{numberedMatch[1]}.</span>
-          <span className="text-gray-700 text-sm leading-relaxed">{renderInline(numberedMatch[2])}</span>
+          <span className="text-primary font-semibold text-sm min-w-[1.25rem]">{numberedMatch[1]}.</span>
+          <span className="text-card-fg text-sm leading-relaxed">{renderInline(numberedMatch[2])}</span>
         </div>
       )
     }
 
     return (
-      <p key={idx} className="text-gray-700 text-sm leading-relaxed my-0.5">
+      <p key={idx} className="text-card-fg text-sm leading-relaxed my-0.5">
         {renderInline(trimmed)}
       </p>
     )
@@ -71,7 +71,7 @@ function renderInline(text: string): React.ReactNode {
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return (
-        <strong key={i} className="font-semibold text-gray-900">
+        <strong key={i} className="font-semibold text-card-fg">
           {part.slice(2, -2)}
         </strong>
       )
@@ -83,14 +83,14 @@ function renderInline(text: string): React.ReactNode {
 function ThinkingBubble() {
   return (
     <div className="flex items-start gap-3 max-w-3xl">
-      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-        <Bot className="w-4 h-4 text-blue-600" />
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-soft flex items-center justify-center">
+        <Bot className="w-4 h-4 text-primary" />
       </div>
-      <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
+      <div className="bg-card border border-border rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
         <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
         </div>
       </div>
     </div>
@@ -115,7 +115,7 @@ function GroundingSources({ chunks }: { chunks: GroundingChunk[] }) {
             href={uri}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 bg-gray-50 hover:bg-blue-50 px-2 py-1 rounded-md transition-colors border border-gray-100"
+            className="inline-flex items-center gap-1 text-xs text-muted-fg hover:text-primary bg-muted hover:bg-primary-soft px-2 py-1 rounded-md transition-colors border border-border"
           >
             <ExternalLink className="w-2.5 h-2.5" />
             <span className="truncate max-w-[180px]">{label}</span>
@@ -128,7 +128,7 @@ function GroundingSources({ chunks }: { chunks: GroundingChunk[] }) {
 
 function MessageDisclaimer() {
   return (
-    <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-400">
+    <div className="mt-2 flex items-center gap-1 text-[10px] text-muted-fg">
       <AlertTriangle className="w-2.5 h-2.5" />
       <span>AI 生成內容僅供參考，投資有風險請謹慎評估</span>
     </div>
@@ -209,7 +209,7 @@ export default function AlphaStrategistPage() {
           if (msg.sender === Sender.User) {
             return (
               <div key={msg.id} className="flex justify-end">
-                <div className="max-w-xl bg-blue-600 text-white rounded-2xl rounded-br-md px-4 py-3 shadow-sm">
+                <div className="max-w-xl bg-primary text-white rounded-2xl rounded-br-md px-4 py-3 shadow-sm">
                   <p className="text-sm leading-relaxed">{msg.text}</p>
                 </div>
               </div>
@@ -218,11 +218,11 @@ export default function AlphaStrategistPage() {
 
           return (
             <div key={msg.id} className="flex items-start gap-3 max-w-3xl">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <Bot className="w-4 h-4 text-blue-600" />
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary-soft flex items-center justify-center">
+                <Bot className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
+                <div className="bg-card border border-border rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
                   <div className="prose-sm max-w-none">{renderMarkdown(msg.text)}</div>
                   {msg.groundingChunks && msg.groundingChunks.length > 0 && (
                     <GroundingSources chunks={msg.groundingChunks} />
@@ -240,7 +240,7 @@ export default function AlphaStrategistPage() {
       </div>
 
       {/* Fixed Input Area */}
-      <div className="border-t border-surface-700 bg-surface-900 px-4 sm:px-6 py-4">
+      <div className="border-t border-border bg-card px-4 sm:px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <input
             ref={inputRef}
@@ -249,13 +249,13 @@ export default function AlphaStrategistPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="請輸入您想分析的股票或基金..."
-            className="flex-1 px-4 py-2.5 bg-surface-800 border border-surface-600 rounded-xl text-sm text-surface-100 placeholder:text-surface-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="flex-1 px-4 py-2.5 bg-muted border border-border rounded-xl text-sm text-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
             disabled={isLoading}
           />
           <button
             onClick={handleSend}
             disabled={isLoading || !input.trim()}
-            className="p-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl transition-colors flex-shrink-0"
+            className="p-2.5 bg-primary hover:bg-primary disabled:bg-muted disabled:cursor-not-allowed text-white rounded-xl transition-colors flex-shrink-0"
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />

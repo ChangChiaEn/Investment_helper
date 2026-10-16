@@ -31,7 +31,7 @@ export function Loader({ size = 'md', text = '載入中...', showBrand = true }:
           <span></span>
         </div>
       </div>
-      {text && <p className="text-surface-400 font-medium text-sm tracking-wide">{text}</p>}
+      {text && <p className="text-muted-fg font-medium text-sm tracking-wide">{text}</p>}
     </div>
   )
 }

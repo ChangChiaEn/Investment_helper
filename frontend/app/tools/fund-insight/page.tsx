@@ -119,35 +119,35 @@ export default function FundInsightPage() {
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 mb-4">
-          <BookOpen className="w-7 h-7 text-blue-600" />
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-soft border border-primary/30 mb-4">
+          <BookOpen className="w-7 h-7 text-primary" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
-          基金<span className="text-blue-600">透視鏡</span>
+        <h1 className="text-2xl sm:text-3xl font-bold text-fg mb-2">
+          基金<span className="text-primary">透視鏡</span>
         </h1>
-        <p className="text-surface-400 text-sm max-w-lg mx-auto">
+        <p className="text-muted-fg text-sm max-w-lg mx-auto">
           輸入基金名稱，AI 即時分析持股、市場情緒與投資策略，掃描重疊強勢股
         </p>
       </div>
 
       {/* Search Area - always visible */}
       <div className="max-w-2xl mx-auto mb-8">
-        <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-4 shadow-sm">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-4 shadow-sm">
+          <label className="block text-sm font-medium text-card-fg mb-2">
             輸入基金名稱（多支以逗號或空格分隔）
           </label>
           <textarea
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="例如：安聯台灣科技基金, 統一黑馬基金, 元大台灣高股息"
-            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+            className="w-full px-4 py-2.5 bg-muted border border-border rounded-lg text-sm text-card-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary resize-none"
             rows={3}
             disabled={appState === AppState.SEARCHING || appState === AppState.ANALYZING || appState === AppState.ANALYZING_OVERLAPS}
           />
           <button
             onClick={handleSearch}
             disabled={!query.trim() || appState === AppState.SEARCHING || appState === AppState.ANALYZING || appState === AppState.ANALYZING_OVERLAPS}
-            className="mt-3 w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
+            className="mt-3 w-full py-2.5 bg-primary hover:bg-primary disabled:bg-muted disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg transition-colors flex items-center justify-center gap-2"
           >
             {appState === AppState.SEARCHING ? (
               <><Loader2 className="w-4 h-4 animate-spin" />搜尋中...</>
@@ -179,7 +179,7 @@ export default function FundInsightPage() {
           <div className="text-center">
             <button
               onClick={goBackToIdle}
-              className="text-sm text-gray-500 hover:text-blue-600 transition-colors flex items-center gap-1 mx-auto"
+              className="text-sm text-muted-fg hover:text-primary transition-colors flex items-center gap-1 mx-auto"
             >
               <ArrowLeft className="w-3 h-3" /> 返回首頁
             </button>
@@ -191,13 +191,13 @@ export default function FundInsightPage() {
       {appState === AppState.FUNDS_LIST && funds.length > 0 && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-surface-100">
+            <h2 className="text-lg font-bold text-fg">
               找到 {funds.length} 支基金
             </h2>
             {funds.length >= 2 && (
               <button
                 onClick={handleAnalyzeOverlaps}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 text-sm font-medium rounded-lg transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-primary-soft hover:bg-primary-soft border border-primary/40 text-primary text-sm font-medium rounded-lg transition-colors"
               >
                 <Crosshair className="w-4 h-4" />
                 掃描重疊強勢股 (Cross-Check)
@@ -209,10 +209,10 @@ export default function FundInsightPage() {
             {funds.map((fund, idx) => (
               <div
                 key={idx}
-                className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-5 hover:border-blue-300 hover:shadow-md transition-all"
+                className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 hover:border-primary hover:shadow-md transition-all"
               >
                 <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-bold text-gray-900 text-sm leading-tight">{fund.name}</h3>
+                  <h3 className="font-bold text-card-fg text-sm leading-tight">{fund.name}</h3>
                   <WatchlistButton
                     symbol={fund.code || fund.name}
                     name={fund.name}
@@ -225,28 +225,28 @@ export default function FundInsightPage() {
                 <div className="space-y-1.5 mb-4">
                   {fund.code && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">代碼</span>
-                      <span className="text-gray-700 font-mono">{fund.code}</span>
+                      <span className="text-muted-fg">代碼</span>
+                      <span className="text-card-fg font-mono">{fund.code}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-400">3個月報酬</span>
+                    <span className="text-muted-fg">3個月報酬</span>
                     <span className={`font-bold ${
-                      fund.returnRate3Month.includes('-') ? 'text-red-500' : 'text-emerald-600'
+                      fund.returnRate3Month.includes('-') ? 'text-danger' : 'text-success'
                     }`}>
                       {fund.returnRate3Month}
                     </span>
                   </div>
                   {fund.riskLevel && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">風險等級</span>
-                      <span className="text-gray-700 font-medium">{fund.riskLevel}</span>
+                      <span className="text-muted-fg">風險等級</span>
+                      <span className="text-card-fg font-medium">{fund.riskLevel}</span>
                     </div>
                   )}
                 </div>
                 <button
                   onClick={() => handleAnalyzeFund(fund)}
-                  className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1"
+                  className="w-full py-2 bg-primary hover:bg-primary text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1"
                 >
                   <BarChart3 className="w-3.5 h-3.5" />
                   分析
@@ -262,26 +262,26 @@ export default function FundInsightPage() {
         <div className="space-y-6">
           <button
             onClick={goBackToList}
-            className="flex items-center gap-2 text-gray-500 hover:text-blue-600 text-sm transition-colors"
+            className="flex items-center gap-2 text-muted-fg hover:text-primary text-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             返回基金列表
           </button>
 
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900 mb-1">{singleReport.fundName}</h2>
-            <p className="text-gray-500 text-xs mb-4">AI 深度分析報告</p>
+          <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-card-fg mb-1">{singleReport.fundName}</h2>
+            <p className="text-muted-fg text-xs mb-4">AI 深度分析報告</p>
 
             {/* Holdings */}
             <div className="mb-6">
-              <h3 className="text-base font-bold text-gray-900 mb-2 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-blue-600" /> 持股結構
+              <h3 className="text-base font-bold text-card-fg mb-2 flex items-center gap-2">
+                <Layers className="w-4 h-4 text-primary" /> 持股結構
               </h3>
-              <p className="text-sm text-gray-700 leading-relaxed mb-3">{singleReport.holdings.summary}</p>
+              <p className="text-sm text-card-fg leading-relaxed mb-3">{singleReport.holdings.summary}</p>
               {singleReport.holdings.topList.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {singleReport.holdings.topList.map((item, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-blue-50 text-blue-700 text-xs font-medium rounded-full border border-blue-100">
+                    <span key={idx} className="px-3 py-1 bg-primary-soft text-primary text-xs font-medium rounded-full border border-primary/30">
                       {item}
                     </span>
                   ))}
@@ -291,15 +291,15 @@ export default function FundInsightPage() {
 
             {/* Sentiment */}
             <div className="mb-6">
-              <h3 className="text-base font-bold text-gray-900 mb-2 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-emerald-600" /> 市場情緒
+              <h3 className="text-base font-bold text-card-fg mb-2 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-success" /> 市場情緒
               </h3>
-              <p className="text-sm text-gray-700 leading-relaxed mb-3">{singleReport.sentiment.summary}</p>
+              <p className="text-sm text-card-fg leading-relaxed mb-3">{singleReport.sentiment.summary}</p>
               {singleReport.sentiment.keyEvents.length > 0 && (
                 <ul className="space-y-1.5">
                   {singleReport.sentiment.keyEvents.map((event, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
-                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+                    <li key={idx} className="flex items-start gap-2 text-sm text-muted-fg">
+                      <span className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0" />
                       {event}
                     </li>
                   ))}
@@ -308,22 +308,22 @@ export default function FundInsightPage() {
             </div>
 
             {/* Strategy */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="text-base font-bold text-blue-800 mb-3 flex items-center gap-2">
+            <div className="bg-primary-soft border border-primary/40 rounded-lg p-4 text-fg">
+              <h3 className="text-base font-bold mb-3 flex items-center gap-2">
                 <FileText className="w-4 h-4" /> 專家建議
               </h3>
               <div className="space-y-3 text-sm">
                 <div>
-                  <span className="text-blue-700 font-semibold">操作建議：</span>
-                  <span className="text-gray-700">{singleReport.strategy.suggestion}</span>
+                  <span className="text-primary font-semibold">操作建議：</span>
+                  <span className="text-card-fg">{singleReport.strategy.suggestion}</span>
                 </div>
                 <div>
-                  <span className="text-blue-700 font-semibold">風險分析：</span>
-                  <span className="text-gray-700">{singleReport.strategy.riskAnalysis}</span>
+                  <span className="text-primary font-semibold">風險分析：</span>
+                  <span className="text-card-fg">{singleReport.strategy.riskAnalysis}</span>
                 </div>
                 <div>
-                  <span className="text-blue-700 font-semibold">適合投資人：</span>
-                  <span className="text-gray-700">{singleReport.strategy.suitableFor}</span>
+                  <span className="text-primary font-semibold">適合投資人：</span>
+                  <span className="text-card-fg">{singleReport.strategy.suitableFor}</span>
                 </div>
               </div>
             </div>
@@ -351,21 +351,21 @@ export default function FundInsightPage() {
         <div className="space-y-6">
           <button
             onClick={goBackToList}
-            className="flex items-center gap-2 text-gray-500 hover:text-blue-600 text-sm transition-colors"
+            className="flex items-center gap-2 text-muted-fg hover:text-primary text-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             返回基金列表
           </button>
 
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-surface-200/50 p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-              <Crosshair className="w-5 h-5 text-blue-600" />
+          <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-card-fg mb-1 flex items-center gap-2">
+              <Crosshair className="w-5 h-5 text-primary" />
               持股重疊交叉分析
             </h2>
 
             {/* Summary */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 mb-6">
-              <p className="text-sm text-gray-700 leading-relaxed">{overlapReport.summary}</p>
+            <div className="bg-primary-soft border border-primary/40 rounded-lg p-4 mt-4 mb-6">
+              <p className="text-sm text-card-fg leading-relaxed">{overlapReport.summary}</p>
             </div>
 
             {/* Stocks Table */}
@@ -373,34 +373,34 @@ export default function FundInsightPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-3 text-gray-500 font-semibold text-xs uppercase">標的名稱</th>
-                      <th className="text-center py-3 px-3 text-gray-500 font-semibold text-xs uppercase">重複次數</th>
-                      <th className="text-left py-3 px-3 text-gray-500 font-semibold text-xs uppercase">持有基金</th>
-                      <th className="text-left py-3 px-3 text-gray-500 font-semibold text-xs uppercase">產業</th>
-                      <th className="text-left py-3 px-3 text-gray-500 font-semibold text-xs uppercase">原因</th>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-3 px-3 text-muted-fg font-semibold text-xs uppercase">標的名稱</th>
+                      <th className="text-center py-3 px-3 text-muted-fg font-semibold text-xs uppercase">重複次數</th>
+                      <th className="text-left py-3 px-3 text-muted-fg font-semibold text-xs uppercase">持有基金</th>
+                      <th className="text-left py-3 px-3 text-muted-fg font-semibold text-xs uppercase">產業</th>
+                      <th className="text-left py-3 px-3 text-muted-fg font-semibold text-xs uppercase">原因</th>
                     </tr>
                   </thead>
                   <tbody>
                     {overlapReport.stocks.map((stock, idx) => (
-                      <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-3 font-medium text-gray-900">{stock.stockName}</td>
+                      <tr key={idx} className="border-b border-border hover:bg-muted transition-colors">
+                        <td className="py-3 px-3 font-medium text-card-fg">{stock.stockName}</td>
                         <td className="py-3 px-3 text-center">
-                          <span className="inline-flex items-center justify-center w-7 h-7 bg-blue-100 text-blue-700 font-bold text-xs rounded-full">
+                          <span className="inline-flex items-center justify-center w-7 h-7 bg-primary-soft text-primary font-bold text-xs rounded-full">
                             {stock.count}
                           </span>
                         </td>
                         <td className="py-3 px-3">
                           <div className="flex flex-wrap gap-1">
                             {stock.heldBy.map((name, i) => (
-                              <span key={i} className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-md">
+                              <span key={i} className="px-2 py-0.5 bg-muted text-muted-fg text-xs rounded-md">
                                 {name}
                               </span>
                             ))}
                           </div>
                         </td>
-                        <td className="py-3 px-3 text-gray-600">{stock.sector}</td>
-                        <td className="py-3 px-3 text-gray-600 text-xs leading-relaxed">{stock.reason}</td>
+                        <td className="py-3 px-3 text-muted-fg">{stock.sector}</td>
+                        <td className="py-3 px-3 text-muted-fg text-xs leading-relaxed">{stock.reason}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -416,10 +416,10 @@ export default function FundInsightPage() {
       {/* Empty State */}
       {appState === AppState.IDLE && (
         <div className="text-center py-16">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-            <Search className="w-8 h-8 text-gray-300" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+            <Search className="w-8 h-8 text-muted-fg" />
           </div>
-          <p className="text-gray-400 text-sm">輸入基金名稱並點擊載入，開始 AI 基金分析</p>
+          <p className="text-fg text-base">輸入基金名稱並點擊載入，開始 AI 基金分析</p>
         </div>
       )}
     </div>
