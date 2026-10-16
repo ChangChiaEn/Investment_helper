@@ -13,6 +13,25 @@ module.exports = {
   ],
   theme: {
     extend: {
+      // 字體唯一對應 CSS 變數（由 layout next/font 注入；常數見 config/typography.ts）
+      fontFamily: {
+        sans: [
+          'var(--font-sans)',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'sans-serif',
+        ],
+        mono: [
+          'var(--font-mono)',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'Consolas',
+          'monospace',
+        ],
+      },
       colors: {
         bg: withOpacity('--color-bg'),
         'bg-end': withOpacity('--color-bg-end'),

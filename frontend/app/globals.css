@@ -40,14 +40,15 @@
 }
 
 /*
- * 全域字級放大：Tailwind rem 單位會隨 html font-size 縮放。
- * 預設瀏覽器 16px → 18px（約 +12.5%）。
+ * 全域字體／字級：與 config/typography.ts、layout next/font 對齊。
+ * 正文用 --font-sans；數字／代號用 font-mono（--font-mono）。
  */
 html {
   font-size: 18px;
 }
 
 body {
+  font-family: var(--font-sans), system-ui, -apple-system, 'Segoe UI', sans-serif;
   color: rgb(var(--color-fg));
   background: linear-gradient(
     135deg,
@@ -58,6 +59,11 @@ body {
   min-height: 100vh;
   font-size: 1rem;
   line-height: 1.6;
+}
+
+/* 確保 Tailwind font-mono 也吃到同一套等寬變數 */
+.font-mono {
+  font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 @layer utilities {

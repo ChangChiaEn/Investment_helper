@@ -63,16 +63,16 @@ import {
 function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
   const kindColor =
     data.kind === 'decision'
-      ? 'border-sky-500'
+      ? 'border-primary'
       : data.kind === 'manual'
         ? 'border-amber-500'
-        : 'border-emerald-500'
+        : 'border-success'
   const kindBg =
     data.kind === 'decision'
-      ? 'bg-sky-50'
+      ? 'bg-primary-soft'
       : data.kind === 'manual'
         ? 'bg-amber-50'
-        : 'bg-emerald-50'
+        : 'bg-success-soft'
 
   return (
     <div
@@ -88,20 +88,20 @@ function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
             id="yes"
             position={Position.Bottom}
             style={{ left: '28%' }}
-            className="!bg-green-500 !w-2.5 !h-2.5"
+            className="!bg-success-soft0 !w-2.5 !h-2.5"
           />
           <Handle
             type="source"
             id="no"
             position={Position.Bottom}
             style={{ left: '72%' }}
-            className="!bg-red-500 !w-2.5 !h-2.5"
+            className="!bg-danger-soft0 !w-2.5 !h-2.5"
           />
           <div className="absolute -bottom-4 left-0 right-0 flex justify-between px-3 pointer-events-none">
             <span className="text-[9px] text-green-700 font-medium">
               {data.kind === 'manual' ? '是' : '通過'}
             </span>
-            <span className="text-[9px] text-red-600 font-medium">
+            <span className="text-[9px] text-danger font-medium">
               {data.kind === 'manual' ? '否' : '未通過'}
             </span>
           </div>
@@ -110,10 +110,10 @@ function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
       {data.kind === 'result' && (
         <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2.5 !h-2.5" />
       )}
-      <div className="text-[10px] tracking-wide text-gray-500 mb-0.5">
+      <div className="text-[10px] tracking-wide text-muted-fg mb-0.5">
         {data.kind === 'decision' ? '決策' : data.kind === 'manual' ? '人工' : '結果'}
       </div>
-      <div className="text-sm font-medium text-gray-900 leading-snug">{data.label}</div>
+      <div className="text-sm font-medium text-fg leading-snug">{data.label}</div>
     </div>
   )
 }
@@ -265,14 +265,14 @@ function TreeEditorInner() {
         </select>
         <button
           type="button"
-          className="px-3 py-2 text-sm bg-primary-600 text-white rounded-lg"
+          className="px-3 py-2 text-sm bg-primary text-primary-fg rounded-lg"
           onClick={() => setList(addBlankTree())}
         >
           新建空白樹
         </button>
         <button
           type="button"
-          className="px-3 py-2 text-sm bg-gray-100 rounded-lg"
+          className="px-3 py-2 text-sm bg-muted rounded-lg"
           onClick={() => setList(addSampleTree())}
         >
           載入範例樹
@@ -286,7 +286,7 @@ function TreeEditorInner() {
             />
             <button
               type="button"
-              className="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg"
+              className="px-3 py-2 text-sm text-danger border border-red-200 rounded-lg"
               onClick={() => {
                 if (confirm('確定刪除此決策樹？')) setList(deleteTree(active.id))
               }}
@@ -295,7 +295,7 @@ function TreeEditorInner() {
             </button>
             <button
               type="button"
-              className="px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg"
+              className="px-3 py-2 text-sm bg-success text-primary-fg rounded-lg"
               onClick={saveFromFlow}
             >
               儲存畫布
@@ -305,35 +305,35 @@ function TreeEditorInner() {
       </div>
 
       {!active ? (
-        <p className="text-sm text-gray-500">請新建或選擇一棵決策樹。</p>
+        <p className="text-sm text-muted-fg">請新建或選擇一棵決策樹。</p>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
-          <div className="h-[560px] bg-white border rounded-xl overflow-hidden relative">
+          <div className="h-[560px] bg-card border rounded-xl overflow-hidden relative">
             <div className="absolute top-2 left-2 z-10 flex flex-wrap gap-1 max-w-[90%]">
               <button
                 type="button"
-                className="text-xs bg-white border rounded px-2 py-1 shadow"
+                className="text-xs bg-card border rounded px-2 py-1 shadow"
                 onClick={() => addNode('decision')}
               >
                 + 決策
               </button>
               <button
                 type="button"
-                className="text-xs bg-white border rounded px-2 py-1 shadow"
+                className="text-xs bg-card border rounded px-2 py-1 shadow"
                 onClick={() => addNode('manual')}
               >
                 + 人工
               </button>
               <button
                 type="button"
-                className="text-xs bg-white border rounded px-2 py-1 shadow"
+                className="text-xs bg-card border rounded px-2 py-1 shadow"
                 onClick={() => addNode('result')}
               >
                 + 結果
               </button>
               <button
                 type="button"
-                className="text-xs bg-sky-50 border border-sky-200 text-sky-800 rounded px-2 py-1 shadow"
+                className="text-xs bg-primary-soft border border-primary/40 text-primary rounded px-2 py-1 shadow"
                 onClick={autoLayout}
               >
                 自動排版
@@ -361,23 +361,23 @@ function TreeEditorInner() {
             </ReactFlow>
           </div>
 
-          <aside className="bg-white border rounded-xl p-4 space-y-3 overflow-y-auto max-h-[560px]">
-            <h3 className="font-semibold text-gray-800">屬性</h3>
+          <aside className="bg-card border rounded-xl p-4 space-y-3 overflow-y-auto max-h-[560px]">
+            <h3 className="font-semibold text-card-fg">屬性</h3>
             {selectedEdgeId && !selectedNode && (
               <div className="space-y-2 text-sm">
-                <p className="text-gray-700">已選取一條連線</p>
+                <p className="text-card-fg">已選取一條連線</p>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-sm text-red-700 border border-red-200 rounded-lg hover:bg-red-50"
+                  className="w-full px-3 py-2 text-sm text-red-700 border border-red-200 rounded-lg hover:bg-danger-soft"
                   onClick={removeSelectedEdge}
                 >
                   取消連結
                 </button>
-                <p className="text-xs text-gray-400">也可按鍵盤 Delete／Backspace 刪除連線。</p>
+                <p className="text-xs text-muted-fg">也可按鍵盤 Delete／Backspace 刪除連線。</p>
               </div>
             )}
             {!selectedNode && !selectedEdgeId && (
-              <p className="text-sm text-gray-500">點選節點編輯，或點選連線後可取消連結。</p>
+              <p className="text-sm text-muted-fg">點選節點編輯，或點選連線後可取消連結。</p>
             )}
             {selectedNode && (
               <NodePropsForm
@@ -396,7 +396,7 @@ function TreeEditorInner() {
                 }}
               />
             )}
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-muted-fg">
               綠＝通過／是（左），紅＝未通過／否（右）。點連線 →「取消連結」或按 Delete。連線後可「自動排版」。
               根節點：{active.rootId}
             </p>
@@ -495,14 +495,14 @@ function NodePropsForm({
       <div className="flex flex-wrap gap-2 pt-2">
         <button
           type="button"
-          className="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs"
+          className="px-3 py-1.5 bg-primary text-primary-fg rounded-lg text-xs"
           onClick={onSetRoot}
         >
           設為根節點並儲存
         </button>
         <button
           type="button"
-          className="px-3 py-1.5 text-red-600 border border-red-200 rounded-lg text-xs"
+          className="px-3 py-1.5 text-danger border border-red-200 rounded-lg text-xs"
           onClick={onDelete}
         >
           刪除節點
@@ -550,7 +550,7 @@ function ConditionEditor({
         )}
       </div>
       {value.conditions.map((c, idx) => (
-        <div key={idx} className="bg-gray-50 rounded-lg p-2 space-y-1.5 overflow-hidden">
+        <div key={idx} className="bg-muted rounded-lg p-2 space-y-1.5 overflow-hidden">
           <IndicatorPicker
             value={c.indicatorId}
             onChange={(indicatorId) => updateCond(idx, { indicatorId })}
@@ -589,7 +589,7 @@ function ConditionEditor({
           )}
           <button
             type="button"
-            className="text-[10px] text-red-600"
+            className="text-[10px] text-danger"
             onClick={() =>
               onChange({ ...value, conditions: value.conditions.filter((_, i) => i !== idx) })
             }
@@ -654,20 +654,20 @@ function IndicatorPicker({
     <div className="relative">
       <button
         type="button"
-        className="w-full border rounded px-2 py-1.5 text-xs text-left bg-white hover:bg-gray-50"
+        className="w-full border rounded px-2 py-1.5 text-xs text-left bg-card hover:bg-muted"
         onClick={() => setOpen((o) => !o)}
       >
         {selected ? (
           <span>
-            <span className="text-sky-700">[{getSourceLabel(selected.source)}]</span>{' '}
+            <span className="text-primary">[{getSourceLabel(selected.source)}]</span>{' '}
             {selected.name}
           </span>
         ) : (
-          <span className="text-gray-400">選擇指標</span>
+          <span className="text-muted-fg">選擇指標</span>
         )}
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-20 mt-1 w-full bg-card border rounded-lg shadow-lg overflow-hidden">
           <input
             autoFocus
             className="w-full border-b px-2 py-1.5 text-xs outline-none"
@@ -677,14 +677,14 @@ function IndicatorPicker({
           />
           <ul className="max-h-40 overflow-y-auto">
             {filtered.length === 0 && (
-              <li className="px-2 py-2 text-xs text-gray-400">無符合項目</li>
+              <li className="px-2 py-2 text-xs text-muted-fg">無符合項目</li>
             )}
             {filtered.map((ind) => (
               <li key={ind.id}>
                 <button
                   type="button"
-                  className={`w-full text-left px-2 py-1.5 text-xs hover:bg-sky-50 ${
-                    ind.id === value ? 'bg-sky-50 font-medium' : ''
+                  className={`w-full text-left px-2 py-1.5 text-xs hover:bg-primary-soft ${
+                    ind.id === value ? 'bg-primary-soft font-medium' : ''
                   }`}
                   onClick={() => {
                     onChange(ind.id)
@@ -692,8 +692,8 @@ function IndicatorPicker({
                     setQuery('')
                   }}
                 >
-                  <span className="text-sky-700">[{getSourceLabel(ind.source)}]</span> {ind.name}
-                  <span className="block text-[10px] text-gray-400 font-mono">{ind.id}</span>
+                  <span className="text-primary">[{getSourceLabel(ind.source)}]</span> {ind.name}
+                  <span className="block text-[10px] text-muted-fg font-mono">{ind.id}</span>
                 </button>
               </li>
             ))}

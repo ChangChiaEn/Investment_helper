@@ -44,7 +44,7 @@ export default function DecisionTreePage() {
 
   if (!inventory) {
     return (
-      <div className="p-8 text-gray-500 text-sm">載入庫存中...</div>
+      <div className="p-8 text-muted-fg text-sm">載入庫存中...</div>
     )
   }
 
@@ -52,19 +52,19 @@ export default function DecisionTreePage() {
     <div className="p-6 md:p-8 max-w-7xl mx-auto min-h-screen">
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-sky-500/20 to-emerald-500/20">
-            <GitBranch className="w-6 h-6 text-sky-600" />
+          <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20">
+            <GitBranch className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">決策樹</h1>
-            <p className="text-sm text-gray-500">
+            <h1 className="text-2xl md:text-3xl font-bold text-fg">決策樹</h1>
+            <p className="text-sm text-muted-fg">
               自訂指標條件與多分叉決策樹；僅輸出建議，不執行下單。資料存於本機瀏覽器。
             </p>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-3">
+      <div className="flex flex-wrap gap-2 mb-6 border-b border-border pb-3">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -72,8 +72,8 @@ export default function DecisionTreePage() {
             onClick={() => setTab(t.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               tab === t.id
-                ? 'bg-primary-600 text-white'
-                : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                ? 'bg-primary text-primary-fg'
+                : 'bg-card text-card-fg border border-border hover:bg-muted'
             }`}
           >
             {t.label}

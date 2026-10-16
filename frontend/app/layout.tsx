@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Noto_Sans_TC, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import { AppShell } from '@/components/AppShell'
 import {
@@ -9,7 +9,28 @@ import {
   THEME_CSS_VAR_MAP,
 } from '@/config/themes'
 
-const inter = Inter({ subsets: ['latin'] })
+/**
+ * 全站 UI 字體：Noto Sans TC（繁中＋拉丁一體，避免中英混排跳字型）。
+ * next/font 的 variable 必須是字面量，不可從常數匯入（編譯期靜態分析限制）。
+ * 變數名需與 config/typography.ts、tailwind.config.js 的 --font-sans 對齊。
+ */
+const fontSans = Noto_Sans_TC({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-sans',
+  display: 'swap',
+})
+
+/**
+ * 等寬字體：代號、價格、API 路徑等數字資訊。
+ * variable 同樣必須為字面量，與 --font-mono 對齊。
+ */
+const fontMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  variable: '--font-mono',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Sagafisc 智慧投研平台',
@@ -49,7 +70,10 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: buildThemeBootstrapScript() }}
         />
       </head>
-      <body className={inter.className} suppressHydrationWarning>
+      <body
+        className={`${fontSans.variable} ${fontMono.variable} font-sans antialiased`}
+        suppressHydrationWarning
+      >
         <AppShell>{children}</AppShell>
       </body>
     </html>

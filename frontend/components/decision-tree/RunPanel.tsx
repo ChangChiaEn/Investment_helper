@@ -186,9 +186,9 @@ export function RunPanel({ inventory }: Props) {
     <div className="space-y-4">
       <Disclaimer />
 
-      <div className="bg-white border rounded-xl p-4 space-y-4">
+      <div className="bg-card border rounded-xl p-4 space-y-4">
         <div className="flex flex-wrap gap-3 items-end">
-          <label className="text-sm text-gray-700">
+          <label className="text-sm text-card-fg">
             決策樹
             <select
               className="mt-1 block border rounded-lg px-3 py-2 min-w-[200px]"
@@ -210,7 +210,7 @@ export function RunPanel({ inventory }: Props) {
             type="button"
             disabled={running || selectedSymbols.length === 0}
             onClick={handleRun}
-            className="px-5 py-2.5 bg-primary-600 text-white rounded-xl font-medium disabled:opacity-50"
+            className="px-5 py-2.5 bg-primary text-primary-fg rounded-xl font-medium disabled:opacity-50"
           >
             {running ? (
               <span className="flex items-center gap-2">
@@ -226,7 +226,7 @@ export function RunPanel({ inventory }: Props) {
           {results.length > 0 && (
             <button
               type="button"
-              className="px-3 py-2 text-sm text-gray-600 border rounded-lg hover:bg-gray-50"
+              className="px-3 py-2 text-sm text-muted-fg border rounded-lg hover:bg-muted"
               onClick={() => {
                 setResults([])
                 clearRunSession()
@@ -247,14 +247,14 @@ export function RunPanel({ inventory }: Props) {
         {/* 多選標的 */}
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-2">
-            <span className="text-sm font-medium text-gray-800">標的（可多選）</span>
+            <span className="text-sm font-medium text-card-fg">標的（可多選）</span>
             <button type="button" className="text-xs text-primary-700" onClick={selectAll}>
               全選
             </button>
-            <button type="button" className="text-xs text-gray-500" onClick={clearSelection}>
+            <button type="button" className="text-xs text-muted-fg" onClick={clearSelection}>
               清空
             </button>
-            <span className="text-xs text-gray-400">已選 {selectedSymbols.length}</span>
+            <span className="text-xs text-muted-fg">已選 {selectedSymbols.length}</span>
           </div>
           {symbols.length === 0 ? (
             <p className="text-sm text-amber-700 bg-amber-50 border border-amber-100 rounded-lg p-3">
@@ -270,7 +270,7 @@ export function RunPanel({ inventory }: Props) {
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm cursor-pointer ${
                       checked
                         ? 'border-primary-500 bg-primary-50 text-primary-900'
-                        : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                        : 'border-border bg-card text-card-fg hover:bg-muted'
                     }`}
                   >
                     <input
@@ -280,7 +280,7 @@ export function RunPanel({ inventory }: Props) {
                       onChange={() => toggleSymbol(sym)}
                     />
                     <span className="font-mono">{sym}</span>
-                    <span className="text-gray-500 truncate max-w-[100px]">{name}</span>
+                    <span className="text-muted-fg truncate max-w-[100px]">{name}</span>
                   </label>
                 )
               })}
@@ -299,7 +299,7 @@ export function RunPanel({ inventory }: Props) {
             <button
               type="button"
               disabled={running}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm"
+              className="px-4 py-2 bg-success text-primary-fg rounded-lg text-sm"
               onClick={() => handleManual('yes')}
             >
               是
@@ -307,7 +307,7 @@ export function RunPanel({ inventory }: Props) {
             <button
               type="button"
               disabled={running}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm"
+              className="px-4 py-2 bg-danger text-primary-fg rounded-lg text-sm"
               onClick={() => handleManual('no')}
             >
               否
@@ -318,9 +318,9 @@ export function RunPanel({ inventory }: Props) {
 
       {/* 統一結果摘要 */}
       {results.length > 0 && (
-        <div className="bg-white border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b bg-gray-50 flex flex-wrap gap-3 text-sm text-gray-700">
-            <span className="font-semibold text-gray-900">執行結果</span>
+        <div className="bg-card border rounded-xl overflow-hidden">
+          <div className="px-4 py-3 border-b bg-muted flex flex-wrap gap-3 text-sm text-card-fg">
+            <span className="font-semibold text-fg">執行結果</span>
             <span>共 {summary.total} 檔</span>
             <span className="text-emerald-700">完成 {summary.completed}</span>
             {summary.waiting > 0 && <span className="text-amber-700">待確認 {summary.waiting}</span>}
@@ -364,12 +364,12 @@ function ResultRow({
           : '執行中'
   const statusClass =
     state.status === 'completed'
-      ? 'bg-emerald-100 text-emerald-800'
+      ? 'bg-emerald-100 text-success'
       : state.status === 'awaiting_manual'
         ? 'bg-amber-100 text-amber-800'
         : state.status === 'error'
           ? 'bg-red-100 text-red-800'
-          : 'bg-gray-100 text-gray-700'
+          : 'bg-muted text-card-fg'
 
   return (
     <li className="p-4">
@@ -379,17 +379,17 @@ function ResultRow({
         className="w-full flex items-start gap-2 text-left"
       >
         {expanded ? (
-          <ChevronDown className="w-4 h-4 mt-1 text-gray-400 shrink-0" />
+          <ChevronDown className="w-4 h-4 mt-1 text-muted-fg shrink-0" />
         ) : (
-          <ChevronRight className="w-4 h-4 mt-1 text-gray-400 shrink-0" />
+          <ChevronRight className="w-4 h-4 mt-1 text-muted-fg shrink-0" />
         )}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono font-semibold text-gray-900">{state.symbol}</span>
+            <span className="font-mono font-semibold text-fg">{state.symbol}</span>
             <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass}`}>{statusLabel}</span>
           </div>
           {state.status === 'completed' && (
-            <p className="text-sm text-gray-800">{state.resultAdvice}</p>
+            <p className="text-sm text-card-fg">{state.resultAdvice}</p>
           )}
           {state.status === 'error' && (
             <p className="text-sm text-red-700">執行中止：{state.error}</p>
@@ -398,7 +398,7 @@ function ResultRow({
             <p className="text-sm text-amber-800">{state.pendingPrompt}</p>
           )}
           {state.resultParams && Object.keys(state.resultParams).length > 0 && (
-            <ul className="text-xs text-gray-600 list-disc ml-4">
+            <ul className="text-xs text-muted-fg list-disc ml-4">
               {Object.entries(state.resultParams).map(([k, v]) => (
                 <li key={k}>
                   {k}：{String(v)}
@@ -406,7 +406,7 @@ function ResultRow({
               ))}
             </ul>
           )}
-          <p className="text-xs text-gray-400">
+          <p className="text-xs text-muted-fg">
             {expanded ? '收合過程' : `展開過程（${state.path.length} 步）`}
           </p>
         </div>
@@ -416,26 +416,26 @@ function ResultRow({
         <ol className="mt-3 ml-6 space-y-3 border-l-2 border-primary-100 pl-3">
           {state.path.map((step, i) => (
             <li key={`${step.nodeId}_${i}`}>
-              <div className="text-sm font-medium text-gray-900">
+              <div className="text-sm font-medium text-fg">
                 {i + 1}. [{step.kind}] {step.label}
                 {step.branchTaken && (
-                  <span className="ml-2 text-xs text-gray-500">
+                  <span className="ml-2 text-xs text-muted-fg">
                     → {step.branchTaken === 'yes' ? '通過／是' : '未通過／否'}
                   </span>
                 )}
               </div>
-              {step.note && <p className="text-xs text-gray-600 mt-0.5">{step.note}</p>}
+              {step.note && <p className="text-xs text-muted-fg mt-0.5">{step.note}</p>}
               {step.indicatorResults && (
                 <ul className="mt-1 space-y-1">
                   {step.indicatorResults.map((r) => (
                     <li
                       key={r.indicatorId}
-                      className="text-xs flex flex-wrap items-center gap-2 text-gray-700"
+                      className="text-xs flex flex-wrap items-center gap-2 text-card-fg"
                     >
                       <SourceBadge source={r.resolvedSource} />
                       <span className="font-mono">{r.indicatorId}</span>
                       <span>{r.display}</span>
-                      {r.error && <span className="text-red-600">{r.error}</span>}
+                      {r.error && <span className="text-danger">{r.error}</span>}
                     </li>
                   ))}
                 </ul>

@@ -43,7 +43,7 @@ export function InventoryPanel({ inventory, onChange }: Props) {
           type="button"
           onClick={() => setTab('holdings')}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-            tab === 'holdings' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            tab === 'holdings' ? 'bg-primary text-primary-fg' : 'bg-muted text-card-fg hover:bg-muted'
           }`}
         >
           持股
@@ -54,7 +54,7 @@ export function InventoryPanel({ inventory, onChange }: Props) {
             type="button"
             onClick={() => setTab(list.id)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-              tab === list.id ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              tab === list.id ? 'bg-primary text-primary-fg' : 'bg-muted text-card-fg hover:bg-muted'
             }`}
           >
             {list.name}
@@ -65,7 +65,7 @@ export function InventoryPanel({ inventory, onChange }: Props) {
           type="button"
           onClick={() => setTab('globals')}
           className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-            tab === 'globals' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            tab === 'globals' ? 'bg-primary text-primary-fg' : 'bg-muted text-card-fg hover:bg-muted'
           }`}
         >
           全域參數
@@ -74,7 +74,7 @@ export function InventoryPanel({ inventory, onChange }: Props) {
 
       {/* 新增分類 */}
       <div className="flex flex-wrap gap-2 items-end bg-slate-50 border border-slate-100 rounded-xl p-3">
-        <label className="text-xs text-gray-600">
+        <label className="text-xs text-muted-fg">
           新增分類（如觀察、候選、半導體）
           <input
             className="mt-1 block border rounded-lg px-3 py-2 text-sm min-w-[160px]"
@@ -96,7 +96,7 @@ export function InventoryPanel({ inventory, onChange }: Props) {
         </label>
         <button
           type="button"
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm"
+          className="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm"
           onClick={() => {
             if (!newListName.trim()) return
             const next = addCustomList(inventory, newListName)
@@ -108,13 +108,13 @@ export function InventoryPanel({ inventory, onChange }: Props) {
         >
           新增分類
         </button>
-        <p className="text-xs text-gray-500 w-full sm:w-auto sm:ml-2">
+        <p className="text-xs text-muted-fg w-full sm:w-auto sm:ml-2">
           分類僅用來分組標的，不預設「觀察／候選」；可自行建立。
         </p>
       </div>
 
       {tab === 'globals' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white rounded-xl border p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-card rounded-xl border p-4">
           {(
             [
               ['totalCapital', '總資金'],
@@ -122,7 +122,7 @@ export function InventoryPanel({ inventory, onChange }: Props) {
               ['maxHoldings', '持股檔數上限'],
             ] as const
           ).map(([key, label]) => (
-            <label key={key} className="text-sm text-gray-700">
+            <label key={key} className="text-sm text-card-fg">
               {label}
               <input
                 type="number"
@@ -186,7 +186,7 @@ function HoldingsTable({
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-xl border p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="bg-card rounded-xl border p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
         {(
           [
             ['symbol', '代號'],
@@ -198,7 +198,7 @@ function HoldingsTable({
             ['note', '備註'],
           ] as const
         ).map(([key, label]) => (
-          <label key={key} className="text-xs text-gray-600">
+          <label key={key} className="text-xs text-muted-fg">
             {label}
             <input
               className="mt-1 w-full border rounded-lg px-2 py-1.5 text-sm"
@@ -225,7 +225,7 @@ function HoldingsTable({
         <div className="flex items-end">
           <button
             type="button"
-            className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm"
+            className="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm"
             onClick={() => {
               if (!form.symbol.trim()) return
               onAdd({ ...form, symbol: form.symbol.trim(), name: form.name.trim() || form.symbol })
@@ -237,9 +237,9 @@ function HoldingsTable({
         </div>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-xl border">
+      <div className="overflow-x-auto bg-card rounded-xl border">
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50 text-left text-gray-600">
+          <thead className="bg-muted text-left text-muted-fg">
             <tr>
               <th className="p-3">代號</th>
               <th className="p-3">名稱</th>
@@ -252,7 +252,7 @@ function HoldingsTable({
           <tbody>
             {items.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-4 text-gray-400 text-center">
+                <td colSpan={6} className="p-4 text-muted-fg text-center">
                   尚無持股，請手動新增
                 </td>
               </tr>
@@ -286,7 +286,7 @@ function HoldingsTable({
                   />
                 </td>
                 <td className="p-3">
-                  <button type="button" className="text-red-600 text-xs" onClick={() => onRemove(h.id)}>
+                  <button type="button" className="text-danger text-xs" onClick={() => onRemove(h.id)}>
                     刪除
                   </button>
                 </td>
@@ -326,7 +326,7 @@ function SimpleList({
   }, [list.id, list.name])
 
   return (
-    <div className="bg-white rounded-xl border p-4 space-y-3">
+    <div className="bg-card rounded-xl border p-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <input
@@ -342,14 +342,14 @@ function SimpleList({
             }}
           />
           {list.maxItems !== undefined && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-fg">
               {list.items.length} / {list.maxItems}
             </span>
           )}
         </div>
         <button
           type="button"
-          className="text-xs text-red-600 hover:underline"
+          className="text-xs text-danger hover:underline"
           onClick={() => {
             if (confirm(`確定刪除分類「${list.name}」？`)) onDeleteList()
           }}
@@ -373,7 +373,7 @@ function SimpleList({
         <button
           type="button"
           disabled={full || !symbol.trim()}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm disabled:opacity-40"
+          className="px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm disabled:opacity-40"
           onClick={() => {
             onAdd(symbol.trim(), name.trim() || symbol.trim())
             setSymbol('')
@@ -387,14 +387,14 @@ function SimpleList({
         {list.items.map((i) => (
           <li key={i.id} className="py-2 flex justify-between text-sm">
             <span>
-              <span className="font-mono text-primary-700">{i.symbol}</span> {i.name}
+              <span className="font-mono text-primary">{i.symbol}</span> {i.name}
             </span>
-            <button type="button" className="text-red-600 text-xs" onClick={() => onRemove(i.id)}>
+            <button type="button" className="text-danger text-xs" onClick={() => onRemove(i.id)}>
               刪除
             </button>
           </li>
         ))}
-        {list.items.length === 0 && <li className="text-gray-400 text-sm py-2">尚無項目</li>}
+        {list.items.length === 0 && <li className="text-muted-fg text-sm py-2">尚無項目</li>}
       </ul>
     </div>
   )
