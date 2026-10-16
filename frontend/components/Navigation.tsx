@@ -4,17 +4,31 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { NAVIGATION_TOOLS, ADVANCED_TOOLS } from '@/config/tools'
-import { Home, Settings, Star, ChevronDown, ChevronRight, ArrowRight, Trash2 } from 'lucide-react'
+import {
+  Home,
+  Settings,
+  Star,
+  ChevronDown,
+  ChevronRight,
+  ArrowRight,
+  Trash2,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react'
 import { ToolIcon } from '@/components/ToolIcons'
 import { useWatchlist } from '@/contexts/WatchlistContext'
 import { navigateToTool, getAnalysisTool } from '@/utils/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+
+/** 側欄收合狀態的 localStorage 鍵 */
+const NAV_COLLAPSED_KEY = 'nav_collapsed'
 
 /**
  * 側欄關注清單面板：展開／收合、跳轉分析、移除項目。
+ * @param collapsed 側欄是否為窄欄模式（僅圖示時隱藏本面板）
  */
-function WatchlistPanel() {
+function WatchlistPanel({ collapsed }: { collapsed: boolean }) {
   const { items, remove } = useWatchlist()
   const [expanded, setExpanded] = useState(true)
   const router = useRouter()
@@ -31,7 +45,7 @@ function WatchlistPanel() {
     router.push(url)
   }
 
-  if (items.length === 0) return null
+  if (items.length === 0 || collapsed) return null
 
   return (
     <div className="mt-4">
@@ -93,50 +107,109 @@ function WatchlistPanel() {
 }
 
 /**
- * 左側導覽列：首頁、工具列表、進階功能、關注清單與設定入口。
+ * 左側導覽列：可收合為僅圖示窄欄；狀態寫入 localStorage。
  */
 export function Navigation() {
   const pathname = usePathname()
+  const [collapsed, setCollapsed] = useState(false)
+  // 避免 SSR／hydration 與 localStorage 不一致造成閃爍
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    const saved = localStorage.getItem(NAV_COLLAPSED_KEY)
+    if (saved === '1') setCollapsed(true)
+    setReady(true)
+  }, [])
+
+  /** 切換收合並持久化。 */
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev
+      localStorage.setItem(NAV_COLLAPSED_KEY, next ? '1' : '0')
+      return next
+    })
+  }
+
+  /** 連結在收合／展開時的共用樣式。 */
+  const linkClass = (active: boolean) =>
+    `flex items-center rounded-xl transition-all duration-200 ${
+      collapsed ? 'justify-center px-2 py-3' : 'space-x-3 px-4 py-3'
+    } ${
+      active
+        ? 'bg-gradient-to-r from-primary/20 to-accent/10 text-primary font-medium shadow-sm border border-primary/30'
+        : 'text-sidebar-fg hover:bg-sidebar-hover/50 hover:shadow-sm'
+    }`
 
   return (
-    <nav className="w-72 bg-gradient-to-b from-sidebar-alt to-sidebar border-r border-sidebar-border/50 flex flex-col h-screen shadow-2xl text-base">
-      {/* Logo */}
-      <div className="p-6 border-b border-sidebar-border/50 bg-gradient-to-r from-sidebar to-sidebar-alt">
-        <Link href="/" className="flex items-center space-x-2 group">
-          <Image
-            src="/Sagafisc.png"
-            alt="Sagafisc"
-            width={40}
-            height={40}
-            className="w-10 h-10 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300"
-          />
-          <span className="font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Sagafisc
-          </span>
-        </Link>
+    <nav
+      className={`
+        relative flex flex-col h-screen shrink-0
+        bg-gradient-to-b from-sidebar-alt to-sidebar
+        border-r border-sidebar-border/50 shadow-2xl text-base
+        transition-[width] duration-300 ease-in-out overflow-hidden
+        ${collapsed ? 'w-[4.5rem]' : 'w-72'}
+        ${ready ? 'opacity-100' : 'opacity-0'}
+      `}
+    >
+      {/* Logo + 收合按鈕 */}
+      <div className={`border-b border-sidebar-border/50 bg-gradient-to-r from-sidebar to-sidebar-alt ${collapsed ? 'p-3' : 'p-4'}`}>
+        <div className={`flex items-center ${collapsed ? 'flex-col gap-2' : 'justify-between gap-2'}`}>
+          <Link
+            href="/"
+            className={`flex items-center group min-w-0 ${collapsed ? 'justify-center' : 'space-x-2'}`}
+            title="Sagafisc"
+          >
+            <Image
+              src="/Sagafisc.png"
+              alt="Sagafisc"
+              width={40}
+              height={40}
+              priority
+              className="w-10 h-10 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300 flex-shrink-0"
+            />
+            {!collapsed && (
+              <span className="font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent truncate">
+                Sagafisc
+              </span>
+            )}
+          </Link>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="p-2 rounded-lg text-sidebar-muted hover:text-sidebar-fg hover:bg-sidebar-hover/50 transition-colors flex-shrink-0"
+            title={collapsed ? '展開側欄' : '收合側欄'}
+            aria-label={collapsed ? '展開側欄' : '收合側欄'}
+            aria-expanded={!collapsed}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="w-5 h-5" />
+            ) : (
+              <PanelLeftClose className="w-5 h-5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* 主要導覽 */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className={`flex-1 overflow-y-auto overflow-x-hidden ${collapsed ? 'p-2' : 'p-4'}`}>
         <div className="mb-4">
           <Link
             href="/"
-            className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-              pathname === '/'
-                ? 'bg-primary/20 text-primary font-medium border border-primary/30'
-                : 'text-sidebar-fg hover:bg-sidebar-hover/50'
-            }`}
+            title="首頁"
+            className={linkClass(pathname === '/')}
           >
-            <Home className="w-5 h-5" />
-            <span>首頁</span>
+            <Home className="w-5 h-5 flex-shrink-0" />
+            {!collapsed && <span>首頁</span>}
           </Link>
         </div>
 
-        <div className="mb-2">
-          <h3 className="px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider">
-            主要功能
-          </h3>
-        </div>
+        {!collapsed && (
+          <div className="mb-2">
+            <h3 className="px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider">
+              主要功能
+            </h3>
+          </div>
+        )}
 
         <div className="space-y-1">
           {NAVIGATION_TOOLS.map((tool) => {
@@ -145,19 +218,18 @@ export function Navigation() {
               <Link
                 key={tool.id}
                 href={`/tools/${tool.id}`}
-                className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-primary/20 to-accent/10 text-primary font-medium shadow-sm border border-primary/30'
-                    : 'text-sidebar-fg hover:bg-sidebar-hover/50 hover:shadow-sm'
-                }`}
+                title={tool.name}
+                className={linkClass(isActive)}
               >
                 <ToolIcon toolId={tool.id} className="w-5 h-5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="text-base font-medium">{tool.name}</div>
-                  <div className="text-sm text-sidebar-muted truncate">
-                    {tool.description}
+                {!collapsed && (
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base font-medium">{tool.name}</div>
+                    <div className="text-sm text-sidebar-muted truncate">
+                      {tool.description}
+                    </div>
                   </div>
-                </div>
+                )}
               </Link>
             )
           })}
@@ -166,31 +238,32 @@ export function Navigation() {
         {/* 進階功能 */}
         {ADVANCED_TOOLS.length > 0 && (
           <>
-            <div className="mt-6 mb-2">
-              <h3 className="px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider">
-                進階功能
-              </h3>
-            </div>
-            <div className="space-y-1">
+            {!collapsed && (
+              <div className="mt-6 mb-2">
+                <h3 className="px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider">
+                  進階功能
+                </h3>
+              </div>
+            )}
+            <div className={`space-y-1 ${collapsed ? 'mt-2' : ''}`}>
               {ADVANCED_TOOLS.map((tool) => {
                 const isActive = pathname === `/tools/${tool.id}`
                 return (
                   <Link
                     key={tool.id}
                     href={`/tools/${tool.id}`}
-                    className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-primary/20 text-primary font-medium border border-primary/30'
-                        : 'text-sidebar-fg hover:bg-sidebar-hover/50'
-                    }`}
+                    title={tool.name}
+                    className={linkClass(isActive)}
                   >
                     <ToolIcon toolId={tool.id} className="w-5 h-5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-base font-medium">{tool.name}</div>
-                      <div className="text-sm text-sidebar-muted truncate">
-                        {tool.description}
+                    {!collapsed && (
+                      <div className="flex-1 min-w-0">
+                        <div className="text-base font-medium">{tool.name}</div>
+                        <div className="text-sm text-sidebar-muted truncate">
+                          {tool.description}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </Link>
                 )
               })}
@@ -198,18 +271,20 @@ export function Navigation() {
           </>
         )}
 
-        {/* 關注清單 */}
-        <WatchlistPanel />
+        <WatchlistPanel collapsed={collapsed} />
       </div>
 
       {/* 底部設定 */}
-      <div className="p-4 border-t border-sidebar-border/50">
+      <div className={`border-t border-sidebar-border/50 ${collapsed ? 'p-2' : 'p-4'}`}>
         <Link
           href="/settings"
-          className="flex items-center space-x-3 px-4 py-3 rounded-lg text-sidebar-fg hover:bg-sidebar-hover/50 transition-colors"
+          title="設定"
+          className={`flex items-center rounded-lg text-sidebar-fg hover:bg-sidebar-hover/50 transition-colors ${
+            collapsed ? 'justify-center px-2 py-3' : 'space-x-3 px-4 py-3'
+          }`}
         >
-          <Settings className="w-5 h-5" />
-          <span>設定</span>
+          <Settings className="w-5 h-5 flex-shrink-0" />
+          {!collapsed && <span>設定</span>}
         </Link>
       </div>
     </nav>
