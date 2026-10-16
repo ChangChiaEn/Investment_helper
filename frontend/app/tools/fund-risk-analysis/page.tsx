@@ -188,10 +188,10 @@ export default function FundRiskAnalysisPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-soft border border-primary/30 mb-4">
           <AlertTriangle className="w-7 h-7 text-primary" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-fg mb-2">
           基金<span className="text-primary">風險分析</span>
         </h1>
-        <p className="text-surface-400 text-sm max-w-lg mx-auto">
+        <p className="text-muted-fg text-sm max-w-lg mx-auto">
           輸入基金名稱，AI 即時搜尋持股成分、檢索新聞並評估風險等級
         </p>
       </div>
@@ -231,7 +231,7 @@ export default function FundRiskAnalysisPage() {
                 key={fund}
                 onClick={() => handleAnalyze(fund)}
                 disabled={status === AnalysisStatus.LOADING}
-                className="px-3 py-1 bg-surface-800 hover:bg-primary-soft border border-surface-600 hover:border-primary text-surface-300 hover:text-primary text-xs rounded-full transition-colors disabled:opacity-50"
+                className="px-3 py-1 bg-muted hover:bg-primary-soft border border-border hover:border-primary text-fg hover:text-primary text-xs rounded-full transition-colors disabled:opacity-50"
               >
                 {fund}
               </button>
@@ -351,7 +351,7 @@ export default function FundRiskAnalysisPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
             <Search className="w-8 h-8 text-muted-fg" />
           </div>
-          <p className="text-muted-fg text-sm">選擇或輸入基金名稱，開始 AI 風險分析</p>
+          <p className="text-fg text-base">選擇或輸入基金名稱，開始 AI 風險分析</p>
         </div>
       )}
     </div>

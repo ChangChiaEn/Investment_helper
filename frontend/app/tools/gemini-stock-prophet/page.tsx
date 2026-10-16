@@ -104,20 +104,20 @@ function LoadingSkeleton() {
     <div className="animate-pulse space-y-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <Loader2 className="w-6 h-6 text-primary animate-spin" />
-        <span className="text-surface-400 font-medium">AI 正在搜尋最新資訊並分析中...</span>
+        <span className="text-muted-fg font-medium">AI 正在搜尋最新資訊並分析中...</span>
       </div>
       <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 space-y-4">
-        <div className="h-8 bg-surface-200 rounded w-3/4" />
-        <div className="h-4 bg-surface-100 rounded w-full" />
-        <div className="h-4 bg-surface-100 rounded w-5/6" />
-        <div className="h-4 bg-surface-100 rounded w-4/6" />
-        <div className="h-6 bg-surface-200 rounded w-1/2 mt-6" />
-        <div className="h-4 bg-surface-100 rounded w-full" />
-        <div className="h-4 bg-surface-100 rounded w-3/4" />
-        <div className="h-6 bg-surface-200 rounded w-1/2 mt-6" />
-        <div className="h-4 bg-surface-100 rounded w-full" />
-        <div className="h-4 bg-surface-100 rounded w-5/6" />
-        <div className="h-4 bg-surface-100 rounded w-2/3" />
+        <div className="h-8 bg-border rounded w-3/4" />
+        <div className="h-4 bg-muted rounded w-full" />
+        <div className="h-4 bg-muted rounded w-5/6" />
+        <div className="h-4 bg-muted rounded w-4/6" />
+        <div className="h-6 bg-border rounded w-1/2 mt-6" />
+        <div className="h-4 bg-muted rounded w-full" />
+        <div className="h-4 bg-muted rounded w-3/4" />
+        <div className="h-6 bg-border rounded w-1/2 mt-6" />
+        <div className="h-4 bg-muted rounded w-full" />
+        <div className="h-4 bg-muted rounded w-5/6" />
+        <div className="h-4 bg-muted rounded w-2/3" />
       </div>
     </div>
   )
@@ -190,8 +190,8 @@ export default function GeminiStockProphetPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-soft border border-primary/30 mb-4">
             <TrendingUp className="w-7 h-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-surface-100 mb-2">Gemini 股票先知</h1>
-          <p className="text-surface-400 text-sm max-w-md mx-auto">
+          <h1 className="text-2xl font-bold text-fg mb-2">Gemini 股票先知</h1>
+          <p className="text-muted-fg text-sm max-w-md mx-auto">
             輸入股票代號或名稱，AI 將搜尋最新資訊進行深度投資分析與走向預測
           </p>
         </div>
@@ -278,7 +278,7 @@ export default function GeminiStockProphetPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
               <Search className="w-8 h-8 text-muted-fg" />
             </div>
-            <p className="text-muted-fg text-sm">輸入股票代號並點擊分析，開始獲取 AI 投資分析報告</p>
+            <p className="text-fg text-base">輸入股票代號並點擊分析，開始獲取 AI 投資分析報告</p>
           </div>
         )}
       </div>

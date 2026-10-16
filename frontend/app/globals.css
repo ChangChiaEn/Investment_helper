@@ -7,35 +7,44 @@
  * 色值格式為 R G B，供 rgb(var(--color-*) / alpha) 使用。
  */
 :root {
-  --color-bg: 13 17 32;
-  --color-bg-end: 15 23 42;
-  --color-fg: 226 232 240;
-  --color-card: 30 41 59;
-  --color-card-fg: 226 232 240;
+  /* 預設對齊駭客風（高對比）；FOUC / ThemeProvider 會覆寫 */
+  --color-bg: 8 12 24;
+  --color-bg-end: 12 18 36;
+  --color-fg: 248 250 252;
+  --color-card: 22 32 52;
+  --color-card-fg: 248 250 252;
   --color-muted: 15 23 42;
-  --color-muted-fg: 148 163 184;
-  --color-border: 51 65 85;
-  --color-primary: 16 185 129;
+  --color-muted-fg: 186 198 214;
+  --color-border: 71 85 105;
+  --color-primary: 52 211 153;
   --color-primary-fg: 2 6 23;
   --color-primary-soft: 6 78 59;
-  --color-accent: 52 211 153;
+  --color-accent: 110 231 183;
   --color-sidebar: 2 6 23;
-  --color-sidebar-alt: 15 23 42;
-  --color-sidebar-fg: 203 213 225;
-  --color-sidebar-muted: 100 116 139;
-  --color-sidebar-border: 30 41 59;
+  --color-sidebar-alt: 10 16 30;
+  --color-sidebar-fg: 248 250 252;
+  --color-sidebar-muted: 168 182 200;
+  --color-sidebar-border: 51 65 85;
   --color-sidebar-hover: 30 41 59;
-  --color-danger: 248 113 113;
+  --color-danger: 252 165 165;
   --color-danger-soft: 69 10 10;
-  --color-success: 52 211 153;
+  --color-success: 110 231 183;
   --color-success-soft: 6 78 59;
-  --color-warning: 251 191 36;
+  --color-warning: 253 224 71;
   --color-warning-soft: 69 26 3;
-  --color-ring: 16 185 129;
-  --color-chart-1: 16 185 129;
+  --color-ring: 52 211 153;
+  --color-chart-1: 52 211 153;
   --color-chart-2: 56 189 248;
-  --color-chart-3: 251 191 36;
-  --color-chart-4: 248 113 113;
+  --color-chart-3: 253 224 71;
+  --color-chart-4: 252 165 165;
+}
+
+/*
+ * 全域字級放大：Tailwind rem 單位會隨 html font-size 縮放。
+ * 預設瀏覽器 16px → 18px（約 +12.5%）。
+ */
+html {
+  font-size: 18px;
 }
 
 body {
@@ -47,6 +56,8 @@ body {
     rgb(var(--color-bg)) 100%
   );
   min-height: 100vh;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 @layer utilities {
@@ -213,7 +224,7 @@ body {
 }
 
 .button .wrap {
-  font-size: 16px;
+  font-size: 1.05rem;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.9);
   padding: 16px 32px;

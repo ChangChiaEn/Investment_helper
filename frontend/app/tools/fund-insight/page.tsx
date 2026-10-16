@@ -122,10 +122,10 @@ export default function FundInsightPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-soft border border-primary/30 mb-4">
           <BookOpen className="w-7 h-7 text-primary" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-fg mb-2">
           基金<span className="text-primary">透視鏡</span>
         </h1>
-        <p className="text-surface-400 text-sm max-w-lg mx-auto">
+        <p className="text-muted-fg text-sm max-w-lg mx-auto">
           輸入基金名稱，AI 即時分析持股、市場情緒與投資策略，掃描重疊強勢股
         </p>
       </div>
@@ -191,7 +191,7 @@ export default function FundInsightPage() {
       {appState === AppState.FUNDS_LIST && funds.length > 0 && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-surface-100">
+            <h2 className="text-lg font-bold text-fg">
               找到 {funds.length} 支基金
             </h2>
             {funds.length >= 2 && (
@@ -308,8 +308,8 @@ export default function FundInsightPage() {
             </div>
 
             {/* Strategy */}
-            <div className="bg-primary-soft border border-primary/40 rounded-lg p-4">
-              <h3 className="text-base font-bold text-blue-800 mb-3 flex items-center gap-2">
+            <div className="bg-primary-soft border border-primary/40 rounded-lg p-4 text-fg">
+              <h3 className="text-base font-bold mb-3 flex items-center gap-2">
                 <FileText className="w-4 h-4" /> 專家建議
               </h3>
               <div className="space-y-3 text-sm">
@@ -419,7 +419,7 @@ export default function FundInsightPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
             <Search className="w-8 h-8 text-muted-fg" />
           </div>
-          <p className="text-muted-fg text-sm">輸入基金名稱並點擊載入，開始 AI 基金分析</p>
+          <p className="text-fg text-base">輸入基金名稱並點擊載入，開始 AI 基金分析</p>
         </div>
       )}
     </div>

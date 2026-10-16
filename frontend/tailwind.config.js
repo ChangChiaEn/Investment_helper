@@ -75,18 +75,23 @@ module.exports = {
           3: withOpacity('--color-chart-3'),
           4: withOpacity('--color-chart-4'),
         },
-        // surface-* 向後相容：對應語意畫布／卡片／側欄
+        /*
+         * surface-* 向後相容（舊深色 UI 慣例）：
+         * - 低數字當「主字／次要字」（text-surface-100/300）→ fg / muted-fg
+         * - 高數字當「區塊底／邊框」（bg-surface-800、border-surface-600）→ muted / border
+         * 不可再把 100 映射成背景色，否則標題會與畫布糊成一團。
+         */
         surface: {
           50: withOpacity('--color-card'),
-          100: withOpacity('--color-muted'),
+          100: withOpacity('--color-fg'),
           200: withOpacity('--color-border'),
           300: withOpacity('--color-muted-fg'),
           400: withOpacity('--color-muted-fg'),
           500: withOpacity('--color-muted-fg'),
-          600: withOpacity('--color-card-fg'),
-          700: withOpacity('--color-border'),
-          800: withOpacity('--color-sidebar-hover'),
-          900: withOpacity('--color-sidebar-alt'),
+          600: withOpacity('--color-border'),
+          700: withOpacity('--color-muted'),
+          800: withOpacity('--color-muted'),
+          900: withOpacity('--color-card'),
           950: withOpacity('--color-bg'),
         },
       },

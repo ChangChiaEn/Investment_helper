@@ -30,10 +30,10 @@ export function HomeDashboard() {
     return (
       <div className="bg-card/95 backdrop-blur-sm rounded-lg shadow p-6 border border-border/50">
         <div className="animate-pulse">
-          <div className="h-4 bg-surface-200 rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-border rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
-            <div className="h-16 bg-surface-200 rounded"></div>
-            <div className="h-16 bg-surface-200 rounded"></div>
+            <div className="h-16 bg-muted rounded"></div>
+            <div className="h-16 bg-muted rounded"></div>
           </div>
         </div>
       </div>

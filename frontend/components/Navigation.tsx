@@ -37,7 +37,7 @@ function WatchlistPanel() {
     <div className="mt-4">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center justify-between w-full px-4 py-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider hover:text-sidebar-fg transition-colors"
+        className="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider hover:text-sidebar-fg transition-colors"
       >
         <span className="flex items-center gap-1.5">
           <Star className="w-3 h-3 text-warning" />
@@ -99,7 +99,7 @@ export function Navigation() {
   const pathname = usePathname()
 
   return (
-    <nav className="w-64 bg-gradient-to-b from-sidebar-alt to-sidebar border-r border-sidebar-border/50 flex flex-col h-screen shadow-2xl">
+    <nav className="w-72 bg-gradient-to-b from-sidebar-alt to-sidebar border-r border-sidebar-border/50 flex flex-col h-screen shadow-2xl text-base">
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border/50 bg-gradient-to-r from-sidebar to-sidebar-alt">
         <Link href="/" className="flex items-center space-x-2 group">
@@ -133,7 +133,7 @@ export function Navigation() {
         </div>
 
         <div className="mb-2">
-          <h3 className="px-4 py-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider">
+          <h3 className="px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider">
             主要功能
           </h3>
         </div>
@@ -153,8 +153,8 @@ export function Navigation() {
               >
                 <ToolIcon toolId={tool.id} className="w-5 h-5 flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium">{tool.name}</div>
-                  <div className="text-xs text-sidebar-muted truncate">
+                  <div className="text-base font-medium">{tool.name}</div>
+                  <div className="text-sm text-sidebar-muted truncate">
                     {tool.description}
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export function Navigation() {
         {ADVANCED_TOOLS.length > 0 && (
           <>
             <div className="mt-6 mb-2">
-              <h3 className="px-4 py-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider">
+              <h3 className="px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider">
                 進階功能
               </h3>
             </div>
@@ -186,8 +186,8 @@ export function Navigation() {
                   >
                     <ToolIcon toolId={tool.id} className="w-5 h-5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium">{tool.name}</div>
-                      <div className="text-xs text-sidebar-muted truncate">
+                      <div className="text-base font-medium">{tool.name}</div>
+                      <div className="text-sm text-sidebar-muted truncate">
                         {tool.description}
                       </div>
                     </div>

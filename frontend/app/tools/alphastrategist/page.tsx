@@ -240,7 +240,7 @@ export default function AlphaStrategistPage() {
       </div>
 
       {/* Fixed Input Area */}
-      <div className="border-t border-surface-700 bg-surface-900 px-4 sm:px-6 py-4">
+      <div className="border-t border-border bg-card px-4 sm:px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <input
             ref={inputRef}
@@ -249,7 +249,7 @@ export default function AlphaStrategistPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="請輸入您想分析的股票或基金..."
-            className="flex-1 px-4 py-2.5 bg-surface-800 border border-surface-600 rounded-xl text-sm text-surface-100 placeholder:text-surface-500 focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
+            className="flex-1 px-4 py-2.5 bg-muted border border-border rounded-xl text-sm text-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
             disabled={isLoading}
           />
           <button

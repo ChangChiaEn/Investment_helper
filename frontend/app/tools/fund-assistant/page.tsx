@@ -204,25 +204,25 @@ function LoadingSkeleton() {
     <div className="space-y-6">
       <div className="flex items-center gap-3 justify-center py-6">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        <span className="text-surface-400 font-medium">AI 正在搜尋最新基金資訊並進行深度分析...</span>
+        <span className="text-muted-fg font-medium">AI 正在搜尋最新基金資訊並進行深度分析...</span>
       </div>
       {[1, 2].map(i => (
         <div key={i} className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 animate-pulse space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-surface-200 rounded-full" />
+            <div className="w-8 h-8 bg-border rounded-full" />
             <div className="space-y-2 flex-1">
-              <div className="h-5 bg-surface-200 rounded w-1/3" />
-              <div className="h-3 bg-surface-100 rounded w-1/4" />
+              <div className="h-5 bg-border rounded w-1/3" />
+              <div className="h-3 bg-muted rounded w-1/4" />
             </div>
           </div>
-          <div className="h-3 bg-surface-100 rounded w-full" />
-          <div className="h-3 bg-surface-100 rounded w-5/6" />
+          <div className="h-3 bg-muted rounded w-full" />
+          <div className="h-3 bg-muted rounded w-5/6" />
           <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="h-20 bg-surface-100 rounded-lg" />
-            <div className="h-20 bg-surface-100 rounded-lg" />
+            <div className="h-20 bg-muted rounded-lg" />
+            <div className="h-20 bg-muted rounded-lg" />
           </div>
-          <div className="h-3 bg-surface-100 rounded w-full" />
-          <div className="h-3 bg-surface-100 rounded w-3/4" />
+          <div className="h-3 bg-muted rounded w-full" />
+          <div className="h-3 bg-muted rounded w-3/4" />
         </div>
       ))}
     </div>
@@ -293,8 +293,8 @@ export default function FundAssistantPage() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-soft border border-primary/30 mb-4">
             <Briefcase className="w-7 h-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-surface-100 mb-2">AI 基金助手</h1>
-          <p className="text-surface-400 text-sm max-w-md mx-auto">
+          <h1 className="text-2xl font-bold text-fg mb-2">AI 基金助手</h1>
+          <p className="text-muted-fg text-sm max-w-md mx-auto">
             搜尋基金名稱或讓 AI 推薦高潛力標的，獲取即時分析與進出場策略
           </p>
         </div>
@@ -350,14 +350,14 @@ export default function FundAssistantPage() {
 
         {/* Popular Fund Tags */}
         <div className="max-w-2xl mx-auto mb-8">
-          <p className="text-xs text-surface-400 text-center mb-2">熱門基金快選</p>
+          <p className="text-xs text-muted-fg text-center mb-2">熱門基金快選</p>
           <div className="flex flex-wrap justify-center gap-2">
             {POPULAR_FUNDS.map(fund => (
               <button
                 key={fund}
                 onClick={() => handlePopularFund(fund)}
                 disabled={isLoading}
-                className="px-3 py-1.5 text-xs font-medium text-surface-300 bg-surface-800 border border-surface-600 rounded-full hover:bg-primary-soft hover:text-primary hover:border-primary/40 disabled:opacity-50 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-fg bg-muted border border-border rounded-full hover:bg-primary-soft hover:text-primary hover:border-primary/40 disabled:opacity-50 transition-colors"
               >
                 {fund}
               </button>
@@ -381,7 +381,7 @@ export default function FundAssistantPage() {
               <div className="bg-primary-soft border border-primary/40 rounded-xl p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-1">
                   <Sparkles className="w-5 h-5 text-primary" />
-                  <h2 className="text-lg font-bold text-blue-800">AI 精選推薦</h2>
+                  <h2 className="text-lg font-bold text-fg">AI 精選推薦</h2>
                 </div>
                 <p className="text-sm text-primary">
                   根據您的搜尋條件，AI 推薦以下 {results.length} 支基金
@@ -415,7 +415,7 @@ export default function FundAssistantPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
               <Search className="w-8 h-8 text-muted-fg" />
             </div>
-            <p className="text-muted-fg text-sm">搜尋基金名稱或點擊熱門標籤，開始獲取 AI 分析報告</p>
+            <p className="text-fg text-base">搜尋基金名稱或點擊熱門標籤，開始獲取 AI 分析報告</p>
           </div>
         )}
       </div>

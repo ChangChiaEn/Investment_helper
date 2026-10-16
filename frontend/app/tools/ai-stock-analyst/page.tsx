@@ -162,8 +162,8 @@ export default function AIStockAnalystPage() {
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-soft border border-primary/40 text-primary text-xs font-semibold mb-4">
           <Sparkles className="w-3 h-3" />Powered by Gemini & Google Search
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-surface-100 mb-3">AI 潛力股<span className="text-primary">分析師</span></h1>
-        <p className="text-surface-400 max-w-2xl mx-auto">即時發掘市場價值。利用 Google 搜尋與 Gemini 深度分析，為您篩選出美股或台股市場中具有翻倍潛力的標的。</p>
+        <h1 className="text-3xl sm:text-4xl font-bold text-fg mb-3">AI 潛力股<span className="text-primary">分析師</span></h1>
+        <p className="text-muted-fg max-w-2xl mx-auto">即時發掘市場價值。利用 Google 搜尋與 Gemini 深度分析，為您篩選出美股或台股市場中具有翻倍潛力的標的。</p>
       </div>
 
       <form onSubmit={handleAnalyze} className="max-w-3xl mx-auto mb-10 bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-6 shadow-sm">
@@ -204,7 +204,7 @@ export default function AIStockAnalystPage() {
         <div className="space-y-8">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary-soft rounded-lg"><TrendingUp className="w-6 h-6 text-primary" /></div>
-            <h2 className="text-2xl font-bold text-surface-100">Gemini 分析結果</h2>
+            <h2 className="text-2xl font-bold text-fg">Gemini 分析結果</h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recommendations.map((stock) => <StockCard key={stock.ticker} stock={stock} />)}

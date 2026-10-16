@@ -227,25 +227,25 @@ export default function TrendDashboardPage() {
             {viewMode === 'ANALYSIS' && (
               <button
                 onClick={() => { setViewMode('DASHBOARD'); setAnalysisResult(null); setError(null) }}
-                className="p-2 hover:bg-surface-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-muted rounded-lg transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-surface-400" />
+                <ArrowLeft className="w-5 h-5 text-muted-fg" />
               </button>
             )}
             <div>
               <div className="flex items-center gap-2">
                 <BarChart3 className="w-6 h-6 text-primary" />
-                <h1 className="text-xl font-bold text-surface-100">全球投資趨勢儀表板</h1>
+                <h1 className="text-xl font-bold text-fg">全球投資趨勢儀表板</h1>
               </div>
-              <p className="text-xs text-surface-400 mt-0.5">GICS 11 大產業 CapEx 趨勢與 AI 分析</p>
+              <p className="text-xs text-muted-fg mt-0.5">GICS 11 大產業 CapEx 趨勢與 AI 分析</p>
             </div>
           </div>
           <button
             onClick={() => setShowHistory(!showHistory)}
-            className="relative p-2 hover:bg-surface-700 rounded-lg transition-colors"
+            className="relative p-2 hover:bg-muted rounded-lg transition-colors"
             title="歷史紀錄"
           >
-            <History className="w-5 h-5 text-surface-400" />
+            <History className="w-5 h-5 text-muted-fg" />
             {history.length > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-[10px] rounded-full flex items-center justify-center">
                 {history.length}
@@ -256,28 +256,28 @@ export default function TrendDashboardPage() {
 
         {/* History Sidebar */}
         {showHistory && (
-          <div className="mb-6 bg-surface-800/90 backdrop-blur-sm rounded-xl border border-surface-600 p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-surface-200 mb-3 flex items-center gap-2">
+          <div className="mb-6 bg-muted/90 backdrop-blur-sm rounded-xl border border-border p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-fg mb-3 flex items-center gap-2">
               <Clock className="w-4 h-4" />
               最近分析紀錄
             </h3>
             {history.length === 0 ? (
-              <p className="text-xs text-surface-500 text-center py-4">尚無歷史紀錄</p>
+              <p className="text-xs text-muted-fg text-center py-4">尚無歷史紀錄</p>
             ) : (
               <div className="space-y-2">
                 {history.map(item => (
                   <button
                     key={item.id}
                     onClick={() => handleViewHistory(item)}
-                    className="w-full text-left p-3 rounded-lg hover:bg-surface-700 border border-surface-600 transition-colors"
+                    className="w-full text-left p-3 rounded-lg hover:bg-muted border border-border transition-colors"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-surface-200">{item.sector}</span>
-                      <span className="text-[10px] text-surface-500">
+                      <span className="text-sm font-medium text-fg">{item.sector}</span>
+                      <span className="text-[10px] text-muted-fg">
                         {new Date(item.timestamp).toLocaleString('zh-TW')}
                       </span>
                     </div>
-                    <p className="text-xs text-surface-400 mt-1 truncate">{item.query}</p>
+                    <p className="text-xs text-muted-fg mt-1 truncate">{item.query}</p>
                   </button>
                 ))}
               </div>
@@ -295,7 +295,7 @@ export default function TrendDashboardPage() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors border ${
                   selectedSector === sector
                     ? 'bg-primary text-white border-primary'
-                    : 'bg-surface-800 text-surface-300 border-surface-600 hover:bg-surface-700 hover:border-surface-500'
+                    : 'bg-muted text-fg border-border hover:bg-muted hover:border-border'
                 }`}
               >
                 {sector}
@@ -309,14 +309,14 @@ export default function TrendDashboardPage() {
           <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-4 shadow-sm">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-fg" />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder={`輸入「${selectedSector}」的趨勢對決分析問題...`}
-                  className="w-full pl-10 pr-4 py-2.5 bg-surface-800 border border-surface-600 rounded-lg text-surface-100 text-sm placeholder:text-surface-500 focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
+                  className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-fg text-sm placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
                 />
               </div>
               <button
@@ -398,8 +398,8 @@ export default function TrendDashboardPage() {
             {hasApiKey && (
               <div className="bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl border border-primary/30 p-8 text-center">
                 <BarChart3 className="w-12 h-12 text-primary mx-auto mb-4" />
-                <h2 className="text-lg font-semibold text-surface-100 mb-2">選擇產業，開始 AI 趨勢分析</h2>
-                <p className="text-sm text-surface-400 max-w-md mx-auto">
+                <h2 className="text-lg font-semibold text-fg mb-2">選擇產業，開始 AI 趨勢分析</h2>
+                <p className="text-sm text-muted-fg max-w-md mx-auto">
                   從上方選擇一個 GICS 產業，並在搜尋框輸入您想了解的趨勢問題，AI 將搜尋最新全球數據為您分析。
                 </p>
               </div>
@@ -582,7 +582,7 @@ export default function TrendDashboardPage() {
             <div className="flex justify-end">
               <button
                 onClick={handleExport}
-                className="px-5 py-2 bg-surface-800 border border-surface-600 hover:bg-surface-700 text-surface-200 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                className="px-5 py-2 bg-muted border border-border hover:bg-muted text-fg text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
                 匯出報告

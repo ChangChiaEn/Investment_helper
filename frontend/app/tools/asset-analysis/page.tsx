@@ -218,7 +218,7 @@ export default function AssetAnalysisPage() {
         {/* Back button */}
         <button
           onClick={() => setShowDashboard(false)}
-          className="flex items-center gap-2 text-surface-400 hover:text-primary text-sm mb-6 transition-colors"
+          className="flex items-center gap-2 text-muted-fg hover:text-primary text-sm mb-6 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           {t.editData}
@@ -226,8 +226,8 @@ export default function AssetAnalysisPage() {
 
         {/* Report Title */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-surface-100 mb-1">{t.reportTitle}</h1>
-          <p className="text-surface-400 text-sm">{currency} | {new Date().toLocaleDateString(lang === Language.ZH ? 'zh-TW' : 'en-US')}</p>
+          <h1 className="text-2xl font-bold text-fg mb-1">{t.reportTitle}</h1>
+          <p className="text-muted-fg text-sm">{currency} | {new Date().toLocaleDateString(lang === Language.ZH ? 'zh-TW' : 'en-US')}</p>
         </div>
 
         <div className="space-y-6">
@@ -268,12 +268,12 @@ export default function AssetAnalysisPage() {
           )}
 
           {result.rebalancingAdvice && (
-            <div className="bg-primary-soft border border-primary/40 rounded-xl p-6">
-              <h3 className="text-lg font-bold text-blue-800 mb-3 flex items-center gap-2">
+            <div className="bg-primary-soft border border-primary/40 rounded-xl p-6 text-fg">
+              <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
                 <TrendingUp className="w-5 h-5" />
                 {t.rebalanceAdvice}
               </h3>
-              <p className="text-card-fg text-sm leading-relaxed whitespace-pre-line">{result.rebalancingAdvice}</p>
+              <p className="text-fg/90 text-sm leading-relaxed whitespace-pre-line">{result.rebalancingAdvice}</p>
             </div>
           )}
 
@@ -327,10 +327,10 @@ export default function AssetAnalysisPage() {
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-soft border border-primary/30 mb-4">
           <DollarSign className="w-7 h-7 text-primary" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-surface-100 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-fg mb-2">
           {t.title} - <span className="text-primary">{t.subtitle}</span>
         </h1>
-        <p className="text-surface-400 text-sm max-w-lg mx-auto">{t.tagline}</p>
+        <p className="text-muted-fg text-sm max-w-lg mx-auto">{t.tagline}</p>
       </div>
 
       {/* Language + Currency selectors */}
@@ -550,9 +550,10 @@ export default function AssetAnalysisPage() {
           </div>
 
           {/* Total */}
-          <div className="mt-4 flex items-center justify-between p-3 bg-primary-soft rounded-lg">
-            <span className="text-sm font-medium text-primary">{t.totalWealth}</span>
-            <span className="text-lg font-bold text-blue-800">{totalWealth.toLocaleString()} {currency}</span>
+          {/* primary-soft 在深色主題為深底，文字一律用語意主字色以保對比 */}
+          <div className="mt-4 flex items-center justify-between p-3 bg-primary-soft rounded-lg text-fg">
+            <span className="text-sm font-medium">{t.totalWealth}</span>
+            <span className="text-lg font-bold">{totalWealth.toLocaleString()} {currency}</span>
           </div>
         </div>
 
