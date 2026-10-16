@@ -10,7 +10,7 @@ import { useRouteLoading } from '@/components/RouteLoadingOverlay'
 import Link from 'next/link'
 import { Settings, Key } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
-import { DISGUISE_BRAND, getToolDisplayLabels } from '@/config/disguise'
+import { getDisguiseBrand, getToolDisplayLabels } from '@/config/disguise'
 
 /**
  * 平台首頁：API Key 提示、快速入口、首頁工具選擇與進階功能。
@@ -19,7 +19,7 @@ import { DISGUISE_BRAND, getToolDisplayLabels } from '@/config/disguise'
  */
 export default function Home() {
   const router = useRouter()
-  const { disguise } = useTheme()
+  const { disguise, disguiseVariant } = useTheme()
   const { startRouteLoading } = useRouteLoading()
   const [isRedirecting, setIsRedirecting] = useState(false)
   // 預設 false，與伺服器 render 相同；掛載後再依 localStorage 更新
@@ -49,7 +49,9 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            {disguise ? `歡迎使用 ${DISGUISE_BRAND}` : '歡迎使用 Sagafisc 智慧投研平台'}
+            {disguise
+              ? `歡迎使用 ${getDisguiseBrand(disguiseVariant)}`
+              : '歡迎使用 Sagafisc 智慧投研平台'}
           </h1>
           <p className="text-muted-fg">
             {disguise

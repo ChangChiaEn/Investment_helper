@@ -75,7 +75,7 @@ export interface ThemeDefinition {
 }
 
 /** 支援的主題 ID。 */
-export type ThemeId = 'hacker' | 'camel' | 'pink' | 'calm' | 'chat'
+export type ThemeId = 'hacker' | 'camel' | 'pink' | 'calm' | 'chat' | 'claude' | 'gemini'
 
 /** localStorage 鍵名。 */
 export const THEME_STORAGE_KEY = 'app_theme'
@@ -341,19 +341,104 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
       chart4: '239 68 68',
     },
   },
+  /**
+   * Claude 靈感：暖紙色畫布與焦糖強調（非官方品牌）。
+   * 供 disguise=claude 使用。
+   */
+  claude: {
+    id: 'claude',
+    name: '助理暖紙風',
+    description: '暖米色與焦糖強調，像文件對話助理',
+    colors: {
+      bg: '250 246 240',
+      bgEnd: '242 234 221',
+      fg: '45 40 35',
+      card: '255 252 248',
+      cardFg: '45 40 35',
+      muted: '237 228 214',
+      mutedFg: '90 78 66',
+      border: '214 198 176',
+      primary: '196 122 78',
+      primaryFg: '255 252 248',
+      primarySoft: '244 226 208',
+      accent: '168 96 56',
+      sidebar: '55 48 42',
+      sidebarAlt: '72 62 54',
+      sidebarFg: '250 246 240',
+      sidebarMuted: '210 196 178',
+      sidebarBorder: '42 36 32',
+      sidebarHover: '88 76 66',
+      danger: '180 50 40',
+      dangerSoft: '252 226 220',
+      success: '72 120 72',
+      successSoft: '220 236 214',
+      warning: '160 100 30',
+      warningSoft: '255 236 200',
+      ring: '196 122 78',
+      chart1: '196 122 78',
+      chart2: '88 120 96',
+      chart3: '160 100 30',
+      chart4: '180 50 40',
+    },
+  },
+  /**
+   * Gemini 靈感：淺灰白＋藍強調（刻意偏藍、避免霓虹紫光）。
+   * 供 disguise=gemini 使用。
+   */
+  gemini: {
+    id: 'gemini',
+    name: '工作室藍風',
+    description: '淺底與藍色強調，像多模態工作室介面',
+    colors: {
+      bg: '248 250 252',
+      bgEnd: '232 240 254',
+      fg: '15 23 42',
+      card: '255 255 255',
+      cardFg: '15 23 42',
+      muted: '226 232 240',
+      mutedFg: '71 85 105',
+      border: '191 219 254',
+      primary: '37 99 235',
+      primaryFg: '255 255 255',
+      primarySoft: '219 234 254',
+      accent: '14 165 233',
+      sidebar: '15 23 42',
+      sidebarAlt: '30 41 59',
+      sidebarFg: '241 245 249',
+      sidebarMuted: '148 163 184',
+      sidebarBorder: '51 65 85',
+      sidebarHover: '51 65 85',
+      danger: '220 38 38',
+      dangerSoft: '254 226 226',
+      success: '22 163 74',
+      successSoft: '220 252 231',
+      warning: '217 119 6',
+      warningSoft: '255 237 213',
+      ring: '37 99 235',
+      chart1: '37 99 235',
+      chart2: '14 165 233',
+      chart3: '217 119 6',
+      chart4: '220 38 38',
+    },
+  },
 }
 
-/** 供設定頁等 UI 依序渲染的主題列表。 */
+/** 供設定頁等 UI 依序渲染的主題列表（偽裝專用主題仍可手動選）。 */
 export const THEME_LIST: ThemeDefinition[] = [
   THEMES.hacker,
   THEMES.camel,
   THEMES.pink,
   THEMES.calm,
   THEMES.chat,
+  THEMES.claude,
+  THEMES.gemini,
 ]
 
-/** 上班摸魚模式預設搭配的主題 */
+/** 上班摸魚模式預設搭配的主題（Chat 變體） */
 export const DISGUISE_THEME_ID: ThemeId = 'chat'
+
+/** 所有偽裝專用主題（關閉偽裝還原時勿停在這些上） */
+export const DISGUISE_THEME_IDS: ThemeId[] = ['chat', 'claude', 'gemini']
 
 /**
  * 解析並回傳合法主題 ID；無效時回傳預設。

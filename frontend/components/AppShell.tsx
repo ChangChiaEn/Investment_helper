@@ -7,6 +7,8 @@ import { WatchlistProvider } from '@/contexts/WatchlistContext'
 import { ToolCacheProvider } from '@/contexts/ToolCacheContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { RouteLoadingOverlay } from '@/components/RouteLoadingOverlay'
+import { DisguiseHotkey } from '@/components/DisguiseHotkey'
+import { DisguiseTextWalker } from '@/components/DisguiseTextWalker'
 import { Loader } from '@/components/Loader'
 
 interface AppShellProps {
@@ -50,15 +52,18 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <ThemeProvider>
+      <DisguiseHotkey />
       <ToolDataProvider>
         <WatchlistProvider>
           <ToolCacheProvider>
             <div className="flex h-screen bg-bg text-fg">
               <Navigation />
               <main className="flex-1 overflow-auto">
-                <Suspense fallback={<MainLoadingFallback />}>
-                  <RouteLoadingOverlay>{children}</RouteLoadingOverlay>
-                </Suspense>
+                <DisguiseTextWalker>
+                  <Suspense fallback={<MainLoadingFallback />}>
+                    <RouteLoadingOverlay>{children}</RouteLoadingOverlay>
+                  </Suspense>
+                </DisguiseTextWalker>
               </main>
             </div>
           </ToolCacheProvider>

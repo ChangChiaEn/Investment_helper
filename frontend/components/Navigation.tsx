@@ -24,8 +24,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
-  DISGUISE_BRAND,
   DISGUISE_NAV_LABELS,
+  getDisguiseBrand,
   getToolDisplayLabels,
 } from '@/config/disguise'
 
@@ -133,7 +133,7 @@ function WatchlistPanel({ collapsed }: { collapsed: boolean }) {
  */
 export function Navigation() {
   const pathname = usePathname()
-  const { disguise } = useTheme()
+  const { disguise, disguiseVariant } = useTheme()
   const [collapsed, setCollapsed] = useState(false)
   // 避免 SSR／hydration 與 localStorage 不一致造成閃爍
   const [ready, setReady] = useState(false)
@@ -163,7 +163,7 @@ export function Navigation() {
         : 'text-sidebar-fg hover:bg-sidebar-hover/50 hover:shadow-sm'
     }`
 
-  const brandName = disguise ? DISGUISE_BRAND : 'Sagafisc'
+  const brandName = getDisguiseBrand(disguiseVariant)
   const homeLabel = disguise ? DISGUISE_NAV_LABELS.home : '首頁'
   const mainSection = disguise ? DISGUISE_NAV_LABELS.mainSection : '主要功能'
   const advancedSection = disguise ? DISGUISE_NAV_LABELS.advancedSection : '進階功能'
