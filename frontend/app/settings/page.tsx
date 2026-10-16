@@ -11,7 +11,7 @@ import {
 } from '@/lib/tools/decision-tree/apiRegistry'
 import { testMarketProxyConnection } from '@/lib/tools/decision-tree/marketClient'
 import { MARKET_SOURCE_CONFIG } from '@/lib/tools/decision-tree/proxyAllowlist'
-import { Cpu, Check, X, Loader2, Globe, Palette, BookOpen } from 'lucide-react'
+import { Cpu, Check, X, Loader2, Globe, Palette, BookOpen, EyeOff } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { THEME_LIST, rgbToHex, type ThemeId } from '@/config/themes'
 
@@ -20,7 +20,7 @@ import { THEME_LIST, rgbToHex, type ThemeId } from '@/config/themes'
  */
 export default function SettingsPage() {
   const router = useRouter()
-  const { themeId, setTheme } = useTheme()
+  const { themeId, setTheme, disguise, setDisguise } = useTheme()
   const [homepageTool, setHomepageTool] = useState<string>('')
   const [apiKey, setApiKey] = useState<string>('')
   const [showKey, setShowKey] = useState(false)
@@ -165,7 +165,54 @@ export default function SettingsPage() {
         <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           設定
         </h1>
-        <p className="text-muted-fg">個人化您的 Sagafisc 體驗</p>
+        <p className="text-muted-fg">
+          {disguise ? '調整對話與外觀偏好' : '個人化您的 Sagafisc 體驗'}
+        </p>
+      </div>
+
+      {/* 上班摸魚／偽裝模式（最小可用版） */}
+      <div className="bg-card/95 backdrop-blur-sm rounded-xl shadow-lg p-8 mb-6 border border-border/50">
+        <h2 className="text-xl font-semibold mb-2 text-card-fg flex items-center gap-2">
+          <span className="w-1 h-6 bg-gradient-to-b from-primary to-accent rounded-full"></span>
+          <EyeOff className="w-5 h-5 text-primary" />
+          上班摸魚模式
+        </h2>
+        <p className="text-muted-fg mb-6">
+          開啟後切換為聊天助手外觀、隱藏品牌，並把側欄工具改成中性「對話」名稱。關閉後還原先前主題。
+        </p>
+        <button
+          type="button"
+          onClick={() => setDisguise(!disguise)}
+          className={`w-full flex items-center justify-between gap-4 p-4 rounded-xl border-2 transition-all ${
+            disguise
+              ? 'border-primary bg-primary-soft/40'
+              : 'border-border hover:border-primary/50'
+          }`}
+          aria-pressed={disguise}
+        >
+          <div className="text-left">
+            <div className="font-medium text-card-fg">
+              {disguise ? '偽裝已開啟' : '偽裝已關閉'}
+            </div>
+            <div className="text-sm text-muted-fg">
+              {disguise
+                ? '分頁標題顯示 Chat；側欄為對話列表風格'
+                : '點此一鍵偽裝成通用 AI 對話介面'}
+            </div>
+          </div>
+          <span
+            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${
+              disguise ? 'bg-primary' : 'bg-muted border border-border'
+            }`}
+            aria-hidden
+          >
+            <span
+              className={`inline-block h-5 w-5 rounded-full bg-card shadow transition-transform ${
+                disguise ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </span>
+        </button>
       </div>
 
       {/* 外觀主題 */}

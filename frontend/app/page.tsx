@@ -9,6 +9,8 @@ import { Loader } from '@/components/Loader'
 import { useRouteLoading } from '@/components/RouteLoadingOverlay'
 import Link from 'next/link'
 import { Settings, Key } from 'lucide-react'
+import { useTheme } from '@/contexts/ThemeContext'
+import { DISGUISE_BRAND, getToolDisplayLabels } from '@/config/disguise'
 
 /**
  * 平台首頁：API Key 提示、快速入口、首頁工具選擇與進階功能。
@@ -17,6 +19,7 @@ import { Settings, Key } from 'lucide-react'
  */
 export default function Home() {
   const router = useRouter()
+  const { disguise } = useTheme()
   const { startRouteLoading } = useRouteLoading()
   const [isRedirecting, setIsRedirecting] = useState(false)
   // 預設 false，與伺服器 render 相同；掛載後再依 localStorage 更新
@@ -46,12 +49,16 @@ export default function Home() {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            歡迎使用 Sagafisc 智慧投研平台
+            {disguise ? `歡迎使用 ${DISGUISE_BRAND}` : '歡迎使用 Sagafisc 智慧投研平台'}
           </h1>
-          <p className="text-muted-fg">整合多個 AI 分析工具的智慧投資研究平台</p>
+          <p className="text-muted-fg">
+            {disguise
+              ? '有什麼我可以幫你的嗎？從左側開啟一則對話即可開始。'
+              : '整合多個 AI 分析工具的智慧投資研究平台'}
+          </p>
         </div>
 
-        {/* API Key 提示 */}
+        {/* API Key 提示（偽裝時改中性文案） */}
         {!hasApiKey && (
           <div className="mb-8 bg-warning-soft border-2 border-warning/40 rounded-xl p-6 shadow-sm">
             <div className="flex items-start gap-4">
@@ -59,9 +66,13 @@ export default function Home() {
                 <Key className="w-6 h-6 text-warning" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-semibold text-card-fg mb-1">尚未設定 Gemini API Key</h2>
+                <h2 className="text-lg font-semibold text-card-fg mb-1">
+                  {disguise ? '尚未設定 API Key' : '尚未設定 Gemini API Key'}
+                </h2>
                 <p className="text-muted-fg text-sm mb-3">
-                  所有 AI 分析工具都需要 Gemini API Key 才能運作。請先至設定頁面輸入您的 API Key。
+                  {disguise
+                    ? '部分功能需要 API Key。請至設定頁面完成設定。'
+                    : '所有 AI 分析工具都需要 Gemini API Key 才能運作。請先至設定頁面輸入您的 API Key。'}
                 </p>
                 <Link
                   href="/settings"
@@ -77,9 +88,18 @@ export default function Home() {
 
         {/* 快速入口 */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-fg">快速開始</h2>
+          <h2 className="text-xl font-semibold mb-4 text-fg">
+            {disguise ? '建議對話' : '快速開始'}
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {NAVIGATION_TOOLS.slice(0, 3).map((tool) => (
+            {NAVIGATION_TOOLS.slice(0, 3).map((tool) => {
+              const labels = getToolDisplayLabels(
+                tool.id,
+                tool.name,
+                tool.description,
+                disguise,
+              )
+              return (
               <Link
                 key={tool.id}
                 href={`/tools/${tool.id}`}
@@ -91,18 +111,21 @@ export default function Home() {
                   </div>
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg mb-1 text-card-fg group-hover:text-primary transition-colors">
-                      {tool.name}
+                      {labels.name}
                     </h3>
-                    <p className="text-sm text-muted-fg">{tool.description}</p>
+                    <p className="text-sm text-muted-fg">{labels.description}</p>
                   </div>
                 </div>
               </Link>
-            ))}
+              )
+            })}
           </div>
         </div>
 
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 text-fg">選擇您的首頁</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-fg">
+            {disguise ? '預設開啟的對話' : '選擇您的首頁'}
+          </h2>
           <ToolSelector onSelect={(toolId) => {
             localStorage.setItem('homepage_tool', toolId)
             router.push(`/tools/${toolId}`)
@@ -112,9 +135,18 @@ export default function Home() {
         {/* 進階功能 */}
         {ADVANCED_TOOLS.length > 0 && (
           <div>
-            <h2 className="text-2xl font-semibold mb-4 text-fg">進階功能</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-fg">
+              {disguise ? '專案' : '進階功能'}
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {ADVANCED_TOOLS.map((tool) => (
+              {ADVANCED_TOOLS.map((tool) => {
+                const labels = getToolDisplayLabels(
+                  tool.id,
+                  tool.name,
+                  tool.description,
+                  disguise,
+                )
+                return (
                 <Link
                   key={tool.id}
                   href={`/tools/${tool.id}`}
@@ -126,13 +158,14 @@ export default function Home() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg mb-1 text-card-fg group-hover:text-primary transition-colors">
-                        {tool.name}
+                        {labels.name}
                       </h3>
-                      <p className="text-sm text-muted-fg">{tool.description}</p>
+                      <p className="text-sm text-muted-fg">{labels.description}</p>
                     </div>
                   </div>
                 </Link>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}

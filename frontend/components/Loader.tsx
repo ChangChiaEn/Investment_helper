@@ -1,12 +1,33 @@
 'use client'
 
+import { useEffect, useState } from 'react'
+import {
+  DISGUISE_BRAND,
+  DISGUISE_STORAGE_KEY,
+  resolveDisguiseEnabled,
+} from '@/config/disguise'
+
 interface LoaderProps {
   size?: 'sm' | 'md' | 'lg'
   text?: string
   showBrand?: boolean
 }
 
+/**
+ * 全站載入指示：品牌字在偽裝模式下改顯示中性名稱，避免露餡。
+ * @param size 尺寸
+ * @param text 下方說明文字
+ * @param showBrand 是否顯示品牌字
+ */
 export function Loader({ size = 'md', text = '載入中...', showBrand = true }: LoaderProps) {
+  // 初次渲染用中性預設，掛載後再讀 localStorage，避免 SSR 不一致
+  const [brand, setBrand] = useState('Sagafisc')
+
+  useEffect(() => {
+    const enabled = resolveDisguiseEnabled(localStorage.getItem(DISGUISE_STORAGE_KEY))
+    setBrand(enabled ? DISGUISE_BRAND : 'Sagafisc')
+  }, [])
+
   const sizeClasses = {
     sm: 'w-20 h-20',
     md: 'w-32 h-32',
@@ -24,7 +45,7 @@ export function Loader({ size = 'md', text = '載入中...', showBrand = true }:
       <div className="loader-wrapper">
         {showBrand && (
           <span className={`loader-brand ${brandSizeClasses[size]}`}>
-            Sagafisc
+            {brand}
           </span>
         )}
         <div className={`loader ${sizeClasses[size]}`}>

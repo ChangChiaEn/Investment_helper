@@ -12,6 +12,8 @@ import { RunPanel } from '@/components/decision-tree/RunPanel'
 import { TreeEditorPanel } from '@/components/decision-tree/TreeEditorPanel'
 import { loadInventory } from '@/lib/tools/decision-tree/inventoryStore'
 import type { DecisionInventory } from '@/lib/tools/decision-tree/types'
+import { useTheme } from '@/contexts/ThemeContext'
+import { getToolDisplayLabels } from '@/config/disguise'
 
 type TabId = 'inventory' | 'catalog' | 'editor' | 'run'
 
@@ -27,6 +29,13 @@ const TABS: { id: TabId; label: string }[] = [
  * @returns 工具 UI
  */
 export default function DecisionTreePage() {
+  const { disguise } = useTheme()
+  const pageLabels = getToolDisplayLabels(
+    'decision-tree',
+    '決策樹',
+    '自訂指標條件與多分叉決策樹；僅輸出建議，不執行下單。資料存於本機瀏覽器。',
+    disguise,
+  )
   const [tab, setTab] = useState<TabId>('inventory')
   const [inventory, setInventory] = useState<DecisionInventory | null>(null)
 
@@ -56,9 +65,11 @@ export default function DecisionTreePage() {
             <GitBranch className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-fg">決策樹</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-fg">{pageLabels.name}</h1>
             <p className="text-sm text-muted-fg">
-              自訂指標條件與多分叉決策樹；僅輸出建議，不執行下單。資料存於本機瀏覽器。
+              {disguise
+                ? '自訂條件與流程圖；僅產出建議，不執行操作。資料存於本機。'
+                : pageLabels.description}
             </p>
           </div>
         </div>

@@ -2,6 +2,8 @@
 
 import { NAVIGATION_TOOLS } from '@/config/tools'
 import { ToolIcon } from '@/components/ToolIcons'
+import { useTheme } from '@/contexts/ThemeContext'
+import { getToolDisplayLabels } from '@/config/disguise'
 
 interface ToolSelectorProps {
   /** 選取工具時回呼（傳入 tool id） */
@@ -10,11 +12,21 @@ interface ToolSelectorProps {
 
 /**
  * 工具卡片選擇器：以語意色呈現可點選的工具列表。
+ * 偽裝模式下改顯示中性對話名稱。
  */
 export function ToolSelector({ onSelect }: ToolSelectorProps) {
+  const { disguise } = useTheme()
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {NAVIGATION_TOOLS.map((tool) => (
+      {NAVIGATION_TOOLS.map((tool) => {
+        const labels = getToolDisplayLabels(
+          tool.id,
+          tool.name,
+          tool.description,
+          disguise,
+        )
+        return (
         <button
           key={tool.id}
           onClick={() => onSelect(tool.id)}
@@ -26,13 +38,14 @@ export function ToolSelector({ onSelect }: ToolSelectorProps) {
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-lg mb-1 text-card-fg group-hover:text-primary transition-colors">
-                {tool.name}
+                {labels.name}
               </h3>
-              <p className="text-sm text-muted-fg">{tool.description}</p>
+              <p className="text-sm text-muted-fg">{labels.description}</p>
             </div>
           </div>
         </button>
-      ))}
+        )
+      })}
     </div>
   )
 }

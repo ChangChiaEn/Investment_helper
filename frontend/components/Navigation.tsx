@@ -14,6 +14,7 @@ import {
   Trash2,
   PanelLeftClose,
   PanelLeftOpen,
+  MessageSquare,
 } from 'lucide-react'
 import { ToolIcon } from '@/components/ToolIcons'
 import { useWatchlist } from '@/contexts/WatchlistContext'
@@ -21,16 +22,24 @@ import { useRouteLoading } from '@/components/RouteLoadingOverlay'
 import { navigateToTool, getAnalysisTool } from '@/utils/navigation'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTheme } from '@/contexts/ThemeContext'
+import {
+  DISGUISE_BRAND,
+  DISGUISE_NAV_LABELS,
+  getToolDisplayLabels,
+} from '@/config/disguise'
 
 /** 側欄收合狀態的 localStorage 鍵 */
 const NAV_COLLAPSED_KEY = 'nav_collapsed'
 
 /**
  * 側欄關注清單面板：展開／收合、跳轉分析、移除項目。
+ * 偽裝模式下改顯示中性「釘選」文案。
  * @param collapsed 側欄是否為窄欄模式（僅圖示時隱藏本面板）
  */
 function WatchlistPanel({ collapsed }: { collapsed: boolean }) {
   const { items, remove } = useWatchlist()
+  const { disguise } = useTheme()
   const [expanded, setExpanded] = useState(true)
   const router = useRouter()
   const { startRouteLoading } = useRouteLoading()
@@ -53,6 +62,10 @@ function WatchlistPanel({ collapsed }: { collapsed: boolean }) {
 
   if (items.length === 0 || collapsed) return null
 
+  const watchlistTitle = disguise
+    ? `${DISGUISE_NAV_LABELS.watchlist} (${items.length})`
+    : `關注清單 (${items.length})`
+
   return (
     <div className="mt-4">
       <button
@@ -61,7 +74,7 @@ function WatchlistPanel({ collapsed }: { collapsed: boolean }) {
       >
         <span className="flex items-center gap-1.5">
           <Star className="w-3 h-3 text-warning" />
-          關注清單 ({items.length})
+          {watchlistTitle}
         </span>
         {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
       </button>
@@ -83,7 +96,9 @@ function WatchlistPanel({ collapsed }: { collapsed: boolean }) {
                       ? 'bg-primary/20 text-primary'
                       : 'bg-success/20 text-success'
                   }`}>
-                    {item.type === 'stock' ? '股票' : '基金'}
+                    {item.type === 'stock'
+                      ? (disguise ? DISGUISE_NAV_LABELS.stockType : '股票')
+                      : (disguise ? DISGUISE_NAV_LABELS.fundType : '基金')}
                   </span>
                   <span className="text-[10px] text-sidebar-muted truncate">{item.symbol}</span>
                 </div>
@@ -92,14 +107,14 @@ function WatchlistPanel({ collapsed }: { collapsed: boolean }) {
                 <button
                   onClick={() => handleAnalyze(item)}
                   className="p-1 text-primary hover:bg-primary/20 rounded transition-colors"
-                  title="深度分析"
+                  title={disguise ? DISGUISE_NAV_LABELS.analyze : '深度分析'}
                 >
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => remove(item.id)}
                   className="p-1 text-sidebar-muted hover:text-danger hover:bg-danger/20 rounded transition-colors"
-                  title="移除"
+                  title={disguise ? DISGUISE_NAV_LABELS.remove : '移除'}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -114,9 +129,11 @@ function WatchlistPanel({ collapsed }: { collapsed: boolean }) {
 
 /**
  * 左側導覽列：可收合為僅圖示窄欄；狀態寫入 localStorage。
+ * 偽裝模式下隱藏 Sagafisc 品牌，工具改顯示中性對話名稱。
  */
 export function Navigation() {
   const pathname = usePathname()
+  const { disguise } = useTheme()
   const [collapsed, setCollapsed] = useState(false)
   // 避免 SSR／hydration 與 localStorage 不一致造成閃爍
   const [ready, setReady] = useState(false)
@@ -146,6 +163,12 @@ export function Navigation() {
         : 'text-sidebar-fg hover:bg-sidebar-hover/50 hover:shadow-sm'
     }`
 
+  const brandName = disguise ? DISGUISE_BRAND : 'Sagafisc'
+  const homeLabel = disguise ? DISGUISE_NAV_LABELS.home : '首頁'
+  const mainSection = disguise ? DISGUISE_NAV_LABELS.mainSection : '主要功能'
+  const advancedSection = disguise ? DISGUISE_NAV_LABELS.advancedSection : '進階功能'
+  const settingsLabel = disguise ? DISGUISE_NAV_LABELS.settings : '設定'
+
   return (
     <nav
       className={`
@@ -163,19 +186,26 @@ export function Navigation() {
           <Link
             href="/"
             className={`flex items-center group min-w-0 ${collapsed ? 'justify-center' : 'space-x-2'}`}
-            title="Sagafisc"
+            title={brandName}
           >
-            <Image
-              src="/Sagafisc.png"
-              alt="Sagafisc"
-              width={40}
-              height={40}
-              priority
-              className="w-10 h-10 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300 flex-shrink-0"
-            />
+            {/* 偽裝時改用對話圖示，避免露出品牌 Logo */}
+            {disguise ? (
+              <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/20 text-primary shadow-md group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
+                <MessageSquare className="w-5 h-5" />
+              </span>
+            ) : (
+              <Image
+                src="/Sagafisc.png"
+                alt="Sagafisc"
+                width={40}
+                height={40}
+                priority
+                className="w-10 h-10 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300 flex-shrink-0"
+              />
+            )}
             {!collapsed && (
               <span className="font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent truncate">
-                Sagafisc
+                {brandName}
               </span>
             )}
           </Link>
@@ -201,18 +231,18 @@ export function Navigation() {
         <div className="mb-4">
           <Link
             href="/"
-            title="首頁"
+            title={homeLabel}
             className={linkClass(pathname === '/')}
           >
             <Home className="w-5 h-5 flex-shrink-0" />
-            {!collapsed && <span>首頁</span>}
+            {!collapsed && <span>{homeLabel}</span>}
           </Link>
         </div>
 
         {!collapsed && (
           <div className="mb-2">
             <h3 className="px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider">
-              主要功能
+              {mainSection}
             </h3>
           </div>
         )}
@@ -220,19 +250,25 @@ export function Navigation() {
         <div className="space-y-1">
           {NAVIGATION_TOOLS.map((tool) => {
             const isActive = pathname === `/tools/${tool.id}`
+            const labels = getToolDisplayLabels(
+              tool.id,
+              tool.name,
+              tool.description,
+              disguise,
+            )
             return (
               <Link
                 key={tool.id}
                 href={`/tools/${tool.id}`}
-                title={tool.name}
+                title={labels.name}
                 className={linkClass(isActive)}
               >
                 <ToolIcon toolId={tool.id} className="w-5 h-5 flex-shrink-0" />
                 {!collapsed && (
                   <div className="flex-1 min-w-0">
-                    <div className="text-base font-medium">{tool.name}</div>
+                    <div className="text-base font-medium">{labels.name}</div>
                     <div className="text-sm text-sidebar-muted truncate">
-                      {tool.description}
+                      {labels.description}
                     </div>
                   </div>
                 )}
@@ -247,26 +283,32 @@ export function Navigation() {
             {!collapsed && (
               <div className="mt-6 mb-2">
                 <h3 className="px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider">
-                  進階功能
+                  {advancedSection}
                 </h3>
               </div>
             )}
             <div className={`space-y-1 ${collapsed ? 'mt-2' : ''}`}>
               {ADVANCED_TOOLS.map((tool) => {
                 const isActive = pathname === `/tools/${tool.id}`
+                const labels = getToolDisplayLabels(
+                  tool.id,
+                  tool.name,
+                  tool.description,
+                  disguise,
+                )
                 return (
                   <Link
                     key={tool.id}
                     href={`/tools/${tool.id}`}
-                    title={tool.name}
+                    title={labels.name}
                     className={linkClass(isActive)}
                   >
                     <ToolIcon toolId={tool.id} className="w-5 h-5 flex-shrink-0" />
                     {!collapsed && (
                       <div className="flex-1 min-w-0">
-                        <div className="text-base font-medium">{tool.name}</div>
+                        <div className="text-base font-medium">{labels.name}</div>
                         <div className="text-sm text-sidebar-muted truncate">
-                          {tool.description}
+                          {labels.description}
                         </div>
                       </div>
                     )}
@@ -284,13 +326,13 @@ export function Navigation() {
       <div className={`border-t border-sidebar-border/50 ${collapsed ? 'p-2' : 'p-4'}`}>
         <Link
           href="/settings"
-          title="設定"
+          title={settingsLabel}
           className={`flex items-center rounded-lg text-sidebar-fg hover:bg-sidebar-hover/50 transition-colors ${
             collapsed ? 'justify-center px-2 py-3' : 'space-x-3 px-4 py-3'
           }`}
         >
           <Settings className="w-5 h-5 flex-shrink-0" />
-          {!collapsed && <span>設定</span>}
+          {!collapsed && <span>{settingsLabel}</span>}
         </Link>
       </div>
     </nav>

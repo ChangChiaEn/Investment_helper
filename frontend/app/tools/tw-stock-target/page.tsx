@@ -5,6 +5,8 @@ import { useSearchParams } from 'next/navigation';
 import { Plus, Trash2, RefreshCw, AlertCircle, TrendingUp, TrendingDown, Search, List, Activity, Crosshair } from 'lucide-react';
 import { useToolCache } from '@/hooks/useToolCache';
 import { WatchlistButton } from '@/components/WatchlistButton';
+import { useTheme } from '@/contexts/ThemeContext';
+import { getToolDisplayLabels } from '@/config/disguise';
 import type { TrackedStock as Stock, DiscoveredStock, DiscoveryResult, ScanMode, StockQuote } from '@/lib/tools/tw-stock-target/types';
 import { loadTrackedStocks } from '@/lib/tools/tw-stock-target/storage';
 
@@ -15,6 +17,13 @@ function cn(...inputs: (string | false | undefined)[]) {
 const STORAGE_KEY = 'sagafisc_tw_stock_targets';
 
 function TaiwanStockTargetTool() {
+  const { disguise } = useTheme();
+  const pageLabels = getToolDisplayLabels(
+    'tw-stock-target',
+    '台股目標價追蹤器',
+    '每 30 秒更新報價，計算與目標價的距離。',
+    disguise,
+  );
   const { cached, save } = useToolCache<{
     activeTab: 'tracking' | 'discover'; discoveredStocks: DiscoveredStock[];
     scanMode: ScanMode; tradingDates: string[]; hasScanned: boolean;
@@ -255,10 +264,12 @@ function TaiwanStockTargetTool() {
               <div className="p-2 bg-primary-soft rounded-lg">
                 <Crosshair className="text-primary w-6 h-6" />
               </div>
-              台股目標價追蹤器
+              {pageLabels.name}
             </h1>
             <p className="text-muted-fg text-sm mt-2 flex items-center gap-2">
-              每 30 秒更新報價，計算與目標價的距離。
+              {disguise
+                ? '定期同步資料，計算與里程碑的差距。'
+                : pageLabels.description}
               {activeTab === 'tracking' && lastFetchTime && (
                 <span className="text-muted-fg font-mono text-xs px-2 py-0.5 bg-muted rounded border border-border">
                   UPDATED: {lastFetchTime.toLocaleTimeString()}

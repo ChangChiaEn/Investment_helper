@@ -75,7 +75,7 @@ export interface ThemeDefinition {
 }
 
 /** 支援的主題 ID。 */
-export type ThemeId = 'hacker' | 'camel' | 'pink' | 'calm'
+export type ThemeId = 'hacker' | 'camel' | 'pink' | 'calm' | 'chat'
 
 /** localStorage 鍵名。 */
 export const THEME_STORAGE_KEY = 'app_theme'
@@ -301,6 +301,46 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
       chart4: '185 28 28',
     },
   },
+  /**
+   * 聊天助手風：靈感來自常見 AI 對話介面（深側欄＋淺主區），非官方品牌複製。
+   * 搭配 disguise 模式作為「上班摸魚」預設外觀。
+   */
+  chat: {
+    id: 'chat',
+    name: '聊天助手風',
+    description: '深灰側欄與淺主區，遠看像通用 AI 對話頁',
+    colors: {
+      bg: '247 247 248',
+      bgEnd: '236 236 241',
+      fg: '32 33 35',
+      card: '255 255 255',
+      cardFg: '32 33 35',
+      muted: '236 236 241',
+      mutedFg: '86 88 105',
+      border: '209 213 219',
+      primary: '16 163 127',
+      primaryFg: '255 255 255',
+      primarySoft: '209 250 229',
+      accent: '25 195 125',
+      sidebar: '32 33 35',
+      sidebarAlt: '42 42 48',
+      sidebarFg: '236 236 241',
+      sidebarMuted: '142 142 160',
+      sidebarBorder: '52 53 65',
+      sidebarHover: '52 53 65',
+      danger: '185 28 28',
+      dangerSoft: '254 226 226',
+      success: '16 163 127',
+      successSoft: '209 250 229',
+      warning: '180 83 9',
+      warningSoft: '255 237 213',
+      ring: '16 163 127',
+      chart1: '16 163 127',
+      chart2: '59 130 246',
+      chart3: '245 158 11',
+      chart4: '239 68 68',
+    },
+  },
 }
 
 /** 供設定頁等 UI 依序渲染的主題列表。 */
@@ -309,7 +349,11 @@ export const THEME_LIST: ThemeDefinition[] = [
   THEMES.camel,
   THEMES.pink,
   THEMES.calm,
+  THEMES.chat,
 ]
+
+/** 上班摸魚模式預設搭配的主題 */
+export const DISGUISE_THEME_ID: ThemeId = 'chat'
 
 /**
  * 解析並回傳合法主題 ID；無效時回傳預設。

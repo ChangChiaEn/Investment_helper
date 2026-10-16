@@ -8,6 +8,10 @@ import {
   DEFAULT_THEME_ID,
   THEME_CSS_VAR_MAP,
 } from '@/config/themes'
+import {
+  DISGUISE_STORAGE_KEY,
+  DISGUISE_DATA_VALUE,
+} from '@/config/disguise'
 
 /**
  * 全站 UI 字體：Noto Sans TC（繁中＋拉丁一體，避免中英混排跳字型）。
@@ -42,7 +46,7 @@ export const metadata: Metadata = {
 }
 
 /**
- * 首屏前同步套用主題，避免 FOUC。
+ * 首屏前同步套用主題與偽裝屬性，避免 FOUC。
  * 色票自 themes.ts 序列化進腳本，與 ThemeProvider 共用同一來源。
  * @returns 可注入的 IIFE 腳本字串
  */
@@ -50,7 +54,7 @@ function buildThemeBootstrapScript(): string {
   const colorMap = Object.fromEntries(
     Object.entries(THEMES).map(([id, def]) => [id, def.colors]),
   )
-  return `(function(){try{var themes=${JSON.stringify(colorMap)};var map=${JSON.stringify(THEME_CSS_VAR_MAP)};var id=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})||${JSON.stringify(DEFAULT_THEME_ID)};if(!themes[id])id=${JSON.stringify(DEFAULT_THEME_ID)};var colors=themes[id];var el=document.documentElement;el.setAttribute("data-theme",id);for(var k in map){if(colors[k])el.style.setProperty(map[k],colors[k]);}}catch(e){}})();`
+  return `(function(){try{var themes=${JSON.stringify(colorMap)};var map=${JSON.stringify(THEME_CSS_VAR_MAP)};var id=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})||${JSON.stringify(DEFAULT_THEME_ID)};if(!themes[id])id=${JSON.stringify(DEFAULT_THEME_ID)};var colors=themes[id];var el=document.documentElement;el.setAttribute("data-theme",id);for(var k in map){if(colors[k])el.style.setProperty(map[k],colors[k]);}var d=localStorage.getItem(${JSON.stringify(DISGUISE_STORAGE_KEY)});if(d==="1"||d==="true"){el.setAttribute("data-disguise",${JSON.stringify(DISGUISE_DATA_VALUE)});}else{el.removeAttribute("data-disguise");}}catch(e){}})();`
 }
 
 /**
