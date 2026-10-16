@@ -12,7 +12,7 @@ const STYLES: Record<string, string> = {
 }
 
 const LABELS: Record<string, string> = {
-  openapi: 'OpenAPI',
+  openapi: '官方',
   ai: 'AI',
   manual: '手動',
   error: '錯誤',

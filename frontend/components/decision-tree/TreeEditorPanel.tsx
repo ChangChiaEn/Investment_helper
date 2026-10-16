@@ -13,6 +13,8 @@ import {
   addEdge,
   useEdgesState,
   useNodesState,
+  useReactFlow,
+  ReactFlowProvider,
   Handle,
   Position,
   type Connection,
@@ -22,6 +24,11 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { INDICATOR_CATALOG } from '@/lib/tools/decision-tree/catalog'
+import {
+  COMPARE_OP_LABELS,
+  COMPARE_OP_ORDER,
+  getSourceLabel,
+} from '@/lib/tools/decision-tree/labels'
 import {
   addBlankTree,
   addSampleTree,
@@ -49,31 +56,64 @@ import {
 } from '@/lib/tools/decision-tree/flowSync'
 
 /**
- * 自訂節點外觀。
+ * 自訂節點外觀（通過＝左下、未通過＝右下）。
  * @param props - React Flow 節點 props
  * @returns 節點 UI
  */
 function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
   const kindColor =
-    data.kind === 'decision' ? 'border-sky-500' : data.kind === 'manual' ? 'border-amber-500' : 'border-emerald-500'
+    data.kind === 'decision'
+      ? 'border-sky-500'
+      : data.kind === 'manual'
+        ? 'border-amber-500'
+        : 'border-emerald-500'
+  const kindBg =
+    data.kind === 'decision'
+      ? 'bg-sky-50'
+      : data.kind === 'manual'
+        ? 'bg-amber-50'
+        : 'bg-emerald-50'
+
   return (
     <div
-      className={`min-w-[160px] rounded-xl border-2 bg-white px-3 py-2 shadow-sm ${kindColor} ${
+      className={`relative min-w-[168px] max-w-[220px] rounded-xl border-2 ${kindBg} px-3 py-2 shadow-sm mb-3 ${kindColor} ${
         selected ? 'ring-2 ring-primary-400' : ''
       }`}
     >
       {data.kind !== 'result' && (
         <>
-          <Handle type="target" position={Position.Top} className="!bg-gray-400" />
-          <Handle type="source" id="yes" position={Position.Bottom} style={{ left: '30%' }} className="!bg-green-500" />
-          <Handle type="source" id="no" position={Position.Bottom} style={{ left: '70%' }} className="!bg-red-500" />
+          <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2.5 !h-2.5" />
+          <Handle
+            type="source"
+            id="yes"
+            position={Position.Bottom}
+            style={{ left: '28%' }}
+            className="!bg-green-500 !w-2.5 !h-2.5"
+          />
+          <Handle
+            type="source"
+            id="no"
+            position={Position.Bottom}
+            style={{ left: '72%' }}
+            className="!bg-red-500 !w-2.5 !h-2.5"
+          />
+          <div className="absolute -bottom-4 left-0 right-0 flex justify-between px-3 pointer-events-none">
+            <span className="text-[9px] text-green-700 font-medium">
+              {data.kind === 'manual' ? '是' : '通過'}
+            </span>
+            <span className="text-[9px] text-red-600 font-medium">
+              {data.kind === 'manual' ? '否' : '未通過'}
+            </span>
+          </div>
         </>
       )}
-      {data.kind === 'result' && <Handle type="target" position={Position.Top} className="!bg-gray-400" />}
-      <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">
+      {data.kind === 'result' && (
+        <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2.5 !h-2.5" />
+      )}
+      <div className="text-[10px] tracking-wide text-gray-500 mb-0.5">
         {data.kind === 'decision' ? '決策' : data.kind === 'manual' ? '人工' : '結果'}
       </div>
-      <div className="text-sm font-medium text-gray-900">{data.label}</div>
+      <div className="text-sm font-medium text-gray-900 leading-snug">{data.label}</div>
     </div>
   )
 }
@@ -81,9 +121,23 @@ function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
 const nodeTypes = { dtNode: DtNodeView }
 
 /**
+ * 外層包 ReactFlowProvider，供自動排版後 fitView。
  * @returns 編輯器 UI
  */
 export function TreeEditorPanel() {
+  return (
+    <ReactFlowProvider>
+      <TreeEditorInner />
+    </ReactFlowProvider>
+  )
+}
+
+/**
+ * 編輯器本體（需在 Provider 內）。
+ * @returns UI
+ */
+function TreeEditorInner() {
+  const { fitView } = useReactFlow()
   const [list, setList] = useState<TreeListState>({ trees: [], activeId: null })
   const active = useMemo(
     () => list.trees.find((t) => t.id === list.activeId) || null,
@@ -108,20 +162,31 @@ export function TreeEditorPanel() {
     setNodes(n)
     setEdges(e)
     setSelectedId(null)
+    // 載入後對齊視窗
+    requestAnimationFrame(() => fitView({ padding: 0.2, duration: 200 }))
   }, [active?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const persist = useCallback(
-    (doc: DecisionTreeDoc) => {
-      setList(upsertTree(doc))
-    },
-    []
-  )
+  const persist = useCallback((doc: DecisionTreeDoc) => {
+    setList(upsertTree(doc))
+  }, [])
 
   const saveFromFlow = useCallback(() => {
     if (!active) return
     const doc = flowToTree(active, nodes, edges)
     persist(doc)
   }, [active, nodes, edges, persist])
+
+  /**
+   * 依根節點與分支重新階層排版（通過左、未通過右）。
+   */
+  const autoLayout = useCallback(() => {
+    if (!active) return
+    const doc = flowToTree(active, nodes, edges)
+    const { nodes: n, edges: e } = treeToFlow(doc)
+    setNodes(n)
+    setEdges(e)
+    requestAnimationFrame(() => fitView({ padding: 0.2, duration: 300 }))
+  }, [active, nodes, edges, setNodes, setEdges, fitView])
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -131,13 +196,24 @@ export function TreeEditorPanel() {
         markerEnd: { type: MarkerType.ArrowClosed },
         label: connection.sourceHandle === 'no' ? '未通過' : '通過',
         style: { stroke: connection.sourceHandle === 'no' ? '#dc2626' : '#16a34a' },
+        interactionWidth: 24,
       }
       setEdges((eds) => addEdge(edge, eds))
     },
     [setEdges]
   )
 
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
   const selectedNode = nodes.find((n) => n.id === selectedId)
+
+  /**
+   * 取消目前選取的連線。
+   */
+  const removeSelectedEdge = useCallback(() => {
+    if (!selectedEdgeId) return
+    setEdges((eds) => eds.filter((e) => e.id !== selectedEdgeId))
+    setSelectedEdgeId(null)
+  }, [selectedEdgeId, setEdges])
 
   const updateSelectedData = (patch: Partial<FlowNodeData>) => {
     if (!selectedId) return
@@ -232,16 +308,35 @@ export function TreeEditorPanel() {
         <p className="text-sm text-gray-500">請新建或選擇一棵決策樹。</p>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-3">
-          <div className="h-[520px] bg-white border rounded-xl overflow-hidden relative">
-            <div className="absolute top-2 left-2 z-10 flex gap-1">
-              <button type="button" className="text-xs bg-white border rounded px-2 py-1 shadow" onClick={() => addNode('decision')}>
+          <div className="h-[560px] bg-white border rounded-xl overflow-hidden relative">
+            <div className="absolute top-2 left-2 z-10 flex flex-wrap gap-1 max-w-[90%]">
+              <button
+                type="button"
+                className="text-xs bg-white border rounded px-2 py-1 shadow"
+                onClick={() => addNode('decision')}
+              >
                 + 決策
               </button>
-              <button type="button" className="text-xs bg-white border rounded px-2 py-1 shadow" onClick={() => addNode('manual')}>
+              <button
+                type="button"
+                className="text-xs bg-white border rounded px-2 py-1 shadow"
+                onClick={() => addNode('manual')}
+              >
                 + 人工
               </button>
-              <button type="button" className="text-xs bg-white border rounded px-2 py-1 shadow" onClick={() => addNode('result')}>
+              <button
+                type="button"
+                className="text-xs bg-white border rounded px-2 py-1 shadow"
+                onClick={() => addNode('result')}
+              >
                 + 結果
+              </button>
+              <button
+                type="button"
+                className="text-xs bg-sky-50 border border-sky-200 text-sky-800 rounded px-2 py-1 shadow"
+                onClick={autoLayout}
+              >
+                自動排版
               </button>
             </div>
             <ReactFlow
@@ -251,20 +346,40 @@ export function TreeEditorPanel() {
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
               nodeTypes={nodeTypes}
-              onSelectionChange={({ nodes: sel }) => setSelectedId(sel[0]?.id ?? null)}
+              elementsSelectable
+              edgesFocusable
+              deleteKeyCode={['Backspace', 'Delete']}
+              onSelectionChange={({ nodes: sel, edges: selEdges }) => {
+                setSelectedId(sel[0]?.id ?? null)
+                setSelectedEdgeId(selEdges[0]?.id ?? null)
+              }}
               fitView
             >
-              <Background />
+              <Background gap={16} />
               <Controls />
-              <MiniMap />
+              <MiniMap pannable zoomable />
             </ReactFlow>
           </div>
 
-          <aside className="bg-white border rounded-xl p-4 space-y-3 overflow-y-auto max-h-[520px]">
+          <aside className="bg-white border rounded-xl p-4 space-y-3 overflow-y-auto max-h-[560px]">
             <h3 className="font-semibold text-gray-800">屬性</h3>
-            {!selectedNode ? (
-              <p className="text-sm text-gray-500">點選畫布上的節點以編輯。</p>
-            ) : (
+            {selectedEdgeId && !selectedNode && (
+              <div className="space-y-2 text-sm">
+                <p className="text-gray-700">已選取一條連線</p>
+                <button
+                  type="button"
+                  className="w-full px-3 py-2 text-sm text-red-700 border border-red-200 rounded-lg hover:bg-red-50"
+                  onClick={removeSelectedEdge}
+                >
+                  取消連結
+                </button>
+                <p className="text-xs text-gray-400">也可按鍵盤 Delete／Backspace 刪除連線。</p>
+              </div>
+            )}
+            {!selectedNode && !selectedEdgeId && (
+              <p className="text-sm text-gray-500">點選節點編輯，或點選連線後可取消連結。</p>
+            )}
+            {selectedNode && (
               <NodePropsForm
                 data={selectedNode.data}
                 onChange={updateSelectedData}
@@ -282,8 +397,8 @@ export function TreeEditorPanel() {
               />
             )}
             <p className="text-xs text-gray-400">
-              綠點＝通過／是，紅點＝未通過／否。儲存後「執行」分頁會使用本機樹。
-              目前根節點：{active.rootId}
+              綠＝通過／是（左），紅＝未通過／否（右）。點連線 →「取消連結」或按 Delete。連線後可「自動排版」。
+              根節點：{active.rootId}
             </p>
           </aside>
         </div>
@@ -292,6 +407,9 @@ export function TreeEditorPanel() {
   )
 }
 
+/**
+ * 右側節點屬性表單。
+ */
 function NodePropsForm({
   data,
   onChange,
@@ -375,10 +493,18 @@ function NodePropsForm({
       )}
 
       <div className="flex flex-wrap gap-2 pt-2">
-        <button type="button" className="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs" onClick={onSetRoot}>
+        <button
+          type="button"
+          className="px-3 py-1.5 bg-sky-600 text-white rounded-lg text-xs"
+          onClick={onSetRoot}
+        >
           設為根節點並儲存
         </button>
-        <button type="button" className="px-3 py-1.5 text-red-600 border border-red-200 rounded-lg text-xs" onClick={onDelete}>
+        <button
+          type="button"
+          className="px-3 py-1.5 text-red-600 border border-red-200 rounded-lg text-xs"
+          onClick={onDelete}
+        >
           刪除節點
         </button>
       </div>
@@ -386,6 +512,9 @@ function NodePropsForm({
   )
 }
 
+/**
+ * 決策條件編輯：指標可搜尋、運算子中文。
+ */
 function ConditionEditor({
   value,
   onChange,
@@ -421,47 +550,43 @@ function ConditionEditor({
         )}
       </div>
       {value.conditions.map((c, idx) => (
-        <div key={idx} className="bg-gray-50 rounded-lg p-2 space-y-1">
+        <div key={idx} className="bg-gray-50 rounded-lg p-2 space-y-1.5 overflow-hidden">
+          <IndicatorPicker
+            value={c.indicatorId}
+            onChange={(indicatorId) => updateCond(idx, { indicatorId })}
+          />
+          {/* 運算子與數值改直向排列，避免側欄寬度不足溢位 */}
           <select
             className="w-full border rounded px-2 py-1 text-xs"
-            value={c.indicatorId}
-            onChange={(e) => updateCond(idx, { indicatorId: e.target.value })}
+            value={c.op}
+            onChange={(e) => updateCond(idx, { op: e.target.value as CompareOp })}
           >
-            {INDICATOR_CATALOG.map((ind) => (
-              <option key={ind.id} value={ind.id}>
-                [{ind.source}] {ind.name}
+            {COMPARE_OP_ORDER.map((op) => (
+              <option key={op} value={op}>
+                {COMPARE_OP_LABELS[op]}
               </option>
             ))}
           </select>
-          <div className="flex gap-1">
-            <select
-              className="border rounded px-2 py-1 text-xs"
-              value={c.op}
-              onChange={(e) => updateCond(idx, { op: e.target.value as CompareOp })}
-            >
-              {(['truthy', 'gte', 'gt', 'lte', 'lt', 'eq', 'neq', 'between'] as CompareOp[]).map((op) => (
-                <option key={op} value={op}>
-                  {op}
-                </option>
-              ))}
-            </select>
-            {c.op !== 'truthy' && (
+          {c.op !== 'truthy' && (
+            <div className="flex gap-1 min-w-0">
               <input
                 type="number"
-                className="flex-1 border rounded px-2 py-1 text-xs"
+                className="min-w-0 flex-1 border rounded px-2 py-1 text-xs"
                 value={Number(c.value ?? 0)}
                 onChange={(e) => updateCond(idx, { value: Number(e.target.value) })}
+                placeholder={c.op === 'between' ? '下限' : '比較值'}
               />
-            )}
-            {c.op === 'between' && (
-              <input
-                type="number"
-                className="w-20 border rounded px-2 py-1 text-xs"
-                value={c.valueTo ?? 0}
-                onChange={(e) => updateCond(idx, { valueTo: Number(e.target.value) })}
-              />
-            )}
-          </div>
+              {c.op === 'between' && (
+                <input
+                  type="number"
+                  className="min-w-0 w-[45%] shrink border rounded px-2 py-1 text-xs"
+                  value={c.valueTo ?? 0}
+                  onChange={(e) => updateCond(idx, { valueTo: Number(e.target.value) })}
+                  placeholder="上限"
+                />
+              )}
+            </div>
+          )}
           <button
             type="button"
             className="text-[10px] text-red-600"
@@ -488,6 +613,93 @@ function ConditionEditor({
       >
         + 新增條件
       </button>
+    </div>
+  )
+}
+
+/**
+ * 可搜尋的指標選擇器（來源以中文顯示）。
+ * @param value - 目前指標 id
+ * @param onChange - 變更回呼
+ * @returns UI
+ */
+function IndicatorPicker({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (id: string) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+
+  const selected = INDICATOR_CATALOG.find((i) => i.id === value)
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return INDICATOR_CATALOG
+    return INDICATOR_CATALOG.filter((ind) => {
+      const src = getSourceLabel(ind.source)
+      return (
+        ind.name.toLowerCase().includes(q) ||
+        ind.id.toLowerCase().includes(q) ||
+        ind.description.toLowerCase().includes(q) ||
+        src.includes(query.trim()) ||
+        ind.source.toLowerCase().includes(q)
+      )
+    })
+  }, [query])
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        className="w-full border rounded px-2 py-1.5 text-xs text-left bg-white hover:bg-gray-50"
+        onClick={() => setOpen((o) => !o)}
+      >
+        {selected ? (
+          <span>
+            <span className="text-sky-700">[{getSourceLabel(selected.source)}]</span>{' '}
+            {selected.name}
+          </span>
+        ) : (
+          <span className="text-gray-400">選擇指標</span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute z-20 mt-1 w-full bg-white border rounded-lg shadow-lg overflow-hidden">
+          <input
+            autoFocus
+            className="w-full border-b px-2 py-1.5 text-xs outline-none"
+            placeholder="搜尋指標名稱、代號、來源…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          <ul className="max-h-40 overflow-y-auto">
+            {filtered.length === 0 && (
+              <li className="px-2 py-2 text-xs text-gray-400">無符合項目</li>
+            )}
+            {filtered.map((ind) => (
+              <li key={ind.id}>
+                <button
+                  type="button"
+                  className={`w-full text-left px-2 py-1.5 text-xs hover:bg-sky-50 ${
+                    ind.id === value ? 'bg-sky-50 font-medium' : ''
+                  }`}
+                  onClick={() => {
+                    onChange(ind.id)
+                    setOpen(false)
+                    setQuery('')
+                  }}
+                >
+                  <span className="text-sky-700">[{getSourceLabel(ind.source)}]</span> {ind.name}
+                  <span className="block text-[10px] text-gray-400 font-mono">{ind.id}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

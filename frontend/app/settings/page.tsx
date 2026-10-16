@@ -5,8 +5,13 @@ import { NAVIGATION_TOOLS } from '@/config/tools'
 import { ToolIcon } from '@/components/ToolIcons'
 import { useRouter } from 'next/navigation'
 import { AVAILABLE_MODELS, testAvailableModels } from '@/lib/gemini'
+import {
+  marketApiRegistry,
+  MODULE_DECISION_TREE,
+} from '@/lib/tools/decision-tree/apiRegistry'
 import { testMarketProxyConnection } from '@/lib/tools/decision-tree/marketClient'
-import { Cpu, Check, X, Loader2, Globe, Palette } from 'lucide-react'
+import { MARKET_SOURCE_CONFIG } from '@/lib/tools/decision-tree/proxyAllowlist'
+import { Cpu, Check, X, Loader2, Globe, Palette, BookOpen } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { THEME_LIST, rgbToHex, type ThemeId } from '@/config/themes'
 
@@ -26,6 +31,8 @@ export default function SettingsPage() {
   const [modelTesting, setModelTesting] = useState(false)
   const [proxyStatus, setProxyStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle')
   const [proxyMessage, setProxyMessage] = useState('')
+  /** 決策樹已登錄的市場 API（class registry） */
+  const decisionTreeApis = marketApiRegistry.listByModule(MODULE_DECISION_TREE)
 
   useEffect(() => {
     const saved = localStorage.getItem('homepage_tool')
@@ -418,6 +425,57 @@ export default function SettingsPage() {
             <span>{proxyMessage}</span>
           </div>
         )}
+      </div>
+
+      {/* 市場 API 登錄（決策樹等） */}
+      <div className="bg-card/95 backdrop-blur-sm rounded-xl shadow-lg p-8 mb-6 border border-border/50">
+        <h2 className="text-xl font-semibold mb-2 text-card-fg flex items-center gap-2">
+          <span className="w-1 h-6 bg-gradient-to-b from-sky-500 to-emerald-500 rounded-full"></span>
+          <BookOpen className="w-5 h-5 text-sky-600" />
+          市場 API 登錄
+        </h2>
+        <p className="text-muted-fg mb-2">
+          由 <code className="text-xs bg-muted px-1 rounded">MarketApiRegistry</code> 集中管理；
+          決策樹指標解析與代理測試皆從此讀取路徑，方便未來工具共用。
+        </p>
+        <p className="text-sm text-muted-fg mb-6">
+          目前列出模組「{MODULE_DECISION_TREE}」共 {decisionTreeApis.length} 筆。
+        </p>
+
+        <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+          {decisionTreeApis.map((ep) => (
+            <div
+              key={ep.id}
+              className="border border-border rounded-xl p-4 bg-card/80"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2 mb-1">
+                <div>
+                  <div className="font-medium text-card-fg">{ep.name}</div>
+                  <div className="text-xs font-mono text-muted-fg mt-0.5">{ep.id}</div>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-sky-50 text-sky-800 border border-sky-100">
+                    {MARKET_SOURCE_CONFIG[ep.source].label}
+                  </span>
+                  {ep.isHealthCheck && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-100">
+                      連線測試
+                    </span>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-muted-fg mb-2">{ep.description}</p>
+              <p className="text-xs font-mono text-card-fg break-all bg-muted/50 rounded-lg px-2 py-1.5">
+                {marketApiRegistry.previewUrl(ep.id)}
+              </p>
+              {ep.usedByIndicators.length > 0 && (
+                <p className="mt-2 text-xs text-muted-fg">
+                  指標：{ep.usedByIndicators.join('、')}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* 首頁設定 */}

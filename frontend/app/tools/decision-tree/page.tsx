@@ -81,12 +81,19 @@ export default function DecisionTreePage() {
         ))}
       </div>
 
-      {tab === 'inventory' && (
+      {/* 分頁改以隱藏切換，避免卸載後遺失執行結果；結果另有 localStorage 記憶 */}
+      <div className={tab === 'inventory' ? '' : 'hidden'}>
         <InventoryPanel inventory={inventory} onChange={handleInventoryChange} />
-      )}
-      {tab === 'catalog' && <CatalogPanel />}
-      {tab === 'editor' && <TreeEditorPanel />}
-      {tab === 'run' && <RunPanel inventory={inventory} />}
+      </div>
+      <div className={tab === 'catalog' ? '' : 'hidden'}>
+        <CatalogPanel />
+      </div>
+      <div className={tab === 'editor' ? '' : 'hidden'}>
+        <TreeEditorPanel />
+      </div>
+      <div className={tab === 'run' ? '' : 'hidden'}>
+        <RunPanel inventory={inventory} />
+      </div>
     </div>
   )
 }

@@ -56,7 +56,7 @@ export interface HoldingItem {
   note?: string
 }
 
-/** 觀察／候選清單項目 */
+/** 觀察／分類清單內單一標的 */
 export interface ListItem {
   id: string
   symbol: string
@@ -65,16 +65,37 @@ export interface ListItem {
   addedAt: number
 }
 
+/**
+ * 使用者自訂分類清單（取代固定的觀察／候選分頁）。
+ * 僅作為標的分組，不影響持股欄位語意。
+ */
+export interface CustomList {
+  id: string
+  name: string
+  items: ListItem[]
+  /** 可選上限；未設則不限 */
+  maxItems?: number
+}
+
 /** 決策樹庫存（本機） */
 export interface DecisionInventory {
   holdings: HoldingItem[]
-  watchlist: ListItem[]
-  candidates: ListItem[]
+  /** 使用者自訂分類（可為空；不預設觀察／候選） */
+  lists: CustomList[]
+  /**
+   * @deprecated 舊版欄位，載入時會遷移至 lists
+   */
+  watchlist?: ListItem[]
+  /**
+   * @deprecated 舊版欄位，載入時會遷移至 lists
+   */
+  candidates?: ListItem[]
   /** 手動全域參數 */
   totalCapital: number
   cashRemaining: number
   maxHoldings: number
-  maxWatchlist: number
+  /** @deprecated 改由各 CustomList.maxItems 控制 */
+  maxWatchlist?: number
 }
 
 /** 單一條件：對某指標比較 */
@@ -151,6 +172,19 @@ export interface RunState {
   resultAdvice?: string
   resultParams?: Record<string, number | string>
   error?: string
+}
+
+/**
+ * 批次／單檔執行面板的持久化快照（切換分頁後還原）。
+ */
+export interface RunSessionSnapshot {
+  treeId: string | null
+  selectedSymbols: string[]
+  /** 各標的最新執行狀態 */
+  results: RunState[]
+  /** 進行中標記 */
+  running: boolean
+  updatedAt: number
 }
 
 /** React Flow 畫布額外資料（與邏輯樹同步） */

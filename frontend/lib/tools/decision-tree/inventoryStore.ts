@@ -1,26 +1,60 @@
 /**
- * 決策樹庫存本機儲存（localStorage）。
+ * 決策樹庫存本機儲存（localStorage）；支援舊版觀察／候選遷移至自訂分類。
  */
 
-import type { DecisionInventory, HoldingItem, ListItem } from './types'
+import type { CustomList, DecisionInventory, HoldingItem, ListItem } from './types'
 
 const STORAGE_KEY = 'sagafisc_decision_inventory'
 
-/** 預設空庫存 */
+/** 預設空庫存（不含預設觀察／候選分頁） */
 export function createEmptyInventory(): DecisionInventory {
   return {
     holdings: [],
-    watchlist: [],
-    candidates: [],
+    lists: [],
     totalCapital: 1000000,
     cashRemaining: 1000000,
     maxHoldings: 5,
-    maxWatchlist: 8,
   }
 }
 
 /**
- * 讀取庫存；無資料時回傳預設。
+ * 將舊版 watchlist／candidates 遷移為 lists，並清掉廢棄欄位。
+ * @param raw - 可能含舊欄位的部分庫存
+ * @returns 正規化後庫存
+ */
+export function migrateInventory(raw: Partial<DecisionInventory>): DecisionInventory {
+  const base = createEmptyInventory()
+  const lists: CustomList[] = Array.isArray(raw.lists) ? [...raw.lists] : []
+
+  // --- 舊版固定分頁 → 自訂分類（僅在尚無同名分類時遷移） ---
+  const hasName = (name: string) => lists.some((l) => l.name === name)
+  if (Array.isArray(raw.watchlist) && raw.watchlist.length > 0 && !hasName('觀察清單')) {
+    lists.push({
+      id: newId(),
+      name: '觀察清單',
+      items: raw.watchlist,
+      maxItems: typeof raw.maxWatchlist === 'number' ? raw.maxWatchlist : 8,
+    })
+  }
+  if (Array.isArray(raw.candidates) && raw.candidates.length > 0 && !hasName('候選池')) {
+    lists.push({
+      id: newId(),
+      name: '候選池',
+      items: raw.candidates,
+    })
+  }
+
+  return {
+    holdings: Array.isArray(raw.holdings) ? raw.holdings : base.holdings,
+    lists,
+    totalCapital: typeof raw.totalCapital === 'number' ? raw.totalCapital : base.totalCapital,
+    cashRemaining: typeof raw.cashRemaining === 'number' ? raw.cashRemaining : base.cashRemaining,
+    maxHoldings: typeof raw.maxHoldings === 'number' ? raw.maxHoldings : base.maxHoldings,
+  }
+}
+
+/**
+ * 讀取庫存；無資料時回傳預設；自動遷移舊結構。
  * @returns 庫存物件
  */
 export function loadInventory(): DecisionInventory {
@@ -29,7 +63,12 @@ export function loadInventory(): DecisionInventory {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return createEmptyInventory()
     const parsed = JSON.parse(raw) as Partial<DecisionInventory>
-    return { ...createEmptyInventory(), ...parsed }
+    const migrated = migrateInventory(parsed)
+    // 若曾含舊欄位，寫回正規化結果
+    if (parsed.watchlist || parsed.candidates || !Array.isArray(parsed.lists)) {
+      saveInventory(migrated)
+    }
+    return migrated
   } catch {
     return createEmptyInventory()
   }
@@ -41,7 +80,15 @@ export function loadInventory(): DecisionInventory {
  */
 export function saveInventory(inventory: DecisionInventory): void {
   if (typeof window === 'undefined') return
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory))
+  // 不持久化廢棄欄位
+  const clean: DecisionInventory = {
+    holdings: inventory.holdings,
+    lists: inventory.lists,
+    totalCapital: inventory.totalCapital,
+    cashRemaining: inventory.cashRemaining,
+    maxHoldings: inventory.maxHoldings,
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(clean))
 }
 
 /**
@@ -102,41 +149,116 @@ export function removeHolding(inv: DecisionInventory, id: string): DecisionInven
   return next
 }
 
-type ListKey = 'watchlist' | 'candidates'
-
 /**
- * 新增觀察或候選項目。
- * @param inv - 目前庫存
- * @param key - 清單鍵
- * @param item - 不含 id／addedAt
+ * 新增自訂分類。
+ * @param inv - 庫存
+ * @param name - 分類名稱
+ * @param maxItems - 可選上限
  * @returns 更新後庫存
  */
-export function addListItem(
+export function addCustomList(
   inv: DecisionInventory,
-  key: ListKey,
-  item: Omit<ListItem, 'id' | 'addedAt'>
+  name: string,
+  maxItems?: number
 ): DecisionInventory {
-  const next = {
+  const trimmed = name.trim()
+  if (!trimmed) return inv
+  if (inv.lists.some((l) => l.name === trimmed)) return inv
+  const next: DecisionInventory = {
     ...inv,
-    [key]: [...inv[key], { ...item, id: newId(), addedAt: Date.now() }],
+    lists: [
+      ...inv.lists,
+      {
+        id: newId(),
+        name: trimmed,
+        items: [],
+        maxItems,
+      },
+    ],
   }
   saveInventory(next)
   return next
 }
 
 /**
- * 刪除觀察或候選項目。
- * @param inv - 目前庫存
- * @param key - 清單鍵
- * @param id - 項目 id
+ * 重新命名分類。
+ * @param inv - 庫存
+ * @param listId - 分類 id
+ * @param name - 新名稱
+ * @returns 更新後庫存
+ */
+export function renameCustomList(
+  inv: DecisionInventory,
+  listId: string,
+  name: string
+): DecisionInventory {
+  const trimmed = name.trim()
+  if (!trimmed) return inv
+  const next = {
+    ...inv,
+    lists: inv.lists.map((l) => (l.id === listId ? { ...l, name: trimmed } : l)),
+  }
+  saveInventory(next)
+  return next
+}
+
+/**
+ * 刪除整個分類。
+ * @param inv - 庫存
+ * @param listId - 分類 id
+ * @returns 更新後庫存
+ */
+export function removeCustomList(inv: DecisionInventory, listId: string): DecisionInventory {
+  const next = { ...inv, lists: inv.lists.filter((l) => l.id !== listId) }
+  saveInventory(next)
+  return next
+}
+
+/**
+ * 向指定分類新增標的。
+ * @param inv - 庫存
+ * @param listId - 分類 id
+ * @param item - 不含 id／addedAt
+ * @returns 更新後庫存
+ */
+export function addListItem(
+  inv: DecisionInventory,
+  listId: string,
+  item: Omit<ListItem, 'id' | 'addedAt'>
+): DecisionInventory {
+  const next = {
+    ...inv,
+    lists: inv.lists.map((l) => {
+      if (l.id !== listId) return l
+      if (l.maxItems !== undefined && l.items.length >= l.maxItems) return l
+      return {
+        ...l,
+        items: [...l.items, { ...item, id: newId(), addedAt: Date.now() }],
+      }
+    }),
+  }
+  saveInventory(next)
+  return next
+}
+
+/**
+ * 從分類刪除標的。
+ * @param inv - 庫存
+ * @param listId - 分類 id
+ * @param itemId - 項目 id
  * @returns 更新後庫存
  */
 export function removeListItem(
   inv: DecisionInventory,
-  key: ListKey,
-  id: string
+  listId: string,
+  itemId: string
 ): DecisionInventory {
-  const next = { ...inv, [key]: inv[key].filter((i) => i.id !== id) }
+  const next = {
+    ...inv,
+    lists: inv.lists.map((l) =>
+      l.id === listId ? { ...l, items: l.items.filter((i) => i.id !== itemId) } : l
+    ),
+  }
   saveInventory(next)
   return next
 }
@@ -149,9 +271,7 @@ export function removeListItem(
  */
 export function updateGlobals(
   inv: DecisionInventory,
-  patch: Partial<
-    Pick<DecisionInventory, 'totalCapital' | 'cashRemaining' | 'maxHoldings' | 'maxWatchlist'>
-  >
+  patch: Partial<Pick<DecisionInventory, 'totalCapital' | 'cashRemaining' | 'maxHoldings'>>
 ): DecisionInventory {
   const next = { ...inv, ...patch }
   saveInventory(next)
@@ -166,4 +286,20 @@ export function updateGlobals(
  */
 export function findHolding(inv: DecisionInventory, symbol: string): HoldingItem | undefined {
   return inv.holdings.find((h) => h.symbol === symbol)
+}
+
+/**
+ * 彙整持股與所有分類中的標的（代號去重）。
+ * @param inv - 庫存
+ * @returns [symbol, name][]
+ */
+export function collectAllSymbols(inv: DecisionInventory): [string, string][] {
+  const map = new Map<string, string>()
+  inv.holdings.forEach((h) => map.set(h.symbol, h.name))
+  inv.lists.forEach((list) => {
+    list.items.forEach((i) => {
+      if (!map.has(i.symbol)) map.set(i.symbol, i.name)
+    })
+  })
+  return Array.from(map.entries())
 }

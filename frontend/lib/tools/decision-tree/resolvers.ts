@@ -3,6 +3,7 @@
  */
 
 import { createClient, generateWithFallback } from '@/lib/gemini'
+import { requireEndpoint } from './apiRegistry'
 import { getIndicatorDef } from './catalog'
 import { fetchViaMarketProxy } from './marketClient'
 import type { DecisionInventory, IndicatorSource, IndicatorValue } from './types'
@@ -168,13 +169,84 @@ async function resolveOpenApi(
       const px = await getLatestClose(ctx.symbol, cache)
       return ok('openapi', indicatorId, px, `${px}`)
     }
-    case 'pe_ratio':
-    case 'dividend_yield': {
-      const row = await getValuationRow(ctx.symbol, cache)
-      const key = indicatorId === 'pe_ratio' ? '本益比' : '殖利率'
-      const raw = pickNumber(row, [key, 'PEratio', 'DividendYield', '殖利率(%)'])
-      if (raw === null) throw new Error(`估值資料無 ${key}`)
+    case 'trade_volume':
+    case 'trade_value':
+    case 'price_change':
+    case 'opening_price':
+    case 'highest_price':
+    case 'lowest_price':
+    case 'transaction_count': {
+      // 同一支 STOCK_DAY_ALL，依欄位取量價資訊
+      const row = await getStockDayRow(ctx.symbol, cache)
+      const fieldMap: Record<string, string[]> = {
+        trade_volume: ['成交股數', 'TradeVolume'],
+        trade_value: ['成交金額', 'TradeValue'],
+        price_change: ['漲跌價差', 'Change'],
+        opening_price: ['開盤價', 'OpeningPrice'],
+        highest_price: ['最高價', 'HighestPrice'],
+        lowest_price: ['最低價', 'LowestPrice'],
+        transaction_count: ['成交筆數', 'Transaction'],
+      }
+      const raw = pickNumber(row, fieldMap[indicatorId])
+      if (raw === null) throw new Error(`日成交無 ${indicatorId}`)
       return ok('openapi', indicatorId, raw, String(raw))
+    }
+    case 'pe_ratio':
+    case 'dividend_yield':
+    case 'pb_ratio': {
+      const row = await getValuationRow(ctx.symbol, cache)
+      const keyMap: Record<string, string[]> = {
+        pe_ratio: ['本益比', 'PEratio'],
+        dividend_yield: ['殖利率', 'DividendYield', '殖利率(%)'],
+        pb_ratio: ['股價淨值比', 'PBratio'],
+      }
+      const raw = pickNumber(row, keyMap[indicatorId])
+      if (raw === null) throw new Error(`估值資料無 ${indicatorId}`)
+      return ok('openapi', indicatorId, raw, String(raw))
+    }
+    case 'monthly_avg_price':
+    case 'close_vs_monthly_avg_pct': {
+      const row = await getDayAvgRow(ctx.symbol, cache)
+      const avgPx = pickNumber(row, ['月平均價', 'MonthlyAveragePrice'])
+      if (avgPx === null) throw new Error('無月平均價')
+      if (indicatorId === 'monthly_avg_price') {
+        return ok('openapi', indicatorId, avgPx, String(avgPx))
+      }
+      const close = pickNumber(row, ['收盤價', 'ClosingPrice'])
+      if (close === null) throw new Error('無收盤價／月均')
+      const pct = ((close - avgPx) / avgPx) * 100
+      return ok('openapi', indicatorId, round(pct, 2), `${round(pct, 2)}%`)
+    }
+    case 'monthly_turnover_ratio': {
+      const row = await getMonthlyTradeRow(ctx.symbol, cache)
+      const v = pickNumber(row, ['週轉率(%)', 'TurnoverRatio', '週轉率'])
+      if (v === null) throw new Error('無月週轉率')
+      return ok('openapi', indicatorId, v, `${v}%`)
+    }
+    case 'taiex_change_pct': {
+      const pct = await getTaiexChangePct(cache)
+      return ok('openapi', indicatorId, pct, `${pct}%`)
+    }
+    case 'margin_balance':
+    case 'short_balance': {
+      const row = await getMarginRow(ctx.symbol, cache)
+      const keys =
+        indicatorId === 'margin_balance'
+          ? ['融資今日餘額', '融資餘額']
+          : ['融券今日餘額', '融券餘額']
+      const v = pickNumber(row, keys)
+      if (v === null) throw new Error(`無${indicatorId === 'margin_balance' ? '融資' : '融券'}餘額`)
+      return ok('openapi', indicatorId, v, String(v))
+    }
+    case 'cash_dividend': {
+      const row = await getDividendRow(ctx.symbol, cache)
+      const v = pickNumber(row, [
+        '股東配發-盈餘分配之現金股利(元/股)',
+        '現金股利',
+        '盈餘分配之現金股利',
+      ])
+      if (v === null) throw new Error('無現金股利資料')
+      return ok('openapi', indicatorId, v, String(v))
     }
     case 'inst_net_buy':
     case 'trust_net_buy':
@@ -200,9 +272,23 @@ async function resolveOpenApi(
       const streak = await calcBuyStreak(ctx.symbol, indicatorId === 'trust_buy_streak' ? 'trust' : 'foreign', maxDays, cache)
       return ok('openapi', indicatorId, streak, `${streak} 天`)
     }
-    case 'monthly_revenue_yoy': {
-      const yoy = await getMonthlyRevenueYoY(ctx.symbol, cache)
-      return ok('openapi', indicatorId, yoy, `${yoy}%`)
+    case 'monthly_revenue_yoy':
+    case 'monthly_revenue_mom':
+    case 'monthly_revenue': {
+      const row = await getRevenueRow(ctx.symbol, cache)
+      if (indicatorId === 'monthly_revenue_yoy') {
+        const yoy = pickNumber(row, ['去年同月增減(%)', 'YoY', '營業收入-去年同月增減(%)'])
+        if (yoy === null) throw new Error('月營收 YoY 解析失敗')
+        return ok('openapi', indicatorId, yoy, `${yoy}%`)
+      }
+      if (indicatorId === 'monthly_revenue_mom') {
+        const mom = pickNumber(row, ['上月比較增減(%)', '營業收入-上月比較增減(%)', 'MoM'])
+        if (mom === null) throw new Error('月營收 MoM 解析失敗')
+        return ok('openapi', indicatorId, mom, `${mom}%`)
+      }
+      const rev = pickNumber(row, ['當月營收', '營業收入-當月營收', '營業收入'])
+      if (rev === null) throw new Error('當月營收解析失敗')
+      return ok('openapi', indicatorId, rev, String(rev))
     }
     case 'eps':
     case 'roe':
@@ -384,24 +470,40 @@ function parseNum(v: unknown): number | null {
  * @param cache - 快取
  * @returns 收盤價
  */
-async function getLatestClose(symbol: string, cache: Map<string, unknown>): Promise<number> {
+/**
+ * 取得上市日成交列（含量價）；上櫃僅備援收盤。
+ * @param symbol - 代號
+ * @param cache - 當次／批次共用快取
+ * @returns 列物件
+ */
+async function getStockDayRow(symbol: string, cache: Map<string, unknown>): Promise<Record<string, unknown>> {
+  const ep = requireEndpoint('twse_stock_day_all')
   const key = 'stock_day_all'
   let data = cache.get(key) as unknown
   if (!data) {
-    const res = await fetchViaMarketProxy({
-      source: 'twse_openapi',
-      path: '/v1/exchangeReport/STOCK_DAY_ALL',
-    })
+    const res = await fetchViaMarketProxy({ source: ep.source, path: ep.path })
+    data = res.data
+    cache.set(key, data)
+  }
+  const row = findSymbolRow(data, symbol)
+  if (row) return row
+  throw new Error('找不到該股當日行情（量價僅支援上市 STOCK_DAY_ALL）')
+}
+
+async function getLatestClose(symbol: string, cache: Map<string, unknown>): Promise<number> {
+  const ep = requireEndpoint('twse_stock_day_all')
+  const key = 'stock_day_all'
+  let data = cache.get(key) as unknown
+  if (!data) {
+    const res = await fetchViaMarketProxy({ source: ep.source, path: ep.path })
     data = res.data
     cache.set(key, data)
   }
   const row = findSymbolRow(data, symbol)
   if (!row) {
     // 上櫃備援
-    const tpex = await fetchViaMarketProxy({
-      source: 'tpex',
-      path: '/openapi/v1/tpex_mainboard_daily_close_quotes',
-    })
+    const tpexEp = requireEndpoint('tpex_daily_close')
+    const tpex = await fetchViaMarketProxy({ source: tpexEp.source, path: tpexEp.path })
     cache.set('tpex_day', tpex.data)
     const row2 = findSymbolRow(tpex.data, symbol)
     if (!row2) throw new Error('找不到該股當日行情')
@@ -409,25 +511,155 @@ async function getLatestClose(symbol: string, cache: Map<string, unknown>): Prom
     if (px === null) throw new Error('收盤價解析失敗')
     return px
   }
-  const px = pickNumber(row, ['收盤價', 'Close', '收盤'])
+  const px = pickNumber(row, ['收盤價', 'Close', '收盤', 'ClosingPrice'])
   if (px === null) throw new Error('收盤價解析失敗')
   return px
 }
 
 async function getValuationRow(symbol: string, cache: Map<string, unknown>): Promise<Record<string, unknown>> {
+  const ep = requireEndpoint('twse_bwibbu_all')
   const key = 'bwibbu_all'
   let data = cache.get(key)
   if (!data) {
-    const res = await fetchViaMarketProxy({
-      source: 'twse_openapi',
-      path: '/v1/exchangeReport/BWIBBU_ALL',
-    })
+    const res = await fetchViaMarketProxy({ source: ep.source, path: ep.path })
     data = res.data
     cache.set(key, data)
   }
   const row = findSymbolRow(data, symbol)
   if (!row) throw new Error('找不到估值資料')
   return row
+}
+
+/**
+ * 日收盤／月均價列。
+ * @param symbol - 代號
+ * @param cache - 快取
+ * @returns 列
+ */
+async function getDayAvgRow(symbol: string, cache: Map<string, unknown>): Promise<Record<string, unknown>> {
+  const ep = requireEndpoint('twse_stock_day_avg_all')
+  const key = 'stock_day_avg_all'
+  let data = cache.get(key)
+  if (!data) {
+    const res = await fetchViaMarketProxy({ source: ep.source, path: ep.path })
+    data = res.data
+    cache.set(key, data)
+  }
+  const row = findSymbolRow(data, symbol)
+  if (!row) throw new Error('找不到月平均價資料')
+  return row
+}
+
+/**
+ * 月成交資訊列（週轉率）。
+ * @param symbol - 代號
+ * @param cache - 快取
+ * @returns 列
+ */
+async function getMonthlyTradeRow(symbol: string, cache: Map<string, unknown>): Promise<Record<string, unknown>> {
+  const ep = requireEndpoint('twse_fmsrfk_all')
+  const key = 'fmsrfk_all'
+  let data = cache.get(key)
+  if (!data) {
+    const res = await fetchViaMarketProxy({ source: ep.source, path: ep.path })
+    data = res.data
+    cache.set(key, data)
+  }
+  const row = findSymbolRow(data, symbol)
+  if (!row) throw new Error('找不到月成交資料')
+  return row
+}
+
+/**
+ * 加權指數當日漲跌百分比。
+ * @param cache - 快取
+ * @returns 漲跌%
+ */
+async function getTaiexChangePct(cache: Map<string, unknown>): Promise<number> {
+  const ep = requireEndpoint('twse_mi_index')
+  const key = 'mi_index'
+  let data = cache.get(key)
+  if (!data) {
+    const res = await fetchViaMarketProxy({ source: ep.source, path: ep.path })
+    data = res.data
+    cache.set(key, data)
+  }
+  if (!Array.isArray(data)) throw new Error('大盤指數格式異常')
+  for (const item of data) {
+    if (!item || typeof item !== 'object') continue
+    const row = item as Record<string, unknown>
+    const name = String(row['指數'] || row['Index'] || '')
+    if (name.includes('發行量加權') || name.includes('加權')) {
+      const pct = pickNumber(row, ['漲跌百分比', '漲跌百分比(%)', 'ChangePercent'])
+      if (pct !== null) return pct
+    }
+  }
+  throw new Error('找不到加權指數漲跌%')
+}
+
+/**
+ * 融資融券餘額列（CSV／JSON 皆嘗試）。
+ * @param symbol - 代號
+ * @param cache - 快取
+ * @returns 列
+ */
+async function getMarginRow(symbol: string, cache: Map<string, unknown>): Promise<Record<string, unknown>> {
+  const ep = requireEndpoint('twse_mi_margn')
+  const key = 'mi_margn'
+  let data = cache.get(key)
+  if (!data) {
+    const res = await fetchViaMarketProxy({
+      source: ep.source,
+      path: ep.path,
+      query: 'response=open_data&selectType=ALL',
+    })
+    data = normalizeCsvOrJsonRows(res.data)
+    cache.set(key, data)
+  }
+  const row = findSymbolRow(data, symbol, ['股票代號', '證券代號', 'Code', '代號'])
+  if (!row) throw new Error('找不到融資融券資料')
+  return row
+}
+
+/**
+ * 股利分派列。
+ * @param symbol - 代號
+ * @param cache - 快取
+ * @returns 列
+ */
+async function getDividendRow(symbol: string, cache: Map<string, unknown>): Promise<Record<string, unknown>> {
+  const ep = requireEndpoint('twse_dividend_l')
+  const key = 'dividend_l'
+  let data = cache.get(key)
+  if (!data) {
+    const res = await fetchViaMarketProxy({ source: ep.source, path: ep.path })
+    data = res.data
+    cache.set(key, data)
+  }
+  const row = findSymbolRow(data, symbol, ['公司代號', 'Code', '證券代號'])
+  if (!row) throw new Error('找不到股利資料')
+  return row
+}
+
+/**
+ * 將 open_data CSV 字串或既有 JSON 陣列正規成列陣列。
+ * @param raw - 上游資料
+ * @returns 物件陣列
+ */
+function normalizeCsvOrJsonRows(raw: unknown): unknown[] {
+  if (Array.isArray(raw)) return raw
+  if (typeof raw !== 'string') return []
+  const lines = raw.trim().split(/\r?\n/).filter(Boolean)
+  if (lines.length < 2) return []
+  const headers = lines[0].split(',').map((h) => h.replace(/^"|"$/g, '').trim())
+  return lines.slice(1).map((line) => {
+    const cols = line.match(/("([^"]*)"|[^,]*)/g) || []
+    const row: Record<string, unknown> = {}
+    headers.forEach((h, i) => {
+      row[h] = (cols[i] || '').replace(/^"|"$/g, '').trim()
+    })
+    return row
+  })
 }
 
 async function getInstitutionalToday(symbol: string, cache: Map<string, unknown>): Promise<Record<string, unknown>> {
@@ -440,12 +672,13 @@ async function getInstitutionalOnDate(
   yyyymmdd: string,
   cache: Map<string, unknown>
 ): Promise<Record<string, unknown>> {
+  const ep = requireEndpoint('twse_t86')
   const key = `t86_${yyyymmdd}`
   let data = cache.get(key) as { fields?: string[]; data?: unknown[] } | unknown
   if (!data) {
     const res = await fetchViaMarketProxy({
-      source: 'twse_rwd',
-      path: '/rwd/zh/fund/T86',
+      source: ep.source,
+      path: ep.path,
       query: `date=${yyyymmdd}&selectType=ALLBUT0999&response=json`,
     })
     data = res.data
@@ -492,33 +725,33 @@ async function calcBuyStreak(
   return streak
 }
 
-async function getMonthlyRevenueYoY(symbol: string, cache: Map<string, unknown>): Promise<number> {
+/**
+ * 月營收列。
+ * @param symbol - 代號
+ * @param cache - 快取
+ * @returns 列
+ */
+async function getRevenueRow(symbol: string, cache: Map<string, unknown>): Promise<Record<string, unknown>> {
+  const ep = requireEndpoint('twse_revenue_l')
   const key = 'rev_l'
   let data = cache.get(key)
   if (!data) {
-    const res = await fetchViaMarketProxy({
-      source: 'twse_openapi',
-      path: '/v1/opendata/t187ap05_L',
-    })
+    const res = await fetchViaMarketProxy({ source: ep.source, path: ep.path })
     data = res.data
     cache.set(key, data)
   }
   const row = findSymbolRow(data, symbol, ['公司代號', 'Code', '出表日期'])
   if (!row) throw new Error('找不到月營收')
-  const yoy = pickNumber(row, ['去年同月增減(%)', 'YoY', '營業收入-去年同月增減(%)'])
-  if (yoy === null) throw new Error('月營收 YoY 解析失敗')
-  return yoy
+  return row
 }
 
 async function getFinanceSnapshot(symbol: string, cache: Map<string, unknown>): Promise<Record<string, unknown>> {
+  const ep = requireEndpoint('twse_income_l_ci')
   const key = 'fin_l'
   let data = cache.get(key)
   if (!data) {
     // 綜合損益表快照（若路徑異動會失敗並降級 AI）
-    const res = await fetchViaMarketProxy({
-      source: 'twse_openapi',
-      path: '/v1/opendata/t187ap06_L_ci',
-    })
+    const res = await fetchViaMarketProxy({ source: ep.source, path: ep.path })
     data = res.data
     cache.set(key, data)
   }
@@ -563,9 +796,10 @@ async function getOhlcSeries(symbol: string, n: number, cache: Map<string, unkno
     const key = `day_${symbol}_${ym}`
     let data = cache.get(key)
     if (!data) {
+      const ep = requireEndpoint('twse_stock_day')
       const res = await fetchViaMarketProxy({
-        source: 'twse_rwd',
-        path: '/rwd/zh/afterTrading/STOCK_DAY',
+        source: ep.source,
+        path: ep.path,
         query: `date=${ym}01&stockNo=${symbol}&response=json`,
       })
       data = res.data

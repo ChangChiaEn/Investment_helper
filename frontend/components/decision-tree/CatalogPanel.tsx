@@ -14,7 +14,7 @@ export function CatalogPanel() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-gray-600">
-        編輯決策節點時可選用下列指標。OpenAPI 經代理即時查詢；失敗或缺資料時降級 AI；手動欄位來自庫存。
+        編輯決策節點時可選用下列指標。官方行情／財報經代理即時查詢（路徑見設定頁「市場 API 登錄」）；失敗或缺資料時降級 AI；手動欄位來自庫存。
       </p>
       <div className="grid gap-3 md:grid-cols-2">
         {INDICATOR_CATALOG.map((ind) => (

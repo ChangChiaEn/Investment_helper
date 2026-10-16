@@ -24,6 +24,20 @@ export interface EngineOptions {
   previous?: RunState
   /** 人工節點選擇 */
   manualAnswer?: 'yes' | 'no'
+  /**
+   * 可選：批次執行共用快取（全市場表只打一次）。
+   * 未傳時每次新建空 Map。
+   */
+  sharedCache?: Map<string, unknown>
+}
+
+/**
+ * 判斷決策樹是否含人工確認節點（批次執行時需改為單檔）。
+ * @param tree - 決策樹文件
+ * @returns 是否含 manual 節點
+ */
+export function treeHasManualNode(tree: DecisionTreeDoc): boolean {
+  return Object.values(tree.nodes).some((n) => n.kind === 'manual')
 }
 
 /**
@@ -32,8 +46,8 @@ export interface EngineOptions {
  * @returns 執行狀態
  */
 export async function runDecisionTree(options: EngineOptions): Promise<RunState> {
-  const { tree, symbol, inventory, previous, manualAnswer } = options
-  const cache = new Map<string, unknown>()
+  const { tree, symbol, inventory, previous, manualAnswer, sharedCache } = options
+  const cache = sharedCache || new Map<string, unknown>()
   const ctx: ResolveContext = { symbol, inventory, cache }
 
   let state: RunState = previous

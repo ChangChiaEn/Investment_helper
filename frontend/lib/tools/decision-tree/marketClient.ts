@@ -2,6 +2,7 @@
  * 前端市場資料客戶端：經 /api/market-proxy 轉發官方 GET。
  */
 
+import { requireEndpoint } from './apiRegistry'
 import type { MarketSource } from './proxyAllowlist'
 import { MARKET_SOURCE_CONFIG } from './proxyAllowlist'
 import type { MarketProxyErrorBody, MarketProxySuccessBody } from './proxyHandler'
@@ -48,10 +49,11 @@ export async function testMarketProxyConnection(): Promise<{
   upstream?: string
 }> {
   try {
-    // 上市證券基本資料（最新快照，路徑較穩定）
+    // 上市證券基本資料（最新快照，路徑由登錄表管理）
+    const ep = requireEndpoint('twse_company_basic_l')
     const result = await fetchViaMarketProxy({
-      source: 'twse_openapi',
-      path: '/v1/opendata/t187ap03_L',
+      source: ep.source,
+      path: ep.path,
     })
     const rows = Array.isArray(result.data) ? result.data.length : 0
     return {

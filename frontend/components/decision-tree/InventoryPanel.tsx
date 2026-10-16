@@ -1,16 +1,19 @@
 'use client'
 
 /**
- * 決策樹庫存欄：持股／觀察／候選與全域手動參數。
+ * 決策樹庫存欄：持股／使用者自訂分類／全域手動參數。
  */
 
-import { useState } from 'react'
-import type { DecisionInventory, HoldingItem } from '@/lib/tools/decision-tree/types'
+import { useEffect, useState } from 'react'
+import type { CustomList, DecisionInventory, HoldingItem } from '@/lib/tools/decision-tree/types'
 import {
+  addCustomList,
   addHolding,
   addListItem,
+  removeCustomList,
   removeHolding,
   removeListItem,
+  renameCustomList,
   updateGlobals,
   updateHolding,
 } from '@/lib/tools/decision-tree/inventoryStore'
@@ -20,36 +23,94 @@ interface Props {
   onChange: (inv: DecisionInventory) => void
 }
 
+type TabKey = 'holdings' | 'globals' | string
+
 /**
  * @param inventory - 目前庫存
  * @param onChange - 變更回呼
  * @returns 庫存管理 UI
  */
 export function InventoryPanel({ inventory, onChange }: Props) {
-  const [tab, setTab] = useState<'holdings' | 'watchlist' | 'candidates' | 'globals'>('holdings')
+  const [tab, setTab] = useState<TabKey>('holdings')
+  const [newListName, setNewListName] = useState('')
+
+  const activeList: CustomList | undefined = inventory.lists.find((l) => l.id === tab)
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            ['holdings', '持股'],
-            ['watchlist', '觀察清單'],
-            ['candidates', '候選池'],
-            ['globals', '全域參數'],
-          ] as const
-        ).map(([k, label]) => (
+      <div className="flex flex-wrap gap-2 items-center">
+        <button
+          type="button"
+          onClick={() => setTab('holdings')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+            tab === 'holdings' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          持股
+        </button>
+        {inventory.lists.map((list) => (
           <button
-            key={k}
+            key={list.id}
             type="button"
-            onClick={() => setTab(k)}
+            onClick={() => setTab(list.id)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
-              tab === k ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              tab === list.id ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            {label}
+            {list.name}
+            <span className="ml-1 text-xs opacity-70">({list.items.length})</span>
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setTab('globals')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium ${
+            tab === 'globals' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          全域參數
+        </button>
+      </div>
+
+      {/* 新增分類 */}
+      <div className="flex flex-wrap gap-2 items-end bg-slate-50 border border-slate-100 rounded-xl p-3">
+        <label className="text-xs text-gray-600">
+          新增分類（如觀察、候選、半導體）
+          <input
+            className="mt-1 block border rounded-lg px-3 py-2 text-sm min-w-[160px]"
+            placeholder="分類名稱"
+            value={newListName}
+            onChange={(e) => setNewListName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                if (!newListName.trim()) return
+                const next = addCustomList(inventory, newListName)
+                onChange(next)
+                const created = next.lists.find((l) => l.name === newListName.trim())
+                if (created) setTab(created.id)
+                setNewListName('')
+              }
+            }}
+          />
+        </label>
+        <button
+          type="button"
+          className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm"
+          onClick={() => {
+            if (!newListName.trim()) return
+            const next = addCustomList(inventory, newListName)
+            onChange(next)
+            const created = next.lists.find((l) => l.name === newListName.trim())
+            if (created) setTab(created.id)
+            setNewListName('')
+          }}
+        >
+          新增分類
+        </button>
+        <p className="text-xs text-gray-500 w-full sm:w-auto sm:ml-2">
+          分類僅用來分組標的，不預設「觀察／候選」；可自行建立。
+        </p>
       </div>
 
       {tab === 'globals' && (
@@ -59,7 +120,6 @@ export function InventoryPanel({ inventory, onChange }: Props) {
               ['totalCapital', '總資金'],
               ['cashRemaining', '剩餘現金'],
               ['maxHoldings', '持股檔數上限'],
-              ['maxWatchlist', '觀察清單上限'],
             ] as const
           ).map(([key, label]) => (
             <label key={key} className="text-sm text-gray-700">
@@ -84,19 +144,25 @@ export function InventoryPanel({ inventory, onChange }: Props) {
         />
       )}
 
-      {(tab === 'watchlist' || tab === 'candidates') && (
+      {activeList && (
         <SimpleList
-          title={tab === 'watchlist' ? '觀察清單' : '候選池'}
-          items={inventory[tab]}
-          limit={tab === 'watchlist' ? inventory.maxWatchlist : undefined}
-          onAdd={(symbol, name) => onChange(addListItem(inventory, tab, { symbol, name }))}
-          onRemove={(id) => onChange(removeListItem(inventory, tab, id))}
+          list={activeList}
+          onRename={(name) => onChange(renameCustomList(inventory, activeList.id, name))}
+          onDeleteList={() => {
+            onChange(removeCustomList(inventory, activeList.id))
+            setTab('holdings')
+          }}
+          onAdd={(symbol, name) => onChange(addListItem(inventory, activeList.id, { symbol, name }))}
+          onRemove={(id) => onChange(removeListItem(inventory, activeList.id, id))}
         />
       )}
     </div>
   )
 }
 
+/**
+ * 持股表格與新增表單。
+ */
 function HoldingsTable({
   items,
   onAdd,
@@ -136,7 +202,13 @@ function HoldingsTable({
             {label}
             <input
               className="mt-1 w-full border rounded-lg px-2 py-1.5 text-sm"
-              type={key === 'entryPrice' || key === 'shares' || key === 'swingHigh' ? 'number' : key === 'entryDate' ? 'date' : 'text'}
+              type={
+                key === 'entryPrice' || key === 'shares' || key === 'swingHigh'
+                  ? 'number'
+                  : key === 'entryDate'
+                    ? 'date'
+                    : 'text'
+              }
               value={form[key] as string | number}
               onChange={(e) =>
                 setForm({
@@ -227,32 +299,63 @@ function HoldingsTable({
   )
 }
 
+/**
+ * 單一自訂分類的標的清單。
+ */
 function SimpleList({
-  title,
-  items,
-  limit,
+  list,
+  onRename,
+  onDeleteList,
   onAdd,
   onRemove,
 }: {
-  title: string
-  items: { id: string; symbol: string; name: string }[]
-  limit?: number
+  list: CustomList
+  onRename: (name: string) => void
+  onDeleteList: () => void
   onAdd: (symbol: string, name: string) => void
   onRemove: (id: string) => void
 }) {
   const [symbol, setSymbol] = useState('')
   const [name, setName] = useState('')
-  const full = limit !== undefined && items.length >= limit
+  const [editingName, setEditingName] = useState(list.name)
+  const full = list.maxItems !== undefined && list.items.length >= list.maxItems
+
+  // 切換分類或外部重新命名時同步輸入框
+  useEffect(() => {
+    setEditingName(list.name)
+  }, [list.id, list.name])
 
   return (
     <div className="bg-white rounded-xl border p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="font-medium text-gray-800">{title}</h3>
-        {limit !== undefined && (
-          <span className="text-xs text-gray-500">
-            {items.length} / {limit}
-          </span>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <input
+            className="border rounded-lg px-2 py-1 text-sm font-medium"
+            value={editingName}
+            onChange={(e) => setEditingName(e.target.value)}
+            onBlur={() => {
+              if (editingName.trim() && editingName.trim() !== list.name) {
+                onRename(editingName)
+              } else {
+                setEditingName(list.name)
+              }
+            }}
+          />
+          {list.maxItems !== undefined && (
+            <span className="text-xs text-gray-500">
+              {list.items.length} / {list.maxItems}
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          className="text-xs text-red-600 hover:underline"
+          onClick={() => {
+            if (confirm(`確定刪除分類「${list.name}」？`)) onDeleteList()
+          }}
+        >
+          刪除分類
+        </button>
       </div>
       <div className="flex flex-wrap gap-2">
         <input
@@ -281,7 +384,7 @@ function SimpleList({
         </button>
       </div>
       <ul className="divide-y">
-        {items.map((i) => (
+        {list.items.map((i) => (
           <li key={i.id} className="py-2 flex justify-between text-sm">
             <span>
               <span className="font-mono text-primary-700">{i.symbol}</span> {i.name}
@@ -291,7 +394,7 @@ function SimpleList({
             </button>
           </li>
         ))}
-        {items.length === 0 && <li className="text-gray-400 text-sm py-2">尚無項目</li>}
+        {list.items.length === 0 && <li className="text-gray-400 text-sm py-2">尚無項目</li>}
       </ul>
     </div>
   )
