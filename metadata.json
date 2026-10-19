@@ -1,0 +1,11 @@
+{
+  "name": "Sagafisc 智慧投研平台",
+  "description": "整合多個 AI 分析工具的智慧投資研究平台",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
+  "permissions": []
+}
