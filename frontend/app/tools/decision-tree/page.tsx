@@ -7,11 +7,10 @@
 import { useEffect, useState } from 'react'
 import { GitBranch } from 'lucide-react'
 import { CatalogPanel } from '@/components/decision-tree/CatalogPanel'
-import { InventoryPanel } from '@/components/decision-tree/InventoryPanel'
+import { InventoryPanel } from '@/components/inventory/InventoryPanel'
 import { RunPanel } from '@/components/decision-tree/RunPanel'
 import { TreeEditorPanel } from '@/components/decision-tree/TreeEditorPanel'
-import { loadInventory } from '@/lib/tools/decision-tree/inventoryStore'
-import type { DecisionInventory } from '@/lib/tools/decision-tree/types'
+import { loadInventory, type DecisionInventory } from '@/lib/inventory'
 import { useTheme } from '@/contexts/ThemeContext'
 import { getToolDisplayLabels } from '@/config/disguise'
 

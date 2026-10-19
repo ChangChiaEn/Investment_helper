@@ -144,6 +144,10 @@ export const DISGUISE_TOOL_LABELS: Record<
     name: '流程決策 SOP',
     description: '自訂指標與決策流程圖',
   },
+  history: {
+    name: '今日查詢紀錄',
+    description: '本日快取與分析摘要',
+  },
   alphastrategist: {
     name: '綜合助理',
     description: '跨主題問答與整理',

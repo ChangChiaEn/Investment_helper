@@ -6,11 +6,11 @@ import { ToolIcon } from '@/components/ToolIcons'
 import { useRouter } from 'next/navigation'
 import { AVAILABLE_MODELS, testAvailableModels } from '@/lib/gemini'
 import {
-  marketApiRegistry,
+  MARKET_SOURCE_CONFIG,
   MODULE_DECISION_TREE,
-} from '@/lib/tools/decision-tree/apiRegistry'
-import { testMarketProxyConnection } from '@/lib/tools/decision-tree/marketClient'
-import { MARKET_SOURCE_CONFIG } from '@/lib/tools/decision-tree/proxyAllowlist'
+  marketApiRegistry,
+  testMarketProxyConnection,
+} from '@/lib/market'
 import { Cpu, Check, X, Loader2, Globe, Palette, BookOpen, EyeOff } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import { THEME_LIST, rgbToHex, type ThemeId } from '@/config/themes'

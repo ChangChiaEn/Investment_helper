@@ -77,6 +77,14 @@ export const TOOL_CONFIGS: Record<string, ToolConfig> = {
     localPath: 'decision-tree',
     inNavigation: true,
   },
+  history: {
+    id: 'history',
+    name: '今日 History',
+    description: '查看今日 OpenAPI 與 AI 查詢快取，避免重複消耗',
+    category: 'stock',
+    localPath: 'history',
+    inNavigation: true,
+  },
   // 進階功能（不在導覽列）
   'alphastrategist': {
     id: 'alphastrategist',

@@ -3,7 +3,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { handleMarketProxy } from '@/lib/tools/decision-tree/proxyHandler'
+import { handleMarketProxy } from '@/lib/market'
 
 /**
  * 轉發官方市場資料 GET 請求。

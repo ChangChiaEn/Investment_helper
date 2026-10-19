@@ -3,11 +3,27 @@
  */
 
 import { createClient, generateWithFallback } from '@/lib/gemini'
-import { requireEndpoint } from './apiRegistry'
+import { findHolding } from '@/lib/inventory'
+import { requireEndpoint } from '@/lib/market'
+import { fetchMarketWithHistory } from '@/lib/pipeline'
 import { getIndicatorDef } from './catalog'
-import { fetchViaMarketProxy } from './marketClient'
 import type { DecisionInventory, IndicatorSource, IndicatorValue } from './types'
-import { findHolding } from './inventoryStore'
+import type { MarketSource } from '@/lib/market'
+
+/**
+ * 決策樹用 OpenAPI 取得：經共用 pipeline 寫入／讀取今日 History。
+ * @param req - source／path／query
+ * @returns 含 data 的代理結果
+ */
+async function fetchViaMarketProxy(req: {
+  source: MarketSource
+  path: string
+  query?: string
+}): Promise<{ data: unknown }> {
+  // 以 source+path 作為 History 端點鍵，與登錄 id 對齊時仍可跨工具重用同一 path
+  const endpointId = `${req.source}${req.path}`
+  return fetchMarketWithHistory(req, { endpointId, title: `OpenAPI ${endpointId}` })
+}
 
 /** 解析上下文 */
 export interface ResolveContext {

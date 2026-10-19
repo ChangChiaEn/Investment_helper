@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import { precheckBatch, runDecisionTreeBatch } from '@/lib/tools/decision-tree/batchRunner'
 import { runDecisionTree, treeHasManualNode } from '@/lib/tools/decision-tree/engine'
-import { collectAllSymbols } from '@/lib/tools/decision-tree/inventoryStore'
+import { collectAllSymbols } from '@/lib/inventory'
 import {
   clearRunSession,
   loadRunSession,

@@ -1,6 +1,15 @@
 /**
- * 決策樹工具核心型別：指標、庫存、樹節點與執行結果。
+ * 決策樹工具核心型別：指標、樹節點與執行結果。
+ * 庫存相關型別已移至 `@/lib/inventory`，此處再匯出以相容舊 import。
  */
+
+export type {
+  CustomList,
+  DecisionInventory,
+  HoldingItem,
+  Inventory,
+  ListItem,
+} from '@/lib/inventory'
 
 /** 指標資料來源標籤 */
 export type IndicatorSource = 'openapi' | 'ai' | 'manual'
@@ -42,60 +51,6 @@ export interface IndicatorValue {
   value: number | boolean | string | null
   display: string
   error?: string
-}
-
-/** 持股項目 */
-export interface HoldingItem {
-  id: string
-  symbol: string
-  name: string
-  entryPrice: number
-  shares: number
-  entryDate: string
-  swingHigh: number
-  note?: string
-}
-
-/** 觀察／分類清單內單一標的 */
-export interface ListItem {
-  id: string
-  symbol: string
-  name: string
-  note?: string
-  addedAt: number
-}
-
-/**
- * 使用者自訂分類清單（取代固定的觀察／候選分頁）。
- * 僅作為標的分組，不影響持股欄位語意。
- */
-export interface CustomList {
-  id: string
-  name: string
-  items: ListItem[]
-  /** 可選上限；未設則不限 */
-  maxItems?: number
-}
-
-/** 決策樹庫存（本機） */
-export interface DecisionInventory {
-  holdings: HoldingItem[]
-  /** 使用者自訂分類（可為空；不預設觀察／候選） */
-  lists: CustomList[]
-  /**
-   * @deprecated 舊版欄位，載入時會遷移至 lists
-   */
-  watchlist?: ListItem[]
-  /**
-   * @deprecated 舊版欄位，載入時會遷移至 lists
-   */
-  candidates?: ListItem[]
-  /** 手動全域參數 */
-  totalCapital: number
-  cashRemaining: number
-  maxHoldings: number
-  /** @deprecated 改由各 CustomList.maxItems 控制 */
-  maxWatchlist?: number
 }
 
 /** 單一條件：對某指標比較 */
