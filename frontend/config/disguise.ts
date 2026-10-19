@@ -103,7 +103,38 @@ export const DISGUISE_NAV_LABELS = {
   fundType: '文件',
   analyze: '開啟',
   remove: '移除',
+  /** 投資流程分組標題 */
+  navGroupShared: '工作區',
+  navGroupExplore: '產業草稿',
+  navGroupDiscover: '案例搜集',
+  navGroupResearch: '深入整理',
+  navGroupExecute: '追蹤節點',
+  navGroupPortfolio: '資源總覽',
+  assistantFab: '綜合助理',
 } as const
+
+/**
+ * 投資流程 navGroup 標題（偽裝時改中性譯名）。
+ * @param groupId - 分組 id
+ * @param realTitle - 真實標題
+ * @param disguise - 是否開啟偽裝
+ */
+export function getNavGroupTitle(
+  groupId: string,
+  realTitle: string,
+  disguise: boolean,
+): string {
+  if (!disguise) return realTitle
+  const map: Record<string, string> = {
+    shared: DISGUISE_NAV_LABELS.navGroupShared,
+    explore: DISGUISE_NAV_LABELS.navGroupExplore,
+    discover: DISGUISE_NAV_LABELS.navGroupDiscover,
+    research: DISGUISE_NAV_LABELS.navGroupResearch,
+    execute: DISGUISE_NAV_LABELS.navGroupExecute,
+    portfolio: DISGUISE_NAV_LABELS.navGroupPortfolio,
+  }
+  return map[groupId] ?? realTitle
+}
 
 /**
  * 各工具在偽裝模式下的顯示名稱與描述。

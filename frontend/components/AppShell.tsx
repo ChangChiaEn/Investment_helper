@@ -6,6 +6,8 @@ import { ToolDataProvider } from '@/contexts/ToolDataContext'
 import { InventoryProvider } from '@/contexts/InventoryContext'
 import { ToolCacheProvider } from '@/contexts/ToolCacheContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
+import { AssistantProvider } from '@/contexts/AssistantContext'
+import { AssistantFab } from '@/components/assistant/AssistantFab'
 import { RouteLoadingOverlay } from '@/components/RouteLoadingOverlay'
 import { DisguiseHotkey } from '@/components/DisguiseHotkey'
 import { DisguiseTextWalker } from '@/components/DisguiseTextWalker'
@@ -56,16 +58,19 @@ export function AppShell({ children }: AppShellProps) {
       <ToolDataProvider>
         <InventoryProvider>
           <ToolCacheProvider>
-            <div className="flex h-screen bg-bg text-fg">
-              <Navigation />
-              <main className="flex-1 overflow-auto">
-                <DisguiseTextWalker>
-                  <Suspense fallback={<MainLoadingFallback />}>
-                    <RouteLoadingOverlay>{children}</RouteLoadingOverlay>
-                  </Suspense>
-                </DisguiseTextWalker>
-              </main>
-            </div>
+            <AssistantProvider>
+              <div className="flex h-screen bg-bg text-fg">
+                <Navigation />
+                <main className="flex-1 overflow-auto">
+                  <DisguiseTextWalker>
+                    <Suspense fallback={<MainLoadingFallback />}>
+                      <RouteLoadingOverlay>{children}</RouteLoadingOverlay>
+                    </Suspense>
+                  </DisguiseTextWalker>
+                </main>
+                <AssistantFab />
+              </div>
+            </AssistantProvider>
           </ToolCacheProvider>
         </InventoryProvider>
       </ToolDataProvider>

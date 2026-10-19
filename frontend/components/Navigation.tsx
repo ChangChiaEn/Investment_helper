@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { NAVIGATION_TOOLS, ADVANCED_TOOLS } from '@/config/tools'
+import { getNavGroupsWithTools } from '@/config/tools'
 import {
   Home,
   Settings,
@@ -18,6 +18,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import {
   DISGUISE_NAV_LABELS,
   getDisguiseBrand,
+  getNavGroupTitle,
   getToolDisplayLabels,
 } from '@/config/disguise'
 
@@ -25,8 +26,8 @@ import {
 const NAV_COLLAPSED_KEY = 'nav_collapsed'
 
 /**
- * 左側導覽列：可收合為僅圖示窄欄；狀態寫入 localStorage。
- * 偽裝模式下隱藏 Sagafisc 品牌，工具改顯示中性對話名稱。
+ * 左側導覽列：依投資流程分組；可收合為僅圖示窄欄。
+ * 偽裝模式下隱藏 Sagafisc 品牌，工具與分組改顯示中性名稱。
  */
 export function Navigation() {
   const pathname = usePathname()
@@ -62,9 +63,8 @@ export function Navigation() {
 
   const brandName = getDisguiseBrand(disguiseVariant)
   const homeLabel = disguise ? DISGUISE_NAV_LABELS.home : '首頁'
-  const mainSection = disguise ? DISGUISE_NAV_LABELS.mainSection : '主要功能'
-  const advancedSection = disguise ? DISGUISE_NAV_LABELS.advancedSection : '進階功能'
   const settingsLabel = disguise ? DISGUISE_NAV_LABELS.settings : '設定'
+  const grouped = getNavGroupsWithTools()
 
   return (
     <nav
@@ -85,7 +85,6 @@ export function Navigation() {
             className={`flex items-center group min-w-0 ${collapsed ? 'justify-center' : 'space-x-2'}`}
             title={brandName}
           >
-            {/* 偽裝時改用對話圖示，避免露出品牌 Logo */}
             {disguise ? (
               <span className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/20 text-primary shadow-md group-hover:scale-110 transition-transform duration-300 flex-shrink-0">
                 <MessageSquare className="w-5 h-5" />
@@ -123,7 +122,7 @@ export function Navigation() {
         </div>
       </div>
 
-      {/* 主要導覽 */}
+      {/* 主要導覽：依投資流程分組 */}
       <div className={`flex-1 overflow-y-auto overflow-x-hidden ${collapsed ? 'p-2' : 'p-4'}`}>
         <div className="mb-4">
           <Link
@@ -136,56 +135,17 @@ export function Navigation() {
           </Link>
         </div>
 
-        {!collapsed && (
-          <div className="mb-2">
-            <h3 className="px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider">
-              {mainSection}
-            </h3>
-          </div>
-        )}
-
-        <div className="space-y-1">
-          {NAVIGATION_TOOLS.map((tool) => {
-            const isActive = pathname === `/tools/${tool.id}`
-            const labels = getToolDisplayLabels(
-              tool.id,
-              tool.name,
-              tool.description,
-              disguise,
-            )
-            return (
-              <Link
-                key={tool.id}
-                href={`/tools/${tool.id}`}
-                title={labels.name}
-                className={linkClass(isActive)}
-              >
-                <ToolIcon toolId={tool.id} className="w-5 h-5 flex-shrink-0" />
-                {!collapsed && (
-                  <div className="flex-1 min-w-0">
-                    <div className="text-base font-medium">{labels.name}</div>
-                    <div className="text-sm text-sidebar-muted truncate">
-                      {labels.description}
-                    </div>
-                  </div>
-                )}
-              </Link>
-            )
-          })}
-        </div>
-
-        {/* 進階功能 */}
-        {ADVANCED_TOOLS.length > 0 && (
-          <>
+        {grouped.map(({ group, tools }, groupIndex) => (
+          <div key={group.id} className={groupIndex > 0 ? 'mt-5' : ''}>
             {!collapsed && (
-              <div className="mt-6 mb-2">
-                <h3 className="px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider">
-                  {advancedSection}
+              <div className="mb-1">
+                <h3 className="px-4 py-1.5 text-xs font-semibold text-sidebar-muted uppercase tracking-wider">
+                  {getNavGroupTitle(group.id, group.title, disguise)}
                 </h3>
               </div>
             )}
-            <div className={`space-y-1 ${collapsed ? 'mt-2' : ''}`}>
-              {ADVANCED_TOOLS.map((tool) => {
+            <div className="space-y-1">
+              {tools.map((tool) => {
                 const isActive = pathname === `/tools/${tool.id}`
                 const labels = getToolDisplayLabels(
                   tool.id,
@@ -203,7 +163,14 @@ export function Navigation() {
                     <ToolIcon toolId={tool.id} className="w-5 h-5 flex-shrink-0" />
                     {!collapsed && (
                       <div className="flex-1 min-w-0">
-                        <div className="text-base font-medium">{labels.name}</div>
+                        <div className="text-base font-medium flex items-center gap-2">
+                          <span className="truncate">{labels.name}</span>
+                          {tool.assetTag && (
+                            <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded bg-sidebar-hover/80 text-sidebar-muted font-normal normal-case tracking-normal">
+                              {tool.assetTag}
+                            </span>
+                          )}
+                        </div>
                         <div className="text-sm text-sidebar-muted truncate">
                           {labels.description}
                         </div>
@@ -213,8 +180,8 @@ export function Navigation() {
                 )
               })}
             </div>
-          </>
-        )}
+          </div>
+        ))}
 
         <SidebarWorkflow collapsed={collapsed} />
       </div>
