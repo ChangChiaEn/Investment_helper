@@ -5,6 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import { Plus, Trash2, RefreshCw, AlertCircle, TrendingUp, TrendingDown, Search, List, Activity, Crosshair } from 'lucide-react';
 import { useToolCache } from '@/hooks/useToolCache';
 import { WatchlistButton } from '@/components/WatchlistButton';
+import { useInventory } from '@/contexts/InventoryContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { getToolDisplayLabels } from '@/config/disguise';
 import type { TrackedStock as Stock, DiscoveredStock, DiscoveryResult, ScanMode, StockQuote } from '@/lib/tools/tw-stock-target/types';
 import { loadTrackedStocks } from '@/lib/tools/tw-stock-target/storage';
 
@@ -15,6 +18,19 @@ function cn(...inputs: (string | false | undefined)[]) {
 const STORAGE_KEY = 'sagafisc_tw_stock_targets';
 
 function TaiwanStockTargetTool() {
+  const { disguise } = useTheme();
+  const { allSymbols } = useInventory();
+  /** 庫存中的台股／股票代號，供一鍵加入追蹤 */
+  const inventoryStocks = allSymbols.filter((s) => s.assetType === 'stock');
+  /** 名稱查詢用 ref，避免 inventory 變動反覆觸發報價輪詢 */
+  const inventoryStocksRef = useRef(inventoryStocks);
+  inventoryStocksRef.current = inventoryStocks;
+  const pageLabels = getToolDisplayLabels(
+    'tw-stock-target',
+    '台股目標價追蹤器',
+    '每 30 秒更新報價，計算與目標價的距離。',
+    disguise,
+  );
   const { cached, save } = useToolCache<{
     activeTab: 'tracking' | 'discover'; discoveredStocks: DiscoveredStock[];
     scanMode: ScanMode; tradingDates: string[]; hasScanned: boolean;
@@ -27,8 +43,9 @@ function TaiwanStockTargetTool() {
   const [newSymbol, setNewSymbol] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
-  const quoteRequest = useRef<AbortController | null>(null);
   const scanRequest = useRef<AbortController | null>(null);
+  const stocksRef = useRef<Stock[]>([]);
+  stocksRef.current = stocks;
 
   const [discoveredStocks, setDiscoveredStocks] = useState<DiscoveredStock[]>(cached?.discoveredStocks ?? []);
   const [isScanning, setIsScanning] = useState(false);
@@ -63,83 +80,143 @@ function TaiwanStockTargetTool() {
       ? previous : [...previous, { symbol, name: searchParams.get('name') || symbol, targets: [] }]);
   }, [ready, searchParams]);
 
-  const symbols = stocks.map(stock => stock.symbol).join(',');
-  const fetchPrices = useCallback(async () => {
-    if (!ready || !symbols || quoteRequest.current) return;
-    const controller = new AbortController();
-    quoteRequest.current = controller;
-    setIsFetching(true);
-    try {
-      const response = await fetch(`/api/tw-stock-target/stocks?symbols=${encodeURIComponent(symbols)}`, { signal: controller.signal });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '無法取得報價');
-      }
-      const data: StockQuote[] = await response.json();
-      setError('');
+  const symbolsKey = stocks.map((stock) => stock.symbol).join(',');
 
-      setStocks(prevStocks => prevStocks.map(stock => {
-        const quote = data.find(q => q.symbol === stock.symbol);
-        if (quote) {
+  /**
+   * 比對報價代號：忽略 .TW／.TWO 後綴差異。
+   * @param a - 追蹤清單代號
+   * @param b - API 回傳代號
+   * @returns 是否同一標的
+   */
+  const sameSymbol = useCallback(
+    (a: string, b: string) =>
+      a.replace(/\.(TW|TWO)$/i, '').toUpperCase() ===
+      b.replace(/\.(TW|TWO)$/i, '').toUpperCase(),
+    []
+  );
+
+  /**
+   * 套用 API 報價到追蹤清單狀態。
+   * @param data - 報價陣列
+   */
+  const applyQuotes = useCallback(
+    (data: StockQuote[]) => {
+      setStocks((prevStocks) =>
+        prevStocks.map((stock) => {
+          const quote = data.find((q) => sameSymbol(q.symbol, stock.symbol));
+          if (!quote || typeof quote.price !== 'number') {
+            return { ...stock, error: '無法取得報價' };
+          }
+
           let newTargets = [...stock.targets];
           if (quote.targetPrice) {
-            const existingIdx = newTargets.findIndex(t => t.label === '法人目標價');
+            const existingIdx = newTargets.findIndex((t) => t.label === '法人目標價');
             if (existingIdx >= 0) {
-              // Update existing target price
               newTargets[existingIdx] = {
                 ...newTargets[existingIdx],
-                price: parseFloat(quote.targetPrice.toFixed(2))
+                price: parseFloat(quote.targetPrice.toFixed(2)),
               };
             } else if (newTargets.length === 0) {
-              // Auto-add target price if no targets exist (e.g., newly added stock)
               newTargets.push({
                 id: crypto.randomUUID(),
                 price: parseFloat(quote.targetPrice.toFixed(2)),
-                label: '法人目標價'
+                label: '法人目標價',
               });
             }
           }
 
+          const invName = inventoryStocksRef.current.find((s) =>
+            sameSymbol(s.symbol, stock.symbol)
+          )?.name;
+          const yahooName = quote.name?.trim();
+          const nextName = /[\u3400-\u9FFF]/.test(stock.name)
+            ? stock.name
+            : yahooName && !/^\d{4,6}/.test(yahooName)
+              ? yahooName
+              : invName || yahooName || stock.name;
+
           return {
             ...stock,
-            name: /[\u3400-\u9FFF]/.test(stock.name) ? stock.name : quote.name || stock.name,
+            name: nextName,
             currentPrice: quote.price,
             change: quote.change,
             changePercent: quote.changePercent,
             updatedAt: quote.updatedAt,
             targets: newTargets,
-            error: undefined
+            error: undefined,
           };
-        }
-        return { ...stock, error: '無法取得報價' };
-      }));
+        })
+      );
       setLastFetchTime(new Date());
+      setError('');
+    },
+    [sameSymbol]
+  );
+
+  /**
+   * 手動／程式觸發同步報價（按鈕用）。
+   */
+  const fetchPrices = useCallback(async () => {
+    const symbols = stocksRef.current.map((s) => s.symbol).join(',');
+    if (!ready || !symbols) return;
+    setIsFetching(true);
+    try {
+      const response = await fetch(
+        `/api/tw-stock-target/stocks?symbols=${encodeURIComponent(symbols)}`
+      );
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '無法取得報價');
+      }
+      const data: StockQuote[] = await response.json();
+      applyQuotes(data);
     } catch (error) {
-      if (controller.signal.aborted) return;
       const message = error instanceof Error ? error.message : '無法取得報價，請稍後重試。';
       setError(message);
-      setStocks(previous => previous.map(stock => ({ ...stock, error: '報價更新失敗，先前報價可能已過期' })));
     } finally {
-      if (quoteRequest.current === controller) {
-        quoteRequest.current = null;
-        setIsFetching(false);
-      }
+      setIsFetching(false);
     }
-  }, [symbols, ready]);
+  }, [ready, applyQuotes]);
 
-  // Initial fetch and polling
+  // 追蹤清單就緒後自動拉價＋輪詢；以 cancelled 略過已卸載／Strict Mode 第一次的回應
   useEffect(() => {
-    if (activeTab === 'tracking') {
-      fetchPrices();
-      const interval = setInterval(fetchPrices, 30000); // Poll every 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [fetchPrices, activeTab]);
+    if (activeTab !== 'tracking' || !ready || !symbolsKey) return;
 
-  useEffect(() => () => {
-    quoteRequest.current?.abort();
-    quoteRequest.current = null;
-  }, [symbols, activeTab]);
+    let cancelled = false;
+
+    const run = async () => {
+      setIsFetching(true);
+      try {
+        const response = await fetch(
+          `/api/tw-stock-target/stocks?symbols=${encodeURIComponent(symbolsKey)}`
+        );
+        if (cancelled) return;
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || '無法取得報價');
+        }
+        const data: StockQuote[] = await response.json();
+        if (cancelled) return;
+        applyQuotes(data);
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : '無法取得報價，請稍後重試。';
+        setError(message);
+      } finally {
+        if (!cancelled) setIsFetching(false);
+      }
+    };
+
+    void run();
+    const interval = setInterval(() => {
+      void run();
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [activeTab, ready, symbolsKey, applyQuotes]);
 
   const scanMarket = async () => {
     if (scanRequest.current) return;
@@ -245,22 +322,24 @@ function TaiwanStockTargetTool() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-gray-200 p-4 md:p-8 font-sans selection:bg-indigo-500/30">
+    <div className="min-h-screen p-4 md:p-8 selection:bg-primary/30">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#111] p-6 rounded-2xl border border-[#222] shadow-2xl shadow-black/50">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card p-6 rounded-2xl border border-border shadow-lg">
           <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-3 tracking-tight">
-              <div className="p-2 bg-indigo-500/10 rounded-lg">
-                <Crosshair className="text-indigo-400 w-6 h-6" />
+            <h1 className="text-2xl font-bold text-fg flex items-center gap-3 tracking-tight">
+              <div className="p-2 bg-primary-soft rounded-lg">
+                <Crosshair className="text-primary w-6 h-6" />
               </div>
-              台股目標價追蹤器
+              {pageLabels.name}
             </h1>
-            <p className="text-gray-400 text-sm mt-2 flex items-center gap-2">
-              每 30 秒更新報價，計算與目標價的距離。
+            <p className="text-muted-fg text-sm mt-2 flex items-center gap-2">
+              {disguise
+                ? '定期同步資料，計算與里程碑的差距。'
+                : pageLabels.description}
               {activeTab === 'tracking' && lastFetchTime && (
-                <span className="text-gray-500 font-mono text-xs px-2 py-0.5 bg-[#1a1a1a] rounded border border-[#333]">
+                <span className="text-muted-fg font-mono text-xs px-2 py-0.5 bg-muted rounded border border-border">
                   UPDATED: {lastFetchTime.toLocaleTimeString()}
                 </span>
               )}
@@ -272,13 +351,13 @@ function TaiwanStockTargetTool() {
               <button
                 onClick={fetchPrices}
                 disabled={isFetching || !ready || stocks.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-[#1a1a1a] hover:bg-[#252525] text-gray-300 border border-[#333] rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted text-card-fg border border-border rounded-lg transition-colors disabled:opacity-50 text-sm font-medium"
               >
                 <RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
                 {isFetching ? '同步中...' : '同步報價'}
               </button>
 
-              <form onSubmit={addStock} className="flex gap-2">
+              <form onSubmit={addStock} className="flex flex-wrap gap-2 items-center">
                 <input
                   type="text"
                   value={newSymbol}
@@ -286,41 +365,78 @@ function TaiwanStockTargetTool() {
                   placeholder="輸入代號 (如 2330)"
                   aria-label="股票代號"
                   disabled={!ready}
-                  className="px-4 py-2 bg-[#1a1a1a] border border-[#333] text-white rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-40 font-mono text-sm placeholder:text-gray-600"
+                  className="px-4 py-2 bg-muted border border-border text-fg rounded-lg focus:outline-none focus:border-primary focus:ring-1 focus:ring-ring w-40 font-sans text-sm placeholder:text-muted-fg"
                 />
                 <button
                   type="submit"
                   disabled={!ready}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors flex items-center gap-1 text-sm font-medium shadow-lg shadow-indigo-500/20"
+                  className="px-4 py-2 bg-primary hover:opacity-90 text-primary-fg rounded-lg transition-colors flex items-center gap-1 text-sm font-medium shadow-md"
                 >
                   <Plus className="w-4 h-4" />
                   新增
                 </button>
+                {inventoryStocks.length > 0 && (
+                  <select
+                    aria-label="從庫存加入"
+                    disabled={!ready}
+                    defaultValue=""
+                    className="px-3 py-2 bg-muted border border-border text-fg rounded-lg text-sm max-w-[180px]"
+                    onChange={(e) => {
+                      const symbol = e.target.value;
+                      e.target.value = '';
+                      if (!symbol) return;
+                      const hit = inventoryStocks.find((s) => s.symbol === symbol);
+                      if (!hit) return;
+                      if (stocks.some((s) => s.symbol === hit.symbol)) {
+                        setError('此股票已在追蹤清單中');
+                        return;
+                      }
+                      if (stocks.length >= 50) {
+                        setError('最多可追蹤 50 檔股票。');
+                        return;
+                      }
+                      setStocks((prev) => [
+                        ...prev,
+                        { symbol: hit.symbol, name: hit.name, targets: [] },
+                      ]);
+                      setError('');
+                    }}
+                  >
+                    <option value="" disabled>
+                      從庫存加入…
+                    </option>
+                    {inventoryStocks.map((s) => (
+                      <option key={s.symbol} value={s.symbol}>
+                        {s.symbol} {s.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </form>
             </div>
           )}
         </header>
 
         {error && (
-          <div role="alert" className="flex items-start gap-2 p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-300 text-sm">
+          <div role="alert" className="flex items-start gap-2 p-4 rounded-xl border border-warning/40 bg-warning-soft text-warning text-sm">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             {error}
           </div>
         )}
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-fg">
           報價與法人目標價來自 Yahoo Finance，可能延遲；法人目標價為分析師預測中位數，部分標的無資料。
           目標價僅供研究參考，不代表保證報酬。追蹤設定保存在此瀏覽器。
         </p>
 
         {/* Tabs */}
-        <div className="flex space-x-2 bg-[#111] p-1.5 rounded-xl border border-[#222] w-fit">
+        <div className="flex space-x-2 bg-card p-1.5 rounded-xl border border-border w-fit">
           <button
             onClick={() => setActiveTab('tracking')}
             className={cn(
               "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
               activeTab === 'tracking'
-                ? "bg-[#222] text-white shadow-sm border border-[#333]"
-                : "text-gray-400 hover:text-gray-200 hover:bg-[#1a1a1a] border border-transparent"
+                ? "bg-muted text-fg shadow-sm border border-border"
+                : "text-muted-fg hover:text-fg hover:bg-muted border border-transparent"
             )}
           >
             <List className="w-4 h-4" />
@@ -331,8 +447,8 @@ function TaiwanStockTargetTool() {
             className={cn(
               "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
               activeTab === 'discover'
-                ? "bg-[#222] text-white shadow-sm border border-[#333]"
-                : "text-gray-400 hover:text-gray-200 hover:bg-[#1a1a1a] border border-transparent"
+                ? "bg-muted text-fg shadow-sm border border-border"
+                : "text-muted-fg hover:text-fg hover:bg-muted border border-transparent"
             )}
           >
             <Search className="w-4 h-4" />
@@ -354,29 +470,29 @@ function TaiwanStockTargetTool() {
             ))}
 
               {stocks.length === 0 && (
-              <div className="col-span-full py-20 text-center text-gray-500 bg-[#111] rounded-2xl border border-dashed border-[#333]">
+              <div className="col-span-full py-20 text-center text-muted-fg bg-card rounded-2xl border border-dashed border-border">
                 <div className="flex flex-col items-center gap-3">
-                  <List className="w-10 h-10 text-gray-600" />
+                  <List className="w-10 h-10 text-muted-fg" />
                   <p>{ready ? '請新增股票以開始追蹤' : '載入追蹤資料中...'}</p>
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <div className="bg-[#111] rounded-2xl border border-[#222] overflow-hidden shadow-2xl shadow-black/50">
-            <div className="p-6 border-b border-[#222] flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#141414]">
+          <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-lg">
+            <div className="p-6 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4 bg-muted">
               <div>
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                  <Activity className="text-emerald-400" />
+                <h2 className="text-xl font-bold text-fg flex items-center gap-2">
+                  <Activity className="text-success" />
                   市場潛力股掃描
                 </h2>
-                <p className="text-gray-400 text-sm mt-1">
+                <p className="text-muted-fg text-sm mt-1">
                   {scanMode === 'short' && '掃描上市股票，找出「最近交易日外資買超大於 1,000 張」且距離「法人目標價」最遠的股票。'}
                   {scanMode === 'swing' && '掃描台股，找出「近 5 日外資累計買超大於 3,000 張」且距離「法人目標價」最遠的股票。'}
                   {scanMode === 'strong' && '掃描上市股票，找出同時符合近 5 日趨勢與最近交易日買超條件的股票，依潛在漲幅排序。'}
                 </p>
                 {tradingDates.length > 0 && (
-                  <p className="text-xs text-gray-500 mt-2">
+                  <p className="text-xs text-muted-fg mt-2">
                     資料期間：{tradingDates[tradingDates.length - 1]}–{tradingDates[0]}（5 個交易日）
                   </p>
                 )}
@@ -392,7 +508,7 @@ function TaiwanStockTargetTool() {
                     setTradingDates([]);
                     setHasScanned(false);
                   }}
-                  className="bg-[#1a1a1a] border border-[#333] text-gray-300 text-sm rounded-xl focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 outline-none w-full sm:w-auto"
+                  className="bg-muted border border-border text-card-fg text-sm rounded-xl focus:ring-ring focus:border-success block p-2.5 outline-none w-full sm:w-auto"
                 >
                   <option value="short">短線確認 (最近交易日買超 &gt; 1千張)</option>
                   <option value="swing">波段趨勢 (近5日買超 &gt; 3千張)</option>
@@ -401,7 +517,7 @@ function TaiwanStockTargetTool() {
                 <button
                   onClick={scanMarket}
                   disabled={isScanning}
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 rounded-xl transition-all disabled:opacity-50 font-medium text-sm shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 bg-success-soft hover:bg-success-soft text-success border border-success/40 rounded-xl transition-all disabled:opacity-50 font-medium text-sm "
                 >
                   <Search className={cn("w-4 h-4", isScanning && "animate-pulse")} />
                   {isScanning ? '掃描中...' : '開始掃描'}
@@ -414,12 +530,12 @@ function TaiwanStockTargetTool() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-[#0a0a0a] border-b border-[#222] text-gray-400 text-xs uppercase tracking-wider font-mono">
+                      <tr className="bg-bg border-b border-border text-muted-fg text-xs uppercase tracking-wider font-mono">
                         <th className="p-4 font-medium">排名 / 標的</th>
                         <th className="p-4 font-medium text-right">目前股價</th>
                         <th className="p-4 font-medium text-right group/th relative cursor-help">
                           法人目標價
-                          <div className="absolute bottom-full right-0 mb-2 hidden group-hover/th:block w-48 p-2 bg-gray-800 text-gray-200 text-xs rounded shadow-xl border border-gray-700 z-10 normal-case tracking-normal">
+                          <div className="absolute bottom-full right-0 mb-2 hidden group-hover/th:block w-48 p-2 bg-card text-fg text-xs rounded shadow-xl border border-border z-10 normal-case tracking-normal">
                             資料來源為 Yahoo Finance 彙整之各大外資券商與研究機構預測的「目標價中位數」。
                           </div>
                         </th>
@@ -429,34 +545,34 @@ function TaiwanStockTargetTool() {
                         <th className="p-4 font-medium text-center">操作</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#222]">
+                    <tbody className="divide-y divide-border">
                       {discoveredStocks.map((stock, idx) => (
-                        <tr key={stock.symbol} className="hover:bg-[#1a1a1a] transition-colors group">
+                        <tr key={stock.symbol} className="hover:bg-muted transition-colors group">
                           <td className="p-4">
                             <div className="flex items-center gap-4">
-                              <span className="flex items-center justify-center w-7 h-7 rounded bg-[#222] text-xs font-mono text-gray-400 group-hover:text-white group-hover:bg-[#333] transition-colors">
+                              <span className="flex items-center justify-center w-7 h-7 rounded bg-muted text-xs font-mono text-muted-fg group-hover:text-fg group-hover:bg-border transition-colors">
                                 {idx + 1}
                               </span>
                               <div>
-                                <div className="font-bold text-gray-200">{stock.name}</div>
-                                <div className="text-xs font-mono text-gray-500">{stock.symbol}</div>
+                                <div className="font-bold text-fg">{stock.name}</div>
+                                <div className="text-xs font-mono text-muted-fg">{stock.symbol}</div>
                               </div>
                             </div>
                           </td>
-                          <td className="p-4 text-right font-mono text-gray-300">
+                          <td className="p-4 text-right font-mono text-card-fg">
                             {stock.price.toFixed(2)}
                           </td>
-                          <td className="p-4 text-right font-mono font-bold text-indigo-400">
+                          <td className="p-4 text-right font-mono font-bold text-primary">
                             {stock.targetPrice.toFixed(2)}
                           </td>
-                          <td className={`p-4 text-right font-mono ${!stock.foreignNetBuy1Day ? 'text-gray-500' : stock.foreignNetBuy1Day > 0 ? 'text-rose-500' : 'text-emerald-400'}`}>
+                          <td className={`p-4 text-right font-mono ${!stock.foreignNetBuy1Day ? 'text-muted-fg' : stock.foreignNetBuy1Day > 0 ? 'text-danger' : 'text-success'}`}>
                             {stock.foreignNetBuy1Day ? (stock.foreignNetBuy1Day / 1000).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' 張' : '-'}
                           </td>
-                          <td className={`p-4 text-right font-mono font-bold ${!stock.foreignNetBuy5Day ? 'text-gray-500' : stock.foreignNetBuy5Day > 0 ? 'text-rose-500' : 'text-emerald-400'}`}>
+                          <td className={`p-4 text-right font-mono font-bold ${!stock.foreignNetBuy5Day ? 'text-muted-fg' : stock.foreignNetBuy5Day > 0 ? 'text-danger' : 'text-success'}`}>
                             {stock.foreignNetBuy5Day ? (stock.foreignNetBuy5Day / 1000).toLocaleString(undefined, { maximumFractionDigits: 0 }) + ' 張' : '-'}
                           </td>
                           <td className="p-4 text-right">
-                            <span className={`inline-flex items-center px-2.5 py-1 rounded text-sm font-mono font-medium border ${stock.upside > 0 ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
+                            <span className={`inline-flex items-center px-2.5 py-1 rounded text-sm font-mono font-medium border ${stock.upside > 0 ? 'bg-danger-soft text-danger border-danger/30' : 'bg-success-soft text-success border-success/30'}`}>
                               {stock.upside > 0 ? <TrendingUp className="w-3 h-3 mr-1.5" /> : <TrendingDown className="w-3 h-3 mr-1.5" />}
                               {stock.upside > 0 ? '+' : ''}{stock.upside.toFixed(2)}%
                             </span>
@@ -465,7 +581,7 @@ function TaiwanStockTargetTool() {
                             <button
                               onClick={() => addDiscoveredStock(stock)}
                               disabled={stocks.some(item => item.symbol === stock.symbol)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#222] border border-[#333] hover:border-indigo-500/50 hover:bg-indigo-500/10 text-gray-300 hover:text-indigo-300 text-xs font-medium rounded transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-muted border border-border hover:border-primary/50 hover:bg-primary-soft text-card-fg hover:text-primary text-xs font-medium rounded transition-colors"
                             >
                               <Plus className="w-3 h-3" />
                               {stocks.some(item => item.symbol === stock.symbol) ? '已追蹤' : '追蹤'}
@@ -477,12 +593,12 @@ function TaiwanStockTargetTool() {
                   </table>
                 </div>
               ) : (
-                <div className="py-32 text-center text-gray-500 flex flex-col items-center bg-[#0a0a0a]">
-                  <div className="p-4 bg-[#111] rounded-full border border-[#222] mb-4">
-                    <Activity className="w-8 h-8 text-gray-600" />
+                <div className="py-32 text-center text-muted-fg flex flex-col items-center bg-bg">
+                  <div className="p-4 bg-card rounded-full border border-border mb-4">
+                    <Activity className="w-8 h-8 text-muted-fg" />
                   </div>
                   <p className="font-medium">{isScanning ? '正在讀取交易資料與目標價...' : hasScanned ? '目前沒有符合條件且具法人目標價的股票' : '點擊「開始掃描」尋找潛力股'}</p>
-                  <p className="text-sm mt-1 text-gray-600">掃描範圍為證交所上市股票，首次掃描可能需要數分鐘</p>
+                  <p className="text-sm mt-1 text-muted-fg">掃描範圍為證交所上市股票，首次掃描可能需要數分鐘</p>
                 </div>
               )}
             </div>
@@ -495,7 +611,7 @@ function TaiwanStockTargetTool() {
 
 export default function TaiwanStockTargetPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-surface-400">載入台股目標價追蹤器...</div>}>
+    <Suspense fallback={<div className="p-8 text-muted-fg">載入台股目標價追蹤器...</div>}>
       <TaiwanStockTargetTool />
     </Suspense>
   );
@@ -533,8 +649,8 @@ function StockCard({
   // Taiwan stock market convention: Red is UP, Green is DOWN
   const isUp = stock.change && stock.change > 0;
   const isDown = stock.change && stock.change < 0;
-  const priceColor = isUp ? 'text-rose-500' : isDown ? 'text-emerald-400' : 'text-gray-300';
-  const bgColor = isUp ? 'bg-rose-500/10 border-rose-500/20' : isDown ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-[#222] border-[#333]';
+  const priceColor = isUp ? 'text-danger' : isDown ? 'text-success' : 'text-card-fg';
+  const bgColor = isUp ? 'bg-danger-soft border-danger/30' : isDown ? 'bg-success-soft border-success/30' : 'bg-muted border-border';
 
   // Sort targets by distance (furthest first)
   const sortedTargets = [...stock.targets].sort((a, b) => {
@@ -545,24 +661,24 @@ function StockCard({
   });
 
   return (
-    <div className="bg-[#111] rounded-2xl border border-[#222] overflow-hidden flex flex-col shadow-xl shadow-black/40 group hover:border-[#333] transition-colors">
+    <div className="bg-card rounded-2xl border border-border overflow-hidden flex flex-col shadow-md group hover:border-border transition-colors">
       {/* Card Header */}
-      <div className="p-5 border-b border-[#222] flex flex-col gap-3 bg-[#141414]">
+      <div className="p-5 border-b border-border flex flex-col gap-3 bg-muted">
         <div className="min-w-0">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="min-w-0 break-words text-lg font-bold text-gray-100">{stock.name}</h2>
-            <span className="shrink-0 text-xs font-mono text-gray-400 bg-[#222] border border-[#333] px-2 py-0.5 rounded">{stock.symbol}</span>
+            <h2 className="min-w-0 break-words text-lg font-bold text-fg">{stock.name}</h2>
+            <span className="shrink-0 text-xs font-mono text-muted-fg bg-muted border border-border px-2 py-0.5 rounded">{stock.symbol}</span>
           </div>
 
           {stock.error ? (
-            <div className="flex items-center gap-1.5 text-amber-500 text-sm mt-3 font-medium">
+            <div className="flex items-center gap-1.5 text-warning text-sm mt-3 font-medium">
               <AlertCircle className="w-4 h-4" />
               {stock.error}
             </div>
           ) : (
             <div className="mt-3 flex items-baseline gap-3">
               <span className={cn("text-3xl font-mono font-bold tracking-tight", priceColor)}>
-                {stock.currentPrice ? stock.currentPrice.toFixed(2) : '--'}
+                {typeof stock.currentPrice === 'number' ? stock.currentPrice.toFixed(2) : '--'}
               </span>
               {stock.changePercent !== undefined && (
                 <span className={cn("text-xs font-mono font-medium flex items-center px-2 py-0.5 rounded border", priceColor, bgColor)}>
@@ -578,7 +694,7 @@ function StockCard({
           <WatchlistButton symbol={stock.symbol} name={stock.name} type="stock" source="tw-stock-target" />
           <button
             onClick={onRemove}
-            className="text-gray-600 hover:text-rose-500 transition-colors p-1.5 rounded hover:bg-rose-500/10"
+            className="text-muted-fg hover:text-danger transition-colors p-1.5 rounded hover:bg-danger-soft"
             title="移除股票"
             aria-label={`移除 ${stock.symbol}`}
           >
@@ -588,13 +704,13 @@ function StockCard({
       </div>
 
       {/* Targets List */}
-      <div className="p-5 flex-1 bg-[#0a0a0a]">
+      <div className="p-5 flex-1 bg-bg">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xs font-mono font-semibold text-gray-500 uppercase tracking-wider">目標價設定</h3>
+          <h3 className="text-xs font-semibold text-muted-fg tracking-wider">目標價設定</h3>
           {!isAddingTarget && (
             <button
               onClick={() => setIsAddingTarget(true)}
-              className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 bg-indigo-500/10 px-2 py-1 rounded border border-indigo-500/20 transition-colors"
+              className="text-xs text-primary hover:text-primary font-medium flex items-center gap-1 bg-primary-soft px-2 py-1 rounded border border-primary/30 transition-colors"
             >
               <Plus className="w-3 h-3" /> 新增
             </button>
@@ -602,10 +718,10 @@ function StockCard({
         </div>
 
         {isAddingTarget && (
-          <form onSubmit={handleAddTarget} className="mb-4 flex flex-col gap-3 bg-[#141414] p-4 rounded-xl border border-[#333]">
+          <form onSubmit={handleAddTarget} className="mb-4 flex flex-col gap-3 bg-muted p-4 rounded-xl border border-border">
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-mono text-gray-500 uppercase mb-1 block">目標價</label>
+                <label className="text-xs text-muted-fg mb-1 block">目標價</label>
                 <input
                   type="number"
                   step="0.01"
@@ -614,27 +730,27 @@ function StockCard({
                   value={newTargetPrice}
                   onChange={(e) => setNewTargetPrice(e.target.value)}
                   placeholder="例如: 1200"
-                  className="w-full px-3 py-2 text-sm bg-[#0a0a0a] border border-[#333] text-white rounded focus:outline-none focus:border-indigo-500 font-mono"
+                  className="w-full px-3 py-2 text-sm bg-bg border border-border text-fg rounded focus:outline-none focus:border-primary font-mono"
                   required
                 />
               </div>
               <div>
-                <label className="text-[10px] font-mono text-gray-500 uppercase mb-1 block">標籤 (選填)</label>
+                <label className="text-xs text-muted-fg mb-1 block">標籤（選填）</label>
                 <input
                   type="text"
                   aria-label="目標價標籤"
                   value={newTargetLabel}
                   onChange={(e) => setNewTargetLabel(e.target.value)}
                   placeholder="例如: 一年目標"
-                  className="w-full px-3 py-2 text-sm bg-[#0a0a0a] border border-[#333] text-white rounded focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 text-sm bg-bg border border-border text-fg rounded focus:outline-none focus:border-primary"
                 />
               </div>
             </div>
             <div className="flex gap-2 mt-1">
-              <button type="submit" className="flex-1 py-2 bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-500 transition-colors">
+              <button type="submit" className="flex-1 py-2 bg-primary text-primary-fg text-xs font-bold rounded hover:opacity-90 transition-colors">
                 儲存
               </button>
-              <button type="button" onClick={() => setIsAddingTarget(false)} className="flex-1 py-2 bg-[#222] text-gray-300 text-xs font-bold rounded hover:bg-[#333] border border-[#333] transition-colors">
+              <button type="button" onClick={() => setIsAddingTarget(false)} className="flex-1 py-2 bg-muted text-card-fg text-xs font-bold rounded hover:bg-border border border-border transition-colors">
                 取消
               </button>
             </div>
@@ -657,24 +773,24 @@ function StockCard({
                   className={cn(
                     "flex items-center justify-between p-3.5 rounded-xl border transition-all",
                     isFar
-                      ? (isAbove ? "bg-rose-500/5 border-rose-500/20" : "bg-emerald-500/5 border-emerald-500/20")
-                      : "bg-[#141414] border-[#222]"
+                      ? (isAbove ? "bg-danger-soft border-danger/30" : "bg-success-soft border-success/30")
+                      : "bg-muted border-border"
                   )}
                 >
                   <div>
                     <div className="flex items-center gap-3">
-                      <span className="font-mono font-bold text-gray-200 text-lg">{target.price}</span>
-                      <span className="text-xs font-medium text-gray-500">{target.label}</span>
+                      <span className="font-mono font-bold text-fg text-lg">{target.price}</span>
+                      <span className="text-xs font-medium text-muted-fg">{target.label}</span>
                     </div>
                     {stock.currentPrice && (
                       <div className={cn(
                         "text-xs mt-1.5 font-mono font-medium flex items-center gap-2",
-                        isFar ? (isAbove ? "text-rose-400" : "text-emerald-400") : "text-gray-400"
+                        isFar ? (isAbove ? "text-danger" : "text-success") : "text-muted-fg"
                       )}>
                         距離: {distance > 0 ? '+' : ''}{distance.toFixed(2)}%
                         {isFar && <span className={cn(
                           "px-1.5 py-0.5 rounded text-[9px] uppercase tracking-widest border",
-                          isAbove ? "bg-rose-500/10 border-rose-500/20" : "bg-emerald-500/10 border-emerald-500/20"
+                          isAbove ? "bg-danger-soft border-danger/30" : "bg-success-soft border-success/30"
                         )}>較遠</span>}
                       </div>
                     )}
@@ -683,7 +799,7 @@ function StockCard({
                   <button
                     onClick={() => onRemoveTarget(target.id)}
                     aria-label={`移除目標價 ${target.price}`}
-                    className="text-gray-600 hover:text-rose-500 p-2 rounded hover:bg-rose-500/10 transition-colors"
+                    className="text-muted-fg hover:text-danger p-2 rounded hover:bg-danger-soft transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -692,7 +808,7 @@ function StockCard({
             })}
           </div>
         ) : (
-          <div className="text-center py-8 text-sm text-gray-600 font-mono border border-dashed border-[#333] rounded-xl">
+          <div className="text-center py-8 text-sm text-muted-fg font-mono border border-dashed border-border rounded-xl">
             尚未設定目標價
           </div>
         )}

@@ -3,25 +3,41 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ToolSelector } from '@/components/ToolSelector'
-import { ADVANCED_TOOLS, NAVIGATION_TOOLS } from '@/config/tools'
+import { getNavGroupsWithTools, NAV_GROUPS } from '@/config/tools'
 import { ToolIcon } from '@/components/ToolIcons'
 import { Loader } from '@/components/Loader'
+import { useRouteLoading } from '@/components/RouteLoadingOverlay'
 import Link from 'next/link'
 import { Settings, Key } from 'lucide-react'
+import { useTheme } from '@/contexts/ThemeContext'
+import {
+  getDisguiseBrand,
+  getNavGroupTitle,
+  getToolDisplayLabels,
+} from '@/config/disguise'
 
+/**
+ * 平台首頁：API Key 提示、依投資流程分組的快速入口與首頁工具選擇。
+ * localStorage（API Key、預設首頁）僅在 useEffect 讀取，預設值與 SSR 一致以避免 hydration 問題。
+ * @returns 首頁內容，或導向預設工具時的載入畫面
+ */
 export default function Home() {
   const router = useRouter()
+  const { disguise, disguiseVariant } = useTheme()
+  const { startRouteLoading } = useRouteLoading()
   const [isRedirecting, setIsRedirecting] = useState(false)
+  // 預設 false，與伺服器 render 相同；掛載後再依 localStorage 更新
   const [hasApiKey, setHasApiKey] = useState(false)
 
   useEffect(() => {
     const savedHomepage = localStorage.getItem('homepage_tool')
     if (savedHomepage) {
       setIsRedirecting(true)
+      startRouteLoading()
       router.push(`/tools/${savedHomepage}`)
     }
     setHasApiKey(!!localStorage.getItem('gemini_api_key'))
-  }, [router])
+  }, [router, startRouteLoading])
 
   if (isRedirecting) {
     return (
@@ -31,31 +47,45 @@ export default function Home() {
     )
   }
 
+  // 快速開始：取前三個流程分組的各第一個工具
+  const quickStartTools = getNavGroupsWithTools()
+    .flatMap(({ tools }) => tools)
+    .slice(0, 3)
+
   return (
     <div className="p-8 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary-400 to-blue-400 bg-clip-text text-transparent">
-            歡迎使用 Sagafisc 智慧投研平台
+          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            {disguise
+              ? `歡迎使用 ${getDisguiseBrand(disguiseVariant)}`
+              : '歡迎使用 Sagafisc 智慧投研平台'}
           </h1>
-          <p className="text-surface-400">整合多個 AI 分析工具的智慧投資研究平台</p>
+          <p className="text-muted-fg">
+            {disguise
+              ? '有什麼我可以幫你的嗎？從左側開啟一則對話即可開始。'
+              : '依投資流程整理的智慧投研工具；右下角可隨時開啟綜合助理'}
+          </p>
         </div>
 
-        {/* API Key 提示 */}
         {!hasApiKey && (
-          <div className="mb-8 bg-amber-50 border-2 border-amber-300 rounded-xl p-6 shadow-sm">
+          <div className="mb-8 bg-warning-soft border-2 border-warning/40 rounded-xl p-6 shadow-sm">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-amber-100 rounded-xl">
-                <Key className="w-6 h-6 text-amber-600" />
+              <div className="p-3 bg-warning/20 rounded-xl">
+                <Key className="w-6 h-6 text-warning" />
               </div>
               <div className="flex-1">
-                <h2 className="text-lg font-semibold text-amber-800 mb-1">尚未設定 Gemini API Key</h2>
-                <p className="text-amber-700 text-sm mb-3">
-                  所有 AI 分析工具都需要 Gemini API Key 才能運作。請先至設定頁面輸入您的 API Key。
+                <h2 className="text-lg font-semibold text-card-fg mb-1">
+                  {disguise ? '尚未設定 API Key' : '尚未設定 Gemini API Key'}
+                </h2>
+                <p className="text-muted-fg text-sm mb-3">
+                  {disguise
+                    ? '部分功能需要 API Key。請至設定頁面完成設定。'
+                    : '所有 AI 分析工具都需要 Gemini API Key 才能運作。請先至設定頁面輸入您的 API Key。'}
                 </p>
                 <Link
                   href="/settings"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm font-medium"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-warning text-primary-fg rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
                 >
                   <Settings className="w-4 h-4" />
                   前往設定
@@ -67,67 +97,66 @@ export default function Home() {
 
         {/* 快速入口 */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-surface-100">快速開始</h2>
+          <h2 className="text-xl font-semibold mb-4 text-fg">
+            {disguise ? '建議對話' : '快速開始'}
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {NAVIGATION_TOOLS.slice(0, 3).map((tool) => (
-              <Link
-                key={tool.id}
-                href={`/tools/${tool.id}`}
-                className="group p-6 bg-white/95 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-surface-200/50 hover:border-primary-400 hover:-translate-y-1"
-              >
-                <div className="flex items-start space-x-4">
-                  <div className="p-3 bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                    <ToolIcon toolId={tool.id} className="w-6 h-6 text-primary-600" />
+            {quickStartTools.map((tool) => {
+              const labels = getToolDisplayLabels(
+                tool.id,
+                tool.name,
+                tool.description,
+                disguise,
+              )
+              return (
+                <Link
+                  key={tool.id}
+                  href={`/tools/${tool.id}`}
+                  className="group p-6 bg-card/95 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-border/50 hover:border-primary hover:-translate-y-1"
+                >
+                  <div className="flex items-start space-x-4">
+                    <div className="p-3 bg-primary-soft rounded-xl group-hover:scale-110 transition-transform duration-300">
+                      <ToolIcon toolId={tool.id} className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg mb-1 text-card-fg group-hover:text-primary transition-colors">
+                        {labels.name}
+                      </h3>
+                      <p className="text-sm text-muted-fg">{labels.description}</p>
+                      {tool.navGroup && (
+                        <p className="text-xs text-muted-fg mt-2">
+                          {getNavGroupTitle(
+                            tool.navGroup,
+                            NAV_GROUPS.find((g) => g.id === tool.navGroup)?.title ?? '',
+                            disguise,
+                          )}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1 text-gray-800 group-hover:text-primary-600 transition-colors">
-                      {tool.name}
-                    </h3>
-                    <p className="text-sm text-gray-600">{tool.description}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              )
+            })}
           </div>
         </div>
 
         <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 text-surface-100">選擇您的首頁</h2>
-          <ToolSelector onSelect={(toolId) => {
-            localStorage.setItem('homepage_tool', toolId)
-            router.push(`/tools/${toolId}`)
-          }} />
+          <h2 className="text-2xl font-semibold mb-4 text-fg">
+            {disguise ? '預設開啟的對話' : '選擇您的首頁'}
+          </h2>
+          <p className="text-sm text-muted-fg mb-4">
+            {disguise
+              ? '依工作流程分組；點選後將設為預設開啟頁。'
+              : '依投資流程分組排列；點選後將設為登入後預設開啟的工具。'}
+          </p>
+          <ToolSelector
+            onSelect={(toolId) => {
+              localStorage.setItem('homepage_tool', toolId)
+              router.push(`/tools/${toolId}`)
+            }}
+          />
         </div>
-
-        {/* 進階功能 */}
-        {ADVANCED_TOOLS.length > 0 && (
-          <div>
-            <h2 className="text-2xl font-semibold mb-4 text-surface-100">進階功能</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {ADVANCED_TOOLS.map((tool) => (
-                <Link
-                  key={tool.id}
-                  href={`/tools/${tool.id}`}
-                  className="group p-6 bg-white/95 backdrop-blur-sm rounded-xl shadow-md hover:shadow-xl transition-all duration-300 border border-surface-200/50 hover:border-primary-400 hover:-translate-y-1"
-                >
-                  <div className="flex items-start space-x-4">
-                    <div className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl group-hover:scale-110 transition-transform duration-300">
-                      <ToolIcon toolId={tool.id} className="w-6 h-6 text-purple-600" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-lg mb-1 text-gray-800 group-hover:text-purple-600 transition-colors">
-                        {tool.name}
-                      </h3>
-                      <p className="text-sm text-gray-600">{tool.description}</p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
 }
-

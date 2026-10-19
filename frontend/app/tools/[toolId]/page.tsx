@@ -2,12 +2,52 @@
 
 import { useParams, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
-import { useEffect } from 'react'
+import { useEffect, type ComponentType } from 'react'
 import { TOOL_CONFIGS } from '@/config/tools'
 import { useToolData } from '@/contexts/ToolDataContext'
 import { ToolWrapper } from '@/components/ToolWrapper'
 import { Loader } from '@/components/Loader'
 
+/** 動態載入工具頁時的全高載入畫面 */
+function ToolChunkLoading() {
+  return (
+    <div className="flex h-full min-h-[50vh] w-full items-center justify-center">
+      <Loader size="lg" text="載入中..." />
+    </div>
+  )
+}
+
+/**
+ * 建立客戶端動態工具頁元件（模組層級建立，避免每次 render 重建）。
+ * @param loader - 對應工具 page 的 dynamic import
+ * @returns Next.js dynamic 元件
+ */
+function createToolPage(loader: () => Promise<{ default: ComponentType }>) {
+  return dynamic(loader, {
+    ssr: false,
+    loading: () => <ToolChunkLoading />,
+  })
+}
+
+/** 各工具專用頁面的動態載入對照（僅供 [toolId] 後備路由使用） */
+const TOOL_PAGE_COMPONENTS: Record<string, ComponentType> = {
+  'ai-stock-analyst': createToolPage(() => import('@/app/tools/ai-stock-analyst/page')),
+  'gemini-stock-prophet': createToolPage(() => import('@/app/tools/gemini-stock-prophet/page')),
+  'tw-stock-target': createToolPage(() => import('@/app/tools/tw-stock-target/page')),
+  'trend-dashboard': createToolPage(() => import('@/app/tools/trend-dashboard/page')),
+  'fund-assistant': createToolPage(() => import('@/app/tools/fund-assistant/page')),
+  'fund-risk-analysis': createToolPage(() => import('@/app/tools/fund-risk-analysis/page')),
+  'asset-analysis': createToolPage(() => import('@/app/tools/asset-analysis/page')),
+  'decision-tree': createToolPage(() => import('@/app/tools/decision-tree/page')),
+  alphastrategist: createToolPage(() => import('@/app/tools/alphastrategist/page')),
+  'fund-insight': createToolPage(() => import('@/app/tools/fund-insight/page')),
+}
+
+/**
+ * 工具後備路由：依 toolId 載入對應專用頁，並從 URL 寫入標的 Context。
+ * 主要導覽通常走各工具專用 path；此頁作為相容與動態載入入口。
+ * @returns 工具內容或錯誤提示
+ */
 export default function ToolPage() {
   const params = useParams()
   const searchParams = useSearchParams()
@@ -35,56 +75,25 @@ export default function ToolPage() {
   if (!toolConfig) {
     return (
       <div className="p-8">
-        <h1 className="text-2xl font-bold text-red-600">工具不存在</h1>
+        <h1 className="text-2xl font-bold text-danger">工具不存在</h1>
       </div>
     )
   }
 
-  // 如果有本地路徑，直接載入工具組件
-  if (toolConfig.localPath) {
-    let ToolComponent: any = null
-    
-    const loadingComponent = (
-      <div className="h-full w-full flex items-center justify-center">
-        <Loader size="lg" text="載入工具中..." />
-      </div>
-    )
-    
-    // 統一使用專用頁面組件載入工具
-    const toolPageMap: Record<string, () => Promise<any>> = {
-      'ai-stock-analyst': () => import('@/app/tools/ai-stock-analyst/page'),
-      'gemini-stock-prophet': () => import('@/app/tools/gemini-stock-prophet/page'),
-      'tw-stock-target': () => import('@/app/tools/tw-stock-target/page'),
-      'trend-dashboard': () => import('@/app/tools/trend-dashboard/page'),
-      'fund-assistant': () => import('@/app/tools/fund-assistant/page'),
-      'fund-risk-analysis': () => import('@/app/tools/fund-risk-analysis/page'),
-      'asset-analysis': () => import('@/app/tools/asset-analysis/page'),
-      'alphastrategist': () => import('@/app/tools/alphastrategist/page'),
-      'fund-insight': () => import('@/app/tools/fund-insight/page'),
-    }
+  const ToolComponent = toolConfig.localPath ? TOOL_PAGE_COMPONENTS[toolId] : null
 
-    const pageLoader = toolPageMap[toolId]
-    if (pageLoader) {
-      ToolComponent = dynamic(pageLoader, {
-        ssr: false,
-        loading: () => loadingComponent
-      })
-    }
-    
-    if (ToolComponent) {
-      return (
-        <ToolWrapper toolId={toolId}>
-          <ToolComponent />
-        </ToolWrapper>
-      )
-    }
+  if (ToolComponent) {
+    return (
+      <ToolWrapper toolId={toolId}>
+        <ToolComponent />
+      </ToolWrapper>
+    )
   }
 
   return (
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">{toolConfig.name}</h1>
-      <p className="text-surface-400">工具載入中或尚未整合...</p>
+      <p className="text-muted-fg">工具載入中或尚未整合...</p>
     </div>
   )
 }
-
