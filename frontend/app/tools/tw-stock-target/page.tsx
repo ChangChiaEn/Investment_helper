@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { Plus, Trash2, RefreshCw, AlertCircle, TrendingUp, TrendingDown, Search, List, Activity, Crosshair } from 'lucide-react';
 import { useToolCache } from '@/hooks/useToolCache';
 import { WatchlistButton } from '@/components/WatchlistButton';
+import { useInventory } from '@/contexts/InventoryContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { getToolDisplayLabels } from '@/config/disguise';
 import type { TrackedStock as Stock, DiscoveredStock, DiscoveryResult, ScanMode, StockQuote } from '@/lib/tools/tw-stock-target/types';
@@ -18,6 +19,12 @@ const STORAGE_KEY = 'sagafisc_tw_stock_targets';
 
 function TaiwanStockTargetTool() {
   const { disguise } = useTheme();
+  const { allSymbols } = useInventory();
+  /** 庫存中的台股／股票代號，供一鍵加入追蹤 */
+  const inventoryStocks = allSymbols.filter((s) => s.assetType === 'stock');
+  /** 名稱查詢用 ref，避免 inventory 變動反覆觸發報價輪詢 */
+  const inventoryStocksRef = useRef(inventoryStocks);
+  inventoryStocksRef.current = inventoryStocks;
   const pageLabels = getToolDisplayLabels(
     'tw-stock-target',
     '台股目標價追蹤器',
@@ -36,8 +43,9 @@ function TaiwanStockTargetTool() {
   const [newSymbol, setNewSymbol] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
-  const quoteRequest = useRef<AbortController | null>(null);
   const scanRequest = useRef<AbortController | null>(null);
+  const stocksRef = useRef<Stock[]>([]);
+  stocksRef.current = stocks;
 
   const [discoveredStocks, setDiscoveredStocks] = useState<DiscoveredStock[]>(cached?.discoveredStocks ?? []);
   const [isScanning, setIsScanning] = useState(false);
@@ -72,83 +80,143 @@ function TaiwanStockTargetTool() {
       ? previous : [...previous, { symbol, name: searchParams.get('name') || symbol, targets: [] }]);
   }, [ready, searchParams]);
 
-  const symbols = stocks.map(stock => stock.symbol).join(',');
-  const fetchPrices = useCallback(async () => {
-    if (!ready || !symbols || quoteRequest.current) return;
-    const controller = new AbortController();
-    quoteRequest.current = controller;
-    setIsFetching(true);
-    try {
-      const response = await fetch(`/api/tw-stock-target/stocks?symbols=${encodeURIComponent(symbols)}`, { signal: controller.signal });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || '無法取得報價');
-      }
-      const data: StockQuote[] = await response.json();
-      setError('');
+  const symbolsKey = stocks.map((stock) => stock.symbol).join(',');
 
-      setStocks(prevStocks => prevStocks.map(stock => {
-        const quote = data.find(q => q.symbol === stock.symbol);
-        if (quote) {
+  /**
+   * 比對報價代號：忽略 .TW／.TWO 後綴差異。
+   * @param a - 追蹤清單代號
+   * @param b - API 回傳代號
+   * @returns 是否同一標的
+   */
+  const sameSymbol = useCallback(
+    (a: string, b: string) =>
+      a.replace(/\.(TW|TWO)$/i, '').toUpperCase() ===
+      b.replace(/\.(TW|TWO)$/i, '').toUpperCase(),
+    []
+  );
+
+  /**
+   * 套用 API 報價到追蹤清單狀態。
+   * @param data - 報價陣列
+   */
+  const applyQuotes = useCallback(
+    (data: StockQuote[]) => {
+      setStocks((prevStocks) =>
+        prevStocks.map((stock) => {
+          const quote = data.find((q) => sameSymbol(q.symbol, stock.symbol));
+          if (!quote || typeof quote.price !== 'number') {
+            return { ...stock, error: '無法取得報價' };
+          }
+
           let newTargets = [...stock.targets];
           if (quote.targetPrice) {
-            const existingIdx = newTargets.findIndex(t => t.label === '法人目標價');
+            const existingIdx = newTargets.findIndex((t) => t.label === '法人目標價');
             if (existingIdx >= 0) {
-              // Update existing target price
               newTargets[existingIdx] = {
                 ...newTargets[existingIdx],
-                price: parseFloat(quote.targetPrice.toFixed(2))
+                price: parseFloat(quote.targetPrice.toFixed(2)),
               };
             } else if (newTargets.length === 0) {
-              // Auto-add target price if no targets exist (e.g., newly added stock)
               newTargets.push({
                 id: crypto.randomUUID(),
                 price: parseFloat(quote.targetPrice.toFixed(2)),
-                label: '法人目標價'
+                label: '法人目標價',
               });
             }
           }
 
+          const invName = inventoryStocksRef.current.find((s) =>
+            sameSymbol(s.symbol, stock.symbol)
+          )?.name;
+          const yahooName = quote.name?.trim();
+          const nextName = /[\u3400-\u9FFF]/.test(stock.name)
+            ? stock.name
+            : yahooName && !/^\d{4,6}/.test(yahooName)
+              ? yahooName
+              : invName || yahooName || stock.name;
+
           return {
             ...stock,
-            name: /[\u3400-\u9FFF]/.test(stock.name) ? stock.name : quote.name || stock.name,
+            name: nextName,
             currentPrice: quote.price,
             change: quote.change,
             changePercent: quote.changePercent,
             updatedAt: quote.updatedAt,
             targets: newTargets,
-            error: undefined
+            error: undefined,
           };
-        }
-        return { ...stock, error: '無法取得報價' };
-      }));
+        })
+      );
       setLastFetchTime(new Date());
+      setError('');
+    },
+    [sameSymbol]
+  );
+
+  /**
+   * 手動／程式觸發同步報價（按鈕用）。
+   */
+  const fetchPrices = useCallback(async () => {
+    const symbols = stocksRef.current.map((s) => s.symbol).join(',');
+    if (!ready || !symbols) return;
+    setIsFetching(true);
+    try {
+      const response = await fetch(
+        `/api/tw-stock-target/stocks?symbols=${encodeURIComponent(symbols)}`
+      );
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '無法取得報價');
+      }
+      const data: StockQuote[] = await response.json();
+      applyQuotes(data);
     } catch (error) {
-      if (controller.signal.aborted) return;
       const message = error instanceof Error ? error.message : '無法取得報價，請稍後重試。';
       setError(message);
-      setStocks(previous => previous.map(stock => ({ ...stock, error: '報價更新失敗，先前報價可能已過期' })));
     } finally {
-      if (quoteRequest.current === controller) {
-        quoteRequest.current = null;
-        setIsFetching(false);
-      }
+      setIsFetching(false);
     }
-  }, [symbols, ready]);
+  }, [ready, applyQuotes]);
 
-  // Initial fetch and polling
+  // 追蹤清單就緒後自動拉價＋輪詢；以 cancelled 略過已卸載／Strict Mode 第一次的回應
   useEffect(() => {
-    if (activeTab === 'tracking') {
-      fetchPrices();
-      const interval = setInterval(fetchPrices, 30000); // Poll every 30 seconds
-      return () => clearInterval(interval);
-    }
-  }, [fetchPrices, activeTab]);
+    if (activeTab !== 'tracking' || !ready || !symbolsKey) return;
 
-  useEffect(() => () => {
-    quoteRequest.current?.abort();
-    quoteRequest.current = null;
-  }, [symbols, activeTab]);
+    let cancelled = false;
+
+    const run = async () => {
+      setIsFetching(true);
+      try {
+        const response = await fetch(
+          `/api/tw-stock-target/stocks?symbols=${encodeURIComponent(symbolsKey)}`
+        );
+        if (cancelled) return;
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || '無法取得報價');
+        }
+        const data: StockQuote[] = await response.json();
+        if (cancelled) return;
+        applyQuotes(data);
+      } catch (error) {
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : '無法取得報價，請稍後重試。';
+        setError(message);
+      } finally {
+        if (!cancelled) setIsFetching(false);
+      }
+    };
+
+    void run();
+    const interval = setInterval(() => {
+      void run();
+    }, 30000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [activeTab, ready, symbolsKey, applyQuotes]);
 
   const scanMarket = async () => {
     if (scanRequest.current) return;
@@ -289,7 +357,7 @@ function TaiwanStockTargetTool() {
                 {isFetching ? '同步中...' : '同步報價'}
               </button>
 
-              <form onSubmit={addStock} className="flex gap-2">
+              <form onSubmit={addStock} className="flex flex-wrap gap-2 items-center">
                 <input
                   type="text"
                   value={newSymbol}
@@ -307,6 +375,43 @@ function TaiwanStockTargetTool() {
                   <Plus className="w-4 h-4" />
                   新增
                 </button>
+                {inventoryStocks.length > 0 && (
+                  <select
+                    aria-label="從庫存加入"
+                    disabled={!ready}
+                    defaultValue=""
+                    className="px-3 py-2 bg-muted border border-border text-fg rounded-lg text-sm max-w-[180px]"
+                    onChange={(e) => {
+                      const symbol = e.target.value;
+                      e.target.value = '';
+                      if (!symbol) return;
+                      const hit = inventoryStocks.find((s) => s.symbol === symbol);
+                      if (!hit) return;
+                      if (stocks.some((s) => s.symbol === hit.symbol)) {
+                        setError('此股票已在追蹤清單中');
+                        return;
+                      }
+                      if (stocks.length >= 50) {
+                        setError('最多可追蹤 50 檔股票。');
+                        return;
+                      }
+                      setStocks((prev) => [
+                        ...prev,
+                        { symbol: hit.symbol, name: hit.name, targets: [] },
+                      ]);
+                      setError('');
+                    }}
+                  >
+                    <option value="" disabled>
+                      從庫存加入…
+                    </option>
+                    {inventoryStocks.map((s) => (
+                      <option key={s.symbol} value={s.symbol}>
+                        {s.symbol} {s.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </form>
             </div>
           )}
@@ -573,7 +678,7 @@ function StockCard({
           ) : (
             <div className="mt-3 flex items-baseline gap-3">
               <span className={cn("text-3xl font-mono font-bold tracking-tight", priceColor)}>
-                {stock.currentPrice ? stock.currentPrice.toFixed(2) : '--'}
+                {typeof stock.currentPrice === 'number' ? stock.currentPrice.toFixed(2) : '--'}
               </span>
               {stock.changePercent !== undefined && (
                 <span className={cn("text-xs font-mono font-medium flex items-center px-2 py-0.5 rounded border", priceColor, bgColor)}>
@@ -601,7 +706,7 @@ function StockCard({
       {/* Targets List */}
       <div className="p-5 flex-1 bg-bg">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xs font-mono font-semibold text-muted-fg uppercase tracking-wider">目標價設定</h3>
+          <h3 className="text-xs font-semibold text-muted-fg tracking-wider">目標價設定</h3>
           {!isAddingTarget && (
             <button
               onClick={() => setIsAddingTarget(true)}
@@ -616,7 +721,7 @@ function StockCard({
           <form onSubmit={handleAddTarget} className="mb-4 flex flex-col gap-3 bg-muted p-4 rounded-xl border border-border">
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] font-mono text-muted-fg uppercase mb-1 block">目標價</label>
+                <label className="text-xs text-muted-fg mb-1 block">目標價</label>
                 <input
                   type="number"
                   step="0.01"
@@ -630,7 +735,7 @@ function StockCard({
                 />
               </div>
               <div>
-                <label className="text-[10px] font-mono text-muted-fg uppercase mb-1 block">標籤 (選填)</label>
+                <label className="text-xs text-muted-fg mb-1 block">標籤（選填）</label>
                 <input
                   type="text"
                   aria-label="目標價標籤"

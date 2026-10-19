@@ -1,5 +1,12 @@
+/**
+ * AI 潛力股分析師型別。
+ * Market 對齊 domain MarketCode 子集。
+ */
 
-export type Market = 'US' | 'TW';
+import type { MarketCode } from '@/lib/domain'
+
+/** @deprecated 請優先用 MarketCode；保留相容 */
+export type Market = Extract<MarketCode, 'US' | 'TW'>
 
 export interface UserPreferences {
   market: Market;

@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense, ReactNode } from 'react'
 import { Navigation } from '@/components/Navigation'
 import { ToolDataProvider } from '@/contexts/ToolDataContext'
-import { WatchlistProvider } from '@/contexts/WatchlistContext'
+import { InventoryProvider } from '@/contexts/InventoryContext'
 import { ToolCacheProvider } from '@/contexts/ToolCacheContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { RouteLoadingOverlay } from '@/components/RouteLoadingOverlay'
@@ -54,7 +54,7 @@ export function AppShell({ children }: AppShellProps) {
     <ThemeProvider>
       <DisguiseHotkey />
       <ToolDataProvider>
-        <WatchlistProvider>
+        <InventoryProvider>
           <ToolCacheProvider>
             <div className="flex h-screen bg-bg text-fg">
               <Navigation />
@@ -67,7 +67,7 @@ export function AppShell({ children }: AppShellProps) {
               </main>
             </div>
           </ToolCacheProvider>
-        </WatchlistProvider>
+        </InventoryProvider>
       </ToolDataProvider>
     </ThemeProvider>
   )

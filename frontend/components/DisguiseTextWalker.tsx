@@ -67,8 +67,18 @@ export function DisguiseTextWalker({ children }: { children: ReactNode }) {
         let textCurrent = textWalker.nextNode()
         while (textCurrent) {
           const textNode = textCurrent as MaskableText
+          const current = textNode.textContent ?? ''
+          // React 常就地改寫同一 Text 節點（例如報價 -- → 2395.00）。
+          // 若目前內容既非已存原文、亦非遮罩結果，視為 React 寫入的新原文，不可鎖死舊值。
           if (textNode.__disguiseOriginal === undefined) {
-            textNode.__disguiseOriginal = textNode.textContent ?? ''
+            textNode.__disguiseOriginal = current
+          } else {
+            const maskedOfOriginal = disguise
+              ? maskText(textNode.__disguiseOriginal, true)
+              : textNode.__disguiseOriginal
+            if (current !== textNode.__disguiseOriginal && current !== maskedOfOriginal) {
+              textNode.__disguiseOriginal = current
+            }
           }
           const original = textNode.__disguiseOriginal
           const next = disguise ? maskText(original, true) : original
@@ -90,8 +100,16 @@ export function DisguiseTextWalker({ children }: { children: ReactNode }) {
           }
           for (const attr of MASK_ATTRS) {
             if (!el.hasAttribute(attr)) continue
+            const currentAttr = el.getAttribute(attr) ?? ''
             if (maskable.__disguiseAttrs[attr] === undefined) {
-              maskable.__disguiseAttrs[attr] = el.getAttribute(attr) ?? ''
+              maskable.__disguiseAttrs[attr] = currentAttr
+            } else {
+              // 與文字節點相同：屬性被 React 更新時同步刷新原文
+              const stored = maskable.__disguiseAttrs[attr]
+              const maskedOfStored = disguise ? maskText(stored, true) : stored
+              if (currentAttr !== stored && currentAttr !== maskedOfStored) {
+                maskable.__disguiseAttrs[attr] = currentAttr
+              }
             }
             const original = maskable.__disguiseAttrs[attr]
             const next = disguise ? maskText(original, true) : original

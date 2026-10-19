@@ -6,6 +6,7 @@ import { ToolIcon } from '@/components/ToolIcons'
 import { useRouter } from 'next/navigation'
 import { AVAILABLE_MODELS, testAvailableModels } from '@/lib/gemini'
 import {
+  DATA_PROVIDERS,
   MARKET_SOURCE_CONFIG,
   MODULE_DECISION_TREE,
   marketApiRegistry,
@@ -547,6 +548,38 @@ export default function SettingsPage() {
                   指標：{ep.usedByIndicators.join('、')}
                 </p>
               )}
+            </div>
+          ))}
+        </div>
+
+        <h3 className="text-lg font-semibold mt-8 mb-2 text-card-fg">外部資料來源</h3>
+        <p className="text-sm text-muted-fg mb-4">
+          非證交所 proxy、由伺服端套件直接呼叫的來源（例如 Yahoo Finance），另以{' '}
+          <code className="text-xs bg-muted px-1 rounded">DATA_PROVIDERS</code> 登錄，與上方
+          MarketApiRegistry 並列管理。
+        </p>
+        <div className="space-y-3">
+          {DATA_PROVIDERS.map((provider) => (
+            <div
+              key={provider.id}
+              className="border border-border rounded-xl p-4 bg-card/80"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2 mb-1">
+                <div>
+                  <div className="font-medium text-card-fg">{provider.name}</div>
+                  <div className="text-xs font-mono text-muted-fg mt-0.5">{provider.id}</div>
+                </div>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-warning-soft text-warning border border-warning/30">
+                  {provider.kind === 'npm-client' ? '套件直連' : provider.kind}
+                </span>
+              </div>
+              <p className="text-sm text-muted-fg mb-2">{provider.description}</p>
+              <p className="text-xs font-mono text-card-fg break-all bg-muted/50 rounded-lg px-2 py-1.5">
+                {provider.upstream}
+              </p>
+              <p className="mt-2 text-xs text-muted-fg">
+                模組：{provider.modules.join('、')} · 實作：{provider.implementation}
+              </p>
             </div>
           ))}
         </div>

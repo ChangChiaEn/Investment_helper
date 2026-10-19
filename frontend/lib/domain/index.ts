@@ -4,10 +4,16 @@
 
 export type {
   AnalysisEnvelope,
+  AssetType,
   DataSource,
   HistoryKeyParts,
   MarketCode,
   MarketQuote,
   SymbolRef,
 } from './types'
-export { buildHistoryEntryKey, todayDayKey } from './types'
+export {
+  buildHistoryEntryKey,
+  resolveMarket,
+  toMarketCode,
+  todayDayKey,
+} from './types'

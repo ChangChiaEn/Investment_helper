@@ -69,6 +69,14 @@ export const TOOL_CONFIGS: Record<string, ToolConfig> = {
     localPath: 'wealthvision---yearly-asset-analysis',
     inNavigation: true,
   },
+  inventory: {
+    id: 'inventory',
+    name: '庫存',
+    description: '持股、關注分類與資金參數；跨工具共用標的庫',
+    category: 'stock',
+    localPath: 'inventory',
+    inNavigation: true,
+  },
   'decision-tree': {
     id: 'decision-tree',
     name: '決策樹',

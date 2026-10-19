@@ -20,5 +20,11 @@ export {
   marketApiRegistry,
   requireEndpoint,
 } from './apiRegistry'
+export type { DataProvider, DataProviderKind } from './dataProviders'
+export {
+  DATA_PROVIDERS,
+  MODULE_TW_STOCK_TARGET,
+  listDataProvidersByModule,
+} from './dataProviders'
 export type { MarketProxyRequest } from './marketClient'
 export { fetchViaMarketProxy, testMarketProxyConnection } from './marketClient'

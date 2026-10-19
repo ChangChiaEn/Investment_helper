@@ -7,21 +7,13 @@ import { NAVIGATION_TOOLS, ADVANCED_TOOLS } from '@/config/tools'
 import {
   Home,
   Settings,
-  Star,
-  ChevronDown,
-  ChevronRight,
-  ArrowRight,
-  Trash2,
   PanelLeftClose,
   PanelLeftOpen,
   MessageSquare,
 } from 'lucide-react'
 import { ToolIcon } from '@/components/ToolIcons'
-import { useWatchlist } from '@/contexts/WatchlistContext'
-import { useRouteLoading } from '@/components/RouteLoadingOverlay'
-import { navigateToTool, getAnalysisTool } from '@/utils/navigation'
+import { SidebarWorkflow } from '@/components/SidebarWorkflow'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   DISGUISE_NAV_LABELS,
@@ -31,101 +23,6 @@ import {
 
 /** 側欄收合狀態的 localStorage 鍵 */
 const NAV_COLLAPSED_KEY = 'nav_collapsed'
-
-/**
- * 側欄關注清單面板：展開／收合、跳轉分析、移除項目。
- * 偽裝模式下改顯示中性「釘選」文案。
- * @param collapsed 側欄是否為窄欄模式（僅圖示時隱藏本面板）
- */
-function WatchlistPanel({ collapsed }: { collapsed: boolean }) {
-  const { items, remove } = useWatchlist()
-  const { disguise } = useTheme()
-  const [expanded, setExpanded] = useState(true)
-  const router = useRouter()
-  const { startRouteLoading } = useRouteLoading()
-
-  /**
-   * 導向深度分析工具；先顯示載入中再 router.push，避免主內容空白。
-   * @param item - 關注清單項目
-   */
-  const handleAnalyze = (item: typeof items[0]) => {
-    const analysisTool = getAnalysisTool(item.type)
-    const url = navigateToTool(analysisTool, {
-      symbol: item.symbol,
-      name: item.name,
-      type: item.type,
-      source: item.source,
-    })
-    startRouteLoading()
-    router.push(url)
-  }
-
-  if (items.length === 0 || collapsed) return null
-
-  const watchlistTitle = disguise
-    ? `${DISGUISE_NAV_LABELS.watchlist} (${items.length})`
-    : `關注清單 (${items.length})`
-
-  return (
-    <div className="mt-4">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center justify-between w-full px-4 py-2 text-sm font-semibold text-sidebar-muted uppercase tracking-wider hover:text-sidebar-fg transition-colors"
-      >
-        <span className="flex items-center gap-1.5">
-          <Star className="w-3 h-3 text-warning" />
-          {watchlistTitle}
-        </span>
-        {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-      </button>
-
-      {expanded && (
-        <div className="space-y-0.5 max-h-48 overflow-y-auto">
-          {items.map(item => (
-            <div
-              key={item.id}
-              className="group flex items-center gap-2 px-4 py-2 hover:bg-sidebar-hover/50 rounded-lg mx-1 transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="text-sm text-sidebar-fg truncate font-medium">
-                  {item.name}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
-                    item.type === 'stock'
-                      ? 'bg-primary/20 text-primary'
-                      : 'bg-success/20 text-success'
-                  }`}>
-                    {item.type === 'stock'
-                      ? (disguise ? DISGUISE_NAV_LABELS.stockType : '股票')
-                      : (disguise ? DISGUISE_NAV_LABELS.fundType : '基金')}
-                  </span>
-                  <span className="text-[10px] text-sidebar-muted truncate">{item.symbol}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => handleAnalyze(item)}
-                  className="p-1 text-primary hover:bg-primary/20 rounded transition-colors"
-                  title={disguise ? DISGUISE_NAV_LABELS.analyze : '深度分析'}
-                >
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => remove(item.id)}
-                  className="p-1 text-sidebar-muted hover:text-danger hover:bg-danger/20 rounded transition-colors"
-                  title={disguise ? DISGUISE_NAV_LABELS.remove : '移除'}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 /**
  * 左側導覽列：可收合為僅圖示窄欄；狀態寫入 localStorage。
@@ -319,7 +216,7 @@ export function Navigation() {
           </>
         )}
 
-        <WatchlistPanel collapsed={collapsed} />
+        <SidebarWorkflow collapsed={collapsed} />
       </div>
 
       {/* 底部設定 */}

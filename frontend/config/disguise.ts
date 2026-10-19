@@ -140,6 +140,10 @@ export const DISGUISE_TOOL_LABELS: Record<
     name: '資源配置檢視',
     description: '年度資源分布健診',
   },
+  inventory: {
+    name: '標的庫',
+    description: '項目分類與資源參數',
+  },
   'decision-tree': {
     name: '流程決策 SOP',
     description: '自訂指標與決策流程圖',

@@ -1,6 +1,6 @@
 /**
  * 跨工具共用領域型別：標的、行情、分析結果殼層與資料來源標籤。
- * 各工具可逐步對齊 AnalysisEnvelope；pipeline／history 以此為契約。
+ * 各工具應優先引用此模組，避免各地自訂 Market／AnalysisResult 殼層。
  */
 
 /** 資料來源（OpenAPI／Grounding／Gemini／手動） */
@@ -9,8 +9,11 @@ export type DataSource = 'openapi' | 'grounding' | 'gemini' | 'manual'
 /** 市場代碼（台／美等；可擴充） */
 export type MarketCode = 'TW' | 'US' | 'OTHER'
 
+/** 資產種類：股票或基金（庫存分類／關注用） */
+export type AssetType = 'stock' | 'fund'
+
 /**
- * 標的參考：代號＋市場，作為跨工具傳遞的最小單位。
+ * 標的參考：代號＋市場＋種類，作為跨工具傳遞的最小單位。
  */
 export interface SymbolRef {
   /** 股票／基金代號 */
@@ -19,6 +22,8 @@ export interface SymbolRef {
   market?: MarketCode
   /** 顯示名稱（可選） */
   name?: string
+  /** 股票或基金；預設視為 stock */
+  assetType?: AssetType
 }
 
 /**
@@ -94,4 +99,31 @@ export function todayDayKey(): string {
 export function buildHistoryEntryKey(parts: HistoryKeyParts): string {
   const sub = parts.subKey ? `:${parts.subKey}` : ''
   return `${parts.kind}:${parts.queryKey}${sub}`
+}
+
+/**
+ * 將任意市場字串正規化為 MarketCode。
+ * @param value - 如 TW、US、StockMarket.TW
+ * @returns MarketCode；無法辨識時 OTHER
+ */
+export function toMarketCode(value: string | undefined | null): MarketCode {
+  if (!value) return 'OTHER'
+  const v = String(value).toUpperCase()
+  if (v === 'TW' || v === 'TAIWAN') return 'TW'
+  if (v === 'US' || v === 'USA') return 'US'
+  return 'OTHER'
+}
+
+/**
+ * 由 AssetType 推斷預設市場（基金預設 TW）。
+ * @param assetType - 資產種類
+ * @param market - 顯式市場
+ * @returns MarketCode
+ */
+export function resolveMarket(
+  assetType?: AssetType,
+  market?: MarketCode | string
+): MarketCode {
+  if (market) return toMarketCode(market)
+  return assetType === 'fund' ? 'TW' : 'OTHER'
 }

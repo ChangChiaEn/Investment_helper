@@ -1,23 +1,23 @@
 'use client'
 
 /**
- * 決策樹工具主頁：庫存／指標／編輯樹／執行。
+ * 決策樹工具主頁：指標／編輯樹／執行。
+ * 庫存已獨立至 /tools/inventory，執行時仍讀取共用 InventoryContext。
  */
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import Link from 'next/link'
 import { GitBranch } from 'lucide-react'
 import { CatalogPanel } from '@/components/decision-tree/CatalogPanel'
-import { InventoryPanel } from '@/components/inventory/InventoryPanel'
 import { RunPanel } from '@/components/decision-tree/RunPanel'
 import { TreeEditorPanel } from '@/components/decision-tree/TreeEditorPanel'
-import { loadInventory, type DecisionInventory } from '@/lib/inventory'
+import { useInventory } from '@/contexts/InventoryContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { getToolDisplayLabels } from '@/config/disguise'
 
-type TabId = 'inventory' | 'catalog' | 'editor' | 'run'
+type TabId = 'catalog' | 'editor' | 'run'
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: 'inventory', label: '庫存' },
   { id: 'catalog', label: '指標' },
   { id: 'editor', label: '編輯樹' },
   { id: 'run', label: '執行' },
@@ -35,24 +35,12 @@ export default function DecisionTreePage() {
     '自訂指標條件與多分叉決策樹；僅輸出建議，不執行下單。資料存於本機瀏覽器。',
     disguise,
   )
-  const [tab, setTab] = useState<TabId>('inventory')
-  const [inventory, setInventory] = useState<DecisionInventory | null>(null)
+  const [tab, setTab] = useState<TabId>('run')
+  const { inventory, ready } = useInventory()
 
-  useEffect(() => {
-    setInventory(loadInventory())
-  }, [])
-
-  /**
-   * 庫存變更時更新狀態（store 函式已寫入 localStorage）。
-   * @param inv - 新庫存
-   */
-  const handleInventoryChange = (inv: DecisionInventory) => {
-    setInventory(inv)
-  }
-
-  if (!inventory) {
+  if (!ready) {
     return (
-      <div className="p-8 text-muted-fg text-sm">載入庫存中...</div>
+      <div className="p-8 text-muted-fg text-sm">載入中...</div>
     )
   }
 
@@ -69,6 +57,13 @@ export default function DecisionTreePage() {
               {disguise
                 ? '自訂條件與流程圖；僅產出建議，不執行操作。資料存於本機。'
                 : pageLabels.description}
+            </p>
+            <p className="text-sm text-muted-fg mt-1">
+              標的與持股請至{' '}
+              <Link href="/tools/inventory" className="text-primary hover:underline font-medium">
+                庫存
+              </Link>{' '}
+              管理；執行分頁會自動讀取庫存代號。
             </p>
           </div>
         </div>
@@ -91,10 +86,6 @@ export default function DecisionTreePage() {
         ))}
       </div>
 
-      {/* 分頁改以隱藏切換，避免卸載後遺失執行結果；結果另有 localStorage 記憶 */}
-      <div className={tab === 'inventory' ? '' : 'hidden'}>
-        <InventoryPanel inventory={inventory} onChange={handleInventoryChange} />
-      </div>
       <div className={tab === 'catalog' ? '' : 'hidden'}>
         <CatalogPanel />
       </div>
