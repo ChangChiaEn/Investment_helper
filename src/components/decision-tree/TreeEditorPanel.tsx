@@ -23,7 +23,7 @@ import {
   MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { INDICATOR_CATALOG } from '@/lib/tools/decision-tree/catalog'
+import { getAllIndicators } from '@/lib/tools/decision-tree/catalog'
 import {
   COMPARE_OP_LABELS,
   COMPARE_OP_ORDER,
@@ -45,7 +45,6 @@ import type {
   DecisionTreeDoc,
   FlowNodeData,
   MetricCondition,
-  NodeKind,
 } from '@/lib/tools/decision-tree/types'
 import {
   defaultCondition,
@@ -61,18 +60,13 @@ import {
  * @returns 節點 UI
  */
 function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
+  const human = data.humanConfirm === true || data.kind === 'manual'
   const kindColor =
-    data.kind === 'decision'
-      ? 'border-primary'
-      : data.kind === 'manual'
-        ? 'border-amber-500'
-        : 'border-success'
+    data.kind === 'result' ? 'border-success' : human ? 'border-amber-500' : 'border-primary'
   const kindBg =
-    data.kind === 'decision'
-      ? 'bg-primary-soft'
-      : data.kind === 'manual'
-        ? 'bg-amber-50'
-        : 'bg-success-soft'
+    data.kind === 'result' ? 'bg-success-soft' : human ? 'bg-amber-50' : 'bg-primary-soft'
+  const kindLabel =
+    data.kind === 'result' ? '結果' : human ? '主觀確認' : '決策'
 
   return (
     <div
@@ -99,10 +93,10 @@ function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
           />
           <div className="absolute -bottom-4 left-0 right-0 flex justify-between px-3 pointer-events-none">
             <span className="text-[9px] text-green-700 font-medium">
-              {data.kind === 'manual' ? '是' : '通過'}
+              {human ? '是' : '通過'}
             </span>
             <span className="text-[9px] text-danger font-medium">
-              {data.kind === 'manual' ? '否' : '未通過'}
+              {human ? '否' : '未通過'}
             </span>
           </div>
         </>
@@ -110,9 +104,7 @@ function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
       {data.kind === 'result' && (
         <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2.5 !h-2.5" />
       )}
-      <div className="text-[10px] tracking-wide text-muted-fg mb-0.5">
-        {data.kind === 'decision' ? '決策' : data.kind === 'manual' ? '人工' : '結果'}
-      </div>
+      <div className="text-[10px] tracking-wide text-muted-fg mb-0.5">{kindLabel}</div>
       <div className="text-sm font-medium text-fg leading-snug">{data.label}</div>
     </div>
   )
@@ -222,13 +214,17 @@ function TreeEditorInner() {
     )
   }
 
-  const addNode = (kind: NodeKind) => {
+  /**
+   * 新增決策或結果節點（不再提供獨立「人工」按鈕）。
+   * @param kind - decision | result
+   */
+  const addNode = (kind: 'decision' | 'result') => {
     const id = newNodeId(kind)
     const data: FlowNodeData = {
       kind,
-      label: kind === 'decision' ? '新決策' : kind === 'manual' ? '人工確認' : '建議結果',
+      label: kind === 'decision' ? '新決策' : '建議結果',
       condition: kind === 'decision' ? defaultCondition() : undefined,
-      prompt: kind === 'manual' ? '請確認是否繼續？' : undefined,
+      humanConfirm: false,
       advice: kind === 'result' ? '建議內容' : undefined,
       adviceParams: kind === 'result' ? { 建議賣出比例: 0.33 } : undefined,
     }
@@ -320,13 +316,6 @@ function TreeEditorInner() {
               <button
                 type="button"
                 className="text-xs bg-card border rounded px-2 py-1 shadow"
-                onClick={() => addNode('manual')}
-              >
-                + 人工
-              </button>
-              <button
-                type="button"
-                className="text-xs bg-card border rounded px-2 py-1 shadow"
                 onClick={() => addNode('result')}
               >
                 + 結果
@@ -398,7 +387,7 @@ function TreeEditorInner() {
             )}
             <p className="text-xs text-muted-fg">
               綠＝通過／是（左），紅＝未通過／否（右）。點連線 →「取消連結」或按 Delete。連線後可「自動排版」。
-              根節點：{active.rootId}
+              根節點：{active.rootId}。自訂公式請至「指標」分頁新增。
             </p>
           </aside>
         </div>
@@ -408,7 +397,7 @@ function TreeEditorInner() {
 }
 
 /**
- * 右側節點屬性表單。
+ * 右側節點屬性表單（類型由建立方式決定，不可下拉改類型）。
  */
 function NodePropsForm({
   data,
@@ -421,6 +410,10 @@ function NodePropsForm({
   onDelete: () => void
   onSetRoot: () => void
 }) {
+  const human = data.humanConfirm === true || data.kind === 'manual'
+  const kindLabel =
+    data.kind === 'result' ? '結果' : human ? '決策（主觀確認）' : '決策'
+
   return (
     <div className="space-y-3 text-sm">
       <label className="block">
@@ -431,20 +424,44 @@ function NodePropsForm({
           onChange={(e) => onChange({ label: e.target.value })}
         />
       </label>
-      <label className="block">
-        類型
-        <select
-          className="mt-1 w-full border rounded-lg px-2 py-1.5"
-          value={data.kind}
-          onChange={(e) => onChange({ kind: e.target.value as NodeKind })}
-        >
-          <option value="decision">決策</option>
-          <option value="manual">人工</option>
-          <option value="result">結果</option>
-        </select>
-      </label>
+      <p className="text-xs text-muted-fg">
+        類型：<span className="text-card-fg font-medium">{kindLabel}</span>
+        （由「+ 決策／+ 結果」決定，不可改類型）
+      </p>
 
-      {data.kind === 'manual' && (
+      {data.kind === 'decision' && (
+        <label className="flex items-start gap-2 text-xs">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={human}
+            onChange={(e) => {
+              const on = e.target.checked
+              if (on) {
+                onChange({
+                  humanConfirm: true,
+                  prompt: data.prompt || '請確認是否繼續？',
+                  condition: undefined,
+                })
+              } else {
+                onChange({
+                  humanConfirm: false,
+                  prompt: undefined,
+                  condition: data.condition || defaultCondition(),
+                })
+              }
+            }}
+          />
+          <span>
+            <span className="font-medium text-card-fg">需主觀確認（執行時暫停）</span>
+            <span className="block text-muted-fg mt-0.5">
+              勾選後改為人工作答是／否；不擋「自填」庫存指標，僅此節點會暫停。
+            </span>
+          </span>
+        </label>
+      )}
+
+      {data.kind === 'decision' && human && (
         <label className="block">
           問題
           <textarea
@@ -485,7 +502,7 @@ function NodePropsForm({
         </>
       )}
 
-      {data.kind === 'decision' && (
+      {data.kind === 'decision' && !human && (
         <ConditionEditor
           value={data.condition || defaultCondition()}
           onChange={(condition) => onChange({ condition })}
@@ -550,7 +567,7 @@ function ConditionEditor({
         )}
       </div>
       {value.conditions.map((c, idx) => (
-        <div key={idx} className="bg-muted rounded-lg p-2 space-y-1.5 overflow-hidden">
+        <div key={idx} className="relative bg-muted rounded-lg p-2 space-y-1.5">
           <IndicatorPicker
             value={c.indicatorId}
             onChange={(indicatorId) => updateCond(idx, { indicatorId })}
@@ -632,13 +649,15 @@ function IndicatorPicker({
 }) {
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
+  // 每次開啟／渲染時合併本機公式
+  const catalog = useMemo(() => getAllIndicators(), [open])
 
-  const selected = INDICATOR_CATALOG.find((i) => i.id === value)
+  const selected = catalog.find((i) => i.id === value)
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return INDICATOR_CATALOG
-    return INDICATOR_CATALOG.filter((ind) => {
+    if (!q) return catalog
+    return catalog.filter((ind) => {
       const src = getSourceLabel(ind.source)
       return (
         ind.name.toLowerCase().includes(q) ||
@@ -648,10 +667,10 @@ function IndicatorPicker({
         ind.source.toLowerCase().includes(q)
       )
     })
-  }, [query])
+  }, [query, catalog])
 
   return (
-    <div className="relative">
+    <div className="relative w-full">
       <button
         type="button"
         className="w-full border rounded px-2 py-1.5 text-xs text-left bg-card hover:bg-muted"
@@ -667,7 +686,8 @@ function IndicatorPicker({
         )}
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 w-full bg-card border rounded-lg shadow-lg overflow-hidden">
+        /* 寬度對齊條件卡片（父層 relative）；高度獨立 max-h，不撐高卡片 */
+        <div className="absolute z-30 left-0 right-0 mt-1 bg-card border rounded-lg shadow-lg">
           <input
             autoFocus
             className="w-full border-b px-2 py-1.5 text-xs outline-none"

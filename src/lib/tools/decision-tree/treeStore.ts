@@ -3,7 +3,7 @@
  */
 
 import type { DecisionTreeDoc } from './types'
-import { createBlankTree, createSampleTree } from './engine'
+import { createBlankTree, createSampleTree, migrateTreeNodes } from './engine'
 
 const STORAGE_KEY = 'sagafisc_decision_trees'
 const ACTIVE_KEY = 'sagafisc_decision_active_tree'
@@ -21,9 +21,20 @@ export function loadTrees(): TreeListState {
   if (typeof window === 'undefined') return { trees: [], activeId: null }
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    const trees: DecisionTreeDoc[] = raw ? JSON.parse(raw) : []
+    const parsed: DecisionTreeDoc[] = raw ? JSON.parse(raw) : []
+    // 載入時遷移舊 manual 節點；若有變更則寫回
+    let dirty = false
+    const trees = parsed.map((t) => {
+      const migrated = migrateTreeNodes(t)
+      if (migrated !== t) dirty = true
+      return migrated
+    })
+    if (dirty) saveTrees(trees)
     const activeId = localStorage.getItem(ACTIVE_KEY)
-    return { trees, activeId: activeId && trees.some((t) => t.id === activeId) ? activeId : trees[0]?.id ?? null }
+    return {
+      trees,
+      activeId: activeId && trees.some((t) => t.id === activeId) ? activeId : trees[0]?.id ?? null,
+    }
   } catch {
     return { trees: [], activeId: null }
   }

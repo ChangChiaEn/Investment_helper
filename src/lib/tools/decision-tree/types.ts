@@ -11,8 +11,20 @@ export type {
   ListItem,
 } from '@/lib/inventory'
 
-/** 指標資料來源標籤 */
-export type IndicatorSource = 'openapi' | 'ai' | 'manual'
+/**
+ * 指標資料來源標籤。
+ * - inventory：庫存自填參數
+ * - composite：庫存＋行情等複合計算
+ * - formula：使用者自訂公式
+ * - manual：舊版相容（讀取時映射為 inventory）
+ */
+export type IndicatorSource =
+  | 'openapi'
+  | 'ai'
+  | 'inventory'
+  | 'composite'
+  | 'formula'
+  | 'manual'
 
 /** 比較運算子 */
 export type CompareOp = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'between' | 'truthy'
@@ -41,6 +53,8 @@ export interface IndicatorDef {
   valueType: 'number' | 'boolean' | 'string'
   unit?: string
   params?: IndicatorParamDef[]
+  /** 公式來源時的表達式（例：entry_price - 2 * atr） */
+  expression?: string
 }
 
 /** 指標解析後的實際結果 */
@@ -72,7 +86,10 @@ export interface ConditionGroup {
   conditions: MetricCondition[]
 }
 
-/** 節點種類 */
+/**
+ * 節點種類。
+ * `manual` 僅供舊資料／執行路徑顯示相容；新編輯一律用 decision + humanConfirm。
+ */
 export type NodeKind = 'decision' | 'manual' | 'result'
 
 /** 決策樹節點（邏輯模型，與 React Flow 分離） */
@@ -82,7 +99,12 @@ export interface TreeNode {
   label: string
   /** decision：條件通過走 yesTarget，否則 noTarget */
   condition?: ConditionGroup
-  /** manual：問題文字，使用者必須選是／否 */
+  /**
+   * 需主觀確認：執行時暫停等人選是／否（等同舊 manual 節點）。
+   * 舊樹 kind==='manual' 載入時會遷移為此旗標。
+   */
+  humanConfirm?: boolean
+  /** 主觀確認時的問題文字 */
   prompt?: string
   yesTarget?: string | null
   noTarget?: string | null
@@ -129,14 +151,29 @@ export interface RunState {
   error?: string
 }
 
+/** 一次執行批次（可含多標的結果）；重跑會新增批次、不覆寫舊批 */
+export interface RunBatch {
+  id: string
+  treeId: string
+  treeName: string
+  symbols: string[]
+  results: RunState[]
+  createdAt: number
+}
+
 /**
  * 批次／單檔執行面板的持久化快照（切換分頁後還原）。
+ * 以 batches 保留歷史；results 欄位保留舊版相容（載入時遷移）。
  */
 export interface RunSessionSnapshot {
   treeId: string | null
   selectedSymbols: string[]
-  /** 各標的最新執行狀態 */
-  results: RunState[]
+  /** @deprecated 請用 batches；舊資料遷移用 */
+  results?: RunState[]
+  /** 執行歷史（新到舊），上限由 store 控制 */
+  batches: RunBatch[]
+  /** 目前檢視的批次 id */
+  activeBatchId: string | null
   /** 進行中標記 */
   running: boolean
   updatedAt: number
@@ -146,8 +183,18 @@ export interface RunSessionSnapshot {
 export interface FlowNodeData extends Record<string, unknown> {
   kind: NodeKind
   label: string
+  humanConfirm?: boolean
   prompt?: string
   advice?: string
   adviceParams?: Record<string, number | string>
   condition?: ConditionGroup
+}
+
+/** 使用者自訂公式指標（本機儲存） */
+export interface FormulaIndicator {
+  id: string
+  name: string
+  expression: string
+  description?: string
+  createdAt: number
 }

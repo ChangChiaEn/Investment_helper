@@ -2,7 +2,7 @@
  * 決策樹 UI 中文標籤：比較運算子、指標來源。
  */
 
-import type { CompareOp, IndicatorSource } from './types'
+import type { CompareOp } from './types'
 
 /** 比較運算子顯示文字（選單用） */
 export const COMPARE_OP_LABELS: Record<CompareOp, string> = {
@@ -29,10 +29,13 @@ export const COMPARE_OP_ORDER: CompareOp[] = [
 ]
 
 /** 指標來源中文 */
-export const INDICATOR_SOURCE_LABELS: Record<IndicatorSource | 'error', string> = {
+export const INDICATOR_SOURCE_LABELS: Record<string, string> = {
   openapi: '官方',
   ai: 'AI',
-  manual: '手動',
+  inventory: '自填',
+  composite: '複合',
+  formula: '公式',
+  manual: '自填',
   error: '錯誤',
 }
 
@@ -42,5 +45,5 @@ export const INDICATOR_SOURCE_LABELS: Record<IndicatorSource | 'error', string> 
  * @returns 中文
  */
 export function getSourceLabel(source: string): string {
-  return INDICATOR_SOURCE_LABELS[source as IndicatorSource] || source
+  return INDICATOR_SOURCE_LABELS[source] || source
 }

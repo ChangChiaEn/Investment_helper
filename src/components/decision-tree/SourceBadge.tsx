@@ -1,5 +1,5 @@
 /**
- * 指標來源徽章（OpenAPI／AI／手動／實際解析來源）。
+ * 指標來源徽章（官方／AI／自填／複合／公式／實際解析來源）。
  */
 
 import type { IndicatorSource } from '@/lib/tools/decision-tree/types'
@@ -8,6 +8,9 @@ import type { IndicatorSource } from '@/lib/tools/decision-tree/types'
 const STYLES: Record<string, string> = {
   openapi: 'bg-primary-soft text-primary',
   ai: 'bg-primary-soft text-accent',
+  inventory: 'bg-warning-soft text-warning',
+  composite: 'bg-primary-soft text-primary',
+  formula: 'bg-muted text-card-fg',
   manual: 'bg-warning-soft text-warning',
   error: 'bg-danger-soft text-danger',
 }
@@ -15,7 +18,10 @@ const STYLES: Record<string, string> = {
 const LABELS: Record<string, string> = {
   openapi: '官方',
   ai: 'AI',
-  manual: '手動',
+  inventory: '自填',
+  composite: '複合',
+  formula: '公式',
+  manual: '自填',
   error: '錯誤',
 }
 

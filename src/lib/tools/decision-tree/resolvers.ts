@@ -1,12 +1,13 @@
 /**
- * 指標解析器：OpenAPI（經 proxy）→ 失敗降級 AI；manual 讀庫存。
+ * 指標解析器：OpenAPI（經 proxy）→ 失敗降級 AI；inventory 讀庫存；composite／formula 複合計算。
  */
 
 import { createClient, generateWithFallback } from '@/lib/gemini'
 import { findHolding } from '@/lib/inventory'
 import { requireEndpoint } from '@/lib/market'
 import { fetchMarketWithHistory } from '@/lib/pipeline'
-import { getIndicatorDef } from './catalog'
+import { getIndicatorDef, normalizeIndicatorSource } from './catalog'
+import { evaluateFormula, extractFormulaDeps } from './formulaEval'
 import type { DecisionInventory, IndicatorSource, IndicatorValue } from './types'
 import type { MarketSource } from '@/lib/market'
 
@@ -57,13 +58,23 @@ export async function resolveIndicator(
   }
 
   try {
-    if (def.source === 'manual') {
-      return resolveManual(indicatorId, ctx)
+    const source = normalizeIndicatorSource(def.source)
+
+    // 庫存自填：缺值以 0 防呆，不中止
+    if (source === 'inventory') {
+      return resolveInventory(indicatorId, ctx)
     }
-    if (def.source === 'ai') {
+
+    // 使用者公式：解析依賴後求值
+    if (source === 'formula') {
+      return await resolveFormula(indicatorId, def.expression || '', params, ctx)
+    }
+
+    if (source === 'ai') {
       return await resolveViaAi(indicatorId, def.name, params, ctx)
     }
-    // openapi：先官方，失敗降級 AI
+
+    // openapi／composite：先官方（含複合），失敗降級 AI
     try {
       return await resolveOpenApi(indicatorId, params, ctx)
     } catch (err) {
@@ -95,26 +106,31 @@ export async function resolveIndicator(
 }
 
 /**
- * 手動欄位解析。
+ * 庫存自填欄位解析；缺值／NaN 以 0 代替並標「未填」，不回 error。
  * @param indicatorId - 指標 id
  * @param ctx - 上下文
  * @returns 指標值
  */
-function resolveManual(indicatorId: string, ctx: ResolveContext): IndicatorValue {
+function resolveInventory(indicatorId: string, ctx: ResolveContext): IndicatorValue {
   const h = findHolding(ctx.inventory, ctx.symbol)
   const inv = ctx.inventory
 
+  /**
+   * 數值防呆：缺漏當 0。
+   * @param v - 原始值
+   * @param label - 欄位名稱（顯示用）
+   * @returns 指標值
+   */
   const num = (v: number | undefined | null, label: string): IndicatorValue => {
     if (v === undefined || v === null || Number.isNaN(v)) {
       return {
         indicatorId,
-        resolvedSource: 'error',
-        value: null,
-        display: '缺手動資料',
-        error: `請先在庫存填寫：${label}`,
+        resolvedSource: 'inventory',
+        value: 0,
+        display: `0（未填：${label}）`,
       }
     }
-    return { indicatorId, resolvedSource: 'manual', value: v, display: String(v) }
+    return { indicatorId, resolvedSource: 'inventory', value: v, display: String(v) }
   }
 
   switch (indicatorId) {
@@ -129,40 +145,125 @@ function resolveManual(indicatorId: string, ctx: ResolveContext): IndicatorValue
     case 'cash_remaining':
       return num(inv.cashRemaining, '剩餘現金')
     case 'holding_count':
-      return { indicatorId, resolvedSource: 'manual', value: inv.holdings.length, display: String(inv.holdings.length) }
+      return {
+        indicatorId,
+        resolvedSource: 'inventory',
+        value: inv.holdings.length,
+        display: String(inv.holdings.length),
+      }
     case 'max_holdings':
       return num(inv.maxHoldings, '持股上限')
     case 'position_pct_of_capital': {
-      if (!h || !inv.totalCapital) {
+      const entry = h?.entryPrice
+      const shares = h?.shares
+      const capital = inv.totalCapital
+      const entryN = entry === undefined || entry === null || Number.isNaN(entry) ? 0 : entry
+      const sharesN = shares === undefined || shares === null || Number.isNaN(shares) ? 0 : shares
+      const capitalN =
+        capital === undefined || capital === null || Number.isNaN(capital) ? 0 : capital
+      const missing = entryN === 0 || sharesN === 0 || capitalN === 0
+      if (capitalN === 0) {
         return {
           indicatorId,
-          resolvedSource: 'error',
-          value: null,
-          display: '缺資料',
-          error: '需持股與總資金',
+          resolvedSource: 'inventory',
+          value: 0,
+          display: '0（未填：總資金）',
         }
       }
-      const pct = ((h.entryPrice * h.shares) / inv.totalCapital) * 100
-      return { indicatorId, resolvedSource: 'manual', value: round(pct, 2), display: `${round(pct, 2)}%` }
-    }
-    case 'unrealized_pnl_pct':
-    case 'drawdown_from_swing':
-      // 需現價：同步路徑無法 await；改由呼叫端用 openapi close 再算，這裡標錯誤提示
+      const pct = ((entryN * sharesN) / capitalN) * 100
       return {
         indicatorId,
-        resolvedSource: 'error',
-        value: null,
-        display: '需現價',
-        error: '請改用引擎內建複合解析（會先取收盤價）',
+        resolvedSource: 'inventory',
+        value: round(pct, 2),
+        display: missing ? `${round(pct, 2)}%（含未填）` : `${round(pct, 2)}%`,
       }
+    }
     default:
       return {
         indicatorId,
         resolvedSource: 'error',
         value: null,
         display: '未實作',
-        error: `手動指標未實作：${indicatorId}`,
+        error: `自填指標未實作：${indicatorId}`,
       }
+  }
+}
+
+/**
+ * 解析使用者公式指標。
+ * @param indicatorId - 公式指標 id
+ * @param expression - 表達式
+ * @param params - 參數（轉傳給依賴指標）
+ * @param ctx - 上下文
+ * @returns 指標值
+ */
+async function resolveFormula(
+  indicatorId: string,
+  expression: string,
+  params: Record<string, number | string> | undefined,
+  ctx: ResolveContext
+): Promise<IndicatorValue> {
+  if (!expression.trim()) {
+    return {
+      indicatorId,
+      resolvedSource: 'error',
+      value: null,
+      display: '公式為空',
+      error: '公式表達式為空',
+    }
+  }
+  const deps = extractFormulaDeps(expression)
+  // 禁止公式自引用，避免無限遞迴
+  if (deps.includes(indicatorId)) {
+    return {
+      indicatorId,
+      resolvedSource: 'error',
+      value: null,
+      display: '循環引用',
+      error: '公式不可引用自身',
+    }
+  }
+  const vars: Record<string, number> = {}
+  for (const depId of deps) {
+    const resolved = await resolveIndicator(depId, params, ctx)
+    if (resolved.resolvedSource === 'error') {
+      return {
+        indicatorId,
+        resolvedSource: 'error',
+        value: null,
+        display: '依賴失敗',
+        error: `公式依賴 ${depId} 失敗：${resolved.error || resolved.display}`,
+      }
+    }
+    const n = typeof resolved.value === 'number' ? resolved.value : Number(resolved.value)
+    if (Number.isNaN(n)) {
+      return {
+        indicatorId,
+        resolvedSource: 'error',
+        value: null,
+        display: '依賴非數值',
+        error: `公式依賴 ${depId} 非數值`,
+      }
+    }
+    vars[depId] = n
+  }
+  try {
+    const value = evaluateFormula(expression, vars)
+    return {
+      indicatorId,
+      resolvedSource: 'formula',
+      value: round(value, 4),
+      display: String(round(value, 4)),
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return {
+      indicatorId,
+      resolvedSource: 'error',
+      value: null,
+      display: '公式錯誤',
+      error: msg,
+    }
   }
 }
 
@@ -362,21 +463,31 @@ async function resolveOpenApi(
       const byMa = last <= ma * 1.02
       const byBias = bias >= -5 && bias <= 5
       const pass = byDrawdown || (byMa && byBias)
-      return ok('openapi', indicatorId, pass, pass ? '是（低檔）' : '否')
+      return ok('composite', indicatorId, pass, pass ? '是（低檔）' : '否')
     }
     case 'unrealized_pnl_pct': {
       const h = findHolding(ctx.inventory, ctx.symbol)
-      if (!h) throw new Error('無持股進場價')
+      const entryRaw = h?.entryPrice
+      const entry =
+        entryRaw === undefined || entryRaw === null || Number.isNaN(entryRaw) ? 0 : entryRaw
+      if (entry === 0) {
+        throw new Error('進場價為 0（未填或無效），無法計算未實現報酬率')
+      }
       const px = await getLatestClose(ctx.symbol, cache)
-      const pct = ((px - h.entryPrice) / h.entryPrice) * 100
-      return ok('openapi', indicatorId, round(pct, 2), `${round(pct, 2)}%`)
+      const pct = ((px - entry) / entry) * 100
+      return ok('composite', indicatorId, round(pct, 2), `${round(pct, 2)}%`)
     }
     case 'drawdown_from_swing': {
       const h = findHolding(ctx.inventory, ctx.symbol)
-      if (!h?.swingHigh) throw new Error('無波段最高價')
+      const swingRaw = h?.swingHigh
+      const swing =
+        swingRaw === undefined || swingRaw === null || Number.isNaN(swingRaw) ? 0 : swingRaw
+      if (swing === 0) {
+        throw new Error('波段最高價為 0（未填或無效），無法計算回檔%')
+      }
       const px = await getLatestClose(ctx.symbol, cache)
-      const pct = ((h.swingHigh - px) / h.swingHigh) * 100
-      return ok('openapi', indicatorId, round(pct, 2), `${round(pct, 2)}%`)
+      const pct = ((swing - px) / swing) * 100
+      return ok('composite', indicatorId, round(pct, 2), `${round(pct, 2)}%`)
     }
     default:
       throw new Error(`OpenAPI 指標未實作：${indicatorId}`)
