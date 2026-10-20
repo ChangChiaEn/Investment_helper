@@ -19,6 +19,10 @@ import {
   updateBatchResult,
 } from '@/lib/tools/decision-tree/runResultStore'
 import { getActiveTree, loadTrees, setActiveTreeId } from '@/lib/tools/decision-tree/treeStore'
+import {
+  getIndicatorLabel,
+  getNodeKindLabel,
+} from '@/lib/tools/decision-tree/labels'
 import type { DecisionInventory, RunBatch, RunState } from '@/lib/tools/decision-tree/types'
 import { SourceBadge } from './SourceBadge'
 import { Disclaimer } from '@/components/Disclaimer'
@@ -484,22 +488,15 @@ function ResultRow({
             <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass}`}>{statusLabel}</span>
           </div>
           {state.status === 'completed' && (
-            <p className="text-sm text-card-fg">{state.resultAdvice}</p>
+            <p className="text-base md:text-lg font-medium text-fg leading-snug">
+              {state.resultAdvice}
+            </p>
           )}
           {state.status === 'error' && (
             <p className="text-sm text-red-700">執行中止：{state.error}</p>
           )}
           {state.status === 'awaiting_manual' && (
             <p className="text-sm text-amber-800">{state.pendingPrompt}</p>
-          )}
-          {state.resultParams && Object.keys(state.resultParams).length > 0 && (
-            <ul className="text-xs text-muted-fg list-disc ml-4">
-              {Object.entries(state.resultParams).map(([k, v]) => (
-                <li key={k}>
-                  {k}：{String(v)}
-                </li>
-              ))}
-            </ul>
           )}
           <p className="text-xs text-muted-fg">
             {expanded ? '收合過程' : `展開過程（${state.path.length} 步）`}
@@ -512,7 +509,7 @@ function ResultRow({
           {state.path.map((step, i) => (
             <li key={`${step.nodeId}_${i}`}>
               <div className="text-sm font-medium text-fg">
-                {i + 1}. [{step.kind === 'manual' ? '主觀' : step.kind}] {step.label}
+                {i + 1}. [{getNodeKindLabel(step.kind)}] {step.label}
                 {step.branchTaken && (
                   <span className="ml-2 text-xs text-muted-fg">
                     → {step.branchTaken === 'yes' ? '通過／是' : '未通過／否'}
@@ -521,16 +518,25 @@ function ResultRow({
               </div>
               {step.note && <p className="text-xs text-muted-fg mt-0.5">{step.note}</p>}
               {step.indicatorResults && (
-                <ul className="mt-1 space-y-1">
+                <ul className="mt-1 space-y-1.5">
                   {step.indicatorResults.map((r) => (
-                    <li
-                      key={r.indicatorId}
-                      className="text-xs flex flex-wrap items-center gap-2 text-card-fg"
-                    >
-                      <SourceBadge source={r.resolvedSource} />
-                      <span className="font-mono">{r.indicatorId}</span>
-                      <span>{r.display}</span>
-                      {r.error && <span className="text-danger">{r.error}</span>}
+                    <li key={r.indicatorId} className="text-xs text-card-fg">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <SourceBadge source={r.resolvedSource} />
+                        <span>{getIndicatorLabel(r.indicatorId)}</span>
+                        <span className="font-medium">{r.display}</span>
+                        {r.error && <span className="text-danger">{r.error}</span>}
+                      </div>
+                      {/* 複合／公式：列出取用的各個組成數值 */}
+                      {r.components && r.components.length > 0 && (
+                        <ul className="mt-1 ml-3 space-y-0.5 text-muted-fg border-l border-border pl-2">
+                          {r.components.map((c, ci) => (
+                            <li key={`${r.indicatorId}_c_${ci}`}>
+                              {c.label}：{c.display}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
                 </ul>

@@ -8,7 +8,13 @@ import { requireEndpoint } from '@/lib/market'
 import { fetchMarketWithHistory } from '@/lib/pipeline'
 import { getIndicatorDef, normalizeIndicatorSource } from './catalog'
 import { evaluateFormula, extractFormulaDeps } from './formulaEval'
-import type { DecisionInventory, IndicatorSource, IndicatorValue } from './types'
+import { getIndicatorLabel } from './labels'
+import type {
+  DecisionInventory,
+  IndicatorComponent,
+  IndicatorSource,
+  IndicatorValue,
+} from './types'
 import type { MarketSource } from '@/lib/market'
 
 /**
@@ -224,6 +230,7 @@ async function resolveFormula(
     }
   }
   const vars: Record<string, number> = {}
+  const components: IndicatorComponent[] = []
   for (const depId of deps) {
     const resolved = await resolveIndicator(depId, params, ctx)
     if (resolved.resolvedSource === 'error') {
@@ -233,6 +240,7 @@ async function resolveFormula(
         value: null,
         display: '依賴失敗',
         error: `公式依賴 ${depId} 失敗：${resolved.error || resolved.display}`,
+        components,
       }
     }
     const n = typeof resolved.value === 'number' ? resolved.value : Number(resolved.value)
@@ -243,9 +251,25 @@ async function resolveFormula(
         value: null,
         display: '依賴非數值',
         error: `公式依賴 ${depId} 非數值`,
+        components,
       }
     }
     vars[depId] = n
+    // 記錄直接依賴；若依賴本身是複合／公式，一併附上其組成
+    components.push({
+      label: getIndicatorLabel(depId),
+      indicatorId: depId,
+      value: resolved.value,
+      display: resolved.display,
+    })
+    if (resolved.components?.length) {
+      for (const c of resolved.components) {
+        components.push({
+          ...c,
+          label: `　↳ ${c.label}`,
+        })
+      }
+    }
   }
   try {
     const value = evaluateFormula(expression, vars)
@@ -254,6 +278,7 @@ async function resolveFormula(
       resolvedSource: 'formula',
       value: round(value, 4),
       display: String(round(value, 4)),
+      components,
     }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
@@ -263,6 +288,7 @@ async function resolveFormula(
       value: null,
       display: '公式錯誤',
       error: msg,
+      components,
     }
   }
 }
@@ -463,7 +489,13 @@ async function resolveOpenApi(
       const byMa = last <= ma * 1.02
       const byBias = bias >= -5 && bias <= 5
       const pass = byDrawdown || (byMa && byBias)
-      return ok('composite', indicatorId, pass, pass ? '是（低檔）' : '否')
+      return ok('composite', indicatorId, pass, pass ? '是（低檔）' : '否', [
+        { label: '收盤價', indicatorId: 'close_price', value: last, display: String(round(last, 2)) },
+        { label: '近 60 日最高', value: high, display: String(round(high, 2)) },
+        { label: '高點回檔%', value: round(dd, 2), display: `${round(dd, 2)}%` },
+        { label: '60 日均線', value: round(ma, 2), display: String(round(ma, 2)) },
+        { label: '乖離率%', value: round(bias, 2), display: `${round(bias, 2)}%` },
+      ])
     }
     case 'unrealized_pnl_pct': {
       const h = findHolding(ctx.inventory, ctx.symbol)
@@ -475,7 +507,15 @@ async function resolveOpenApi(
       }
       const px = await getLatestClose(ctx.symbol, cache)
       const pct = ((px - entry) / entry) * 100
-      return ok('composite', indicatorId, round(pct, 2), `${round(pct, 2)}%`)
+      return ok('composite', indicatorId, round(pct, 2), `${round(pct, 2)}%`, [
+        { label: '收盤價（現價）', indicatorId: 'close_price', value: px, display: String(px) },
+        {
+          label: '進場價',
+          indicatorId: 'entry_price',
+          value: entry,
+          display: String(entry),
+        },
+      ])
     }
     case 'drawdown_from_swing': {
       const h = findHolding(ctx.inventory, ctx.symbol)
@@ -487,7 +527,15 @@ async function resolveOpenApi(
       }
       const px = await getLatestClose(ctx.symbol, cache)
       const pct = ((swing - px) / swing) * 100
-      return ok('composite', indicatorId, round(pct, 2), `${round(pct, 2)}%`)
+      return ok('composite', indicatorId, round(pct, 2), `${round(pct, 2)}%`, [
+        { label: '收盤價（現價）', indicatorId: 'close_price', value: px, display: String(px) },
+        {
+          label: '波段最高價',
+          indicatorId: 'swing_high',
+          value: swing,
+          display: String(swing),
+        },
+      ])
     }
     default:
       throw new Error(`OpenAPI 指標未實作：${indicatorId}`)
@@ -543,13 +591,29 @@ ${reason ? `（官方 API 失敗原因：${reason}）` : ''}
 
 // --- 官方資料輔助 ---
 
+/**
+ * 組裝成功的指標結果。
+ * @param source - 解析來源
+ * @param indicatorId - 指標 id
+ * @param value - 數值
+ * @param display - 顯示字串
+ * @param components - 複合／公式組成（可選）
+ * @returns IndicatorValue
+ */
 function ok(
   source: IndicatorSource,
   indicatorId: string,
   value: number | boolean,
-  display: string
+  display: string,
+  components?: IndicatorComponent[]
 ): IndicatorValue {
-  return { indicatorId, resolvedSource: source, value, display }
+  return {
+    indicatorId,
+    resolvedSource: source,
+    value,
+    display,
+    ...(components?.length ? { components } : {}),
+  }
 }
 
 function round(n: number, d: number): number {

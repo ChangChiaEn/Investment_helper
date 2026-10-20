@@ -57,6 +57,18 @@ export interface IndicatorDef {
   expression?: string
 }
 
+/**
+ * 複合／公式計算時取用的組成數值（供執行過程展開顯示）。
+ */
+export interface IndicatorComponent {
+  /** 顯示名稱（中文） */
+  label: string
+  /** 對應指標 id（有則可對照目錄） */
+  indicatorId?: string
+  value: number | boolean | string | null
+  display: string
+}
+
 /** 指標解析後的實際結果 */
 export interface IndicatorValue {
   indicatorId: string
@@ -65,6 +77,8 @@ export interface IndicatorValue {
   value: number | boolean | string | null
   display: string
   error?: string
+  /** 複合／公式取用的各個組成數值 */
+  components?: IndicatorComponent[]
 }
 
 /** 單一條件：對某指標比較 */

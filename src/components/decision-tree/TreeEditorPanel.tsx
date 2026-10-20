@@ -226,7 +226,6 @@ function TreeEditorInner() {
       condition: kind === 'decision' ? defaultCondition() : undefined,
       humanConfirm: false,
       advice: kind === 'result' ? '建議內容' : undefined,
-      adviceParams: kind === 'result' ? { 建議賣出比例: 0.33 } : undefined,
     }
     setNodes((nds) => [
       ...nds,
@@ -387,7 +386,6 @@ function TreeEditorInner() {
             )}
             <p className="text-xs text-muted-fg">
               綠＝通過／是（左），紅＝未通過／否（右）。點連線 →「取消連結」或按 Delete。連線後可「自動排版」。
-              根節點：{active.rootId}。自訂公式請至「指標」分頁新增。
             </p>
           </aside>
         </div>
@@ -474,32 +472,15 @@ function NodePropsForm({
       )}
 
       {data.kind === 'result' && (
-        <>
-          <label className="block">
-            建議文案
-            <textarea
-              className="mt-1 w-full border rounded-lg px-2 py-1.5"
-              rows={3}
-              value={data.advice || ''}
-              onChange={(e) => onChange({ advice: e.target.value })}
-            />
-          </label>
-          <label className="block">
-            建議參數（JSON）
-            <textarea
-              className="mt-1 w-full border rounded-lg px-2 py-1.5 font-mono text-xs"
-              rows={3}
-              value={JSON.stringify(data.adviceParams || {}, null, 2)}
-              onChange={(e) => {
-                try {
-                  onChange({ adviceParams: JSON.parse(e.target.value) })
-                } catch {
-                  /* 輸入中略過 */
-                }
-              }}
-            />
-          </label>
-        </>
+        <label className="block">
+          建議文案
+          <textarea
+            className="mt-1 w-full border rounded-lg px-2 py-1.5"
+            rows={3}
+            value={data.advice || ''}
+            onChange={(e) => onChange({ advice: e.target.value })}
+          />
+        </label>
       )}
 
       {data.kind === 'decision' && !human && (

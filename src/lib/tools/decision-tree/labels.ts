@@ -1,8 +1,34 @@
 /**
- * 決策樹 UI 中文標籤：比較運算子、指標來源。
+ * 決策樹 UI 中文標籤：比較運算子、指標來源、節點種類。
  */
 
-import type { CompareOp } from './types'
+import { getIndicatorDef } from './catalog'
+import type { CompareOp, NodeKind } from './types'
+
+/** 執行路徑／節點種類中文 */
+export const NODE_KIND_LABELS: Record<NodeKind, string> = {
+  decision: '決策',
+  manual: '主觀確認',
+  result: '結果',
+}
+
+/**
+ * 取得節點種類中文。
+ * @param kind - 節點種類
+ * @returns 中文
+ */
+export function getNodeKindLabel(kind: string): string {
+  return NODE_KIND_LABELS[kind as NodeKind] || kind
+}
+
+/**
+ * 取得指標顯示名稱（優先目錄中文名，否則回傳 id）。
+ * @param indicatorId - 指標 id
+ * @returns 顯示名稱
+ */
+export function getIndicatorLabel(indicatorId: string): string {
+  return getIndicatorDef(indicatorId)?.name || indicatorId
+}
 
 /** 比較運算子顯示文字（選單用） */
 export const COMPARE_OP_LABELS: Record<CompareOp, string> = {
