@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 import { handleMarketProxy } from './src/lib/market/proxyHandler'
 import { getQuotes, normalizeSymbol, discoverStocks, isScanMode } from './src/lib/tools/tw-stock-target/service'
@@ -8,8 +9,29 @@ import { getQuotes, normalizeSymbol, discoverStocks, isScanMode } from './src/li
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+// --- 載入 .env.local（例如 AI Studio 注入的 secrets）---
+try {
+  const envLocalPath = path.resolve(__dirname, '.env.local')
+  if (fs.existsSync(envLocalPath)) {
+    const lines = fs.readFileSync(envLocalPath, 'utf8').split('\n')
+    for (const line of lines) {
+      const match = line.match(/^([^=]+)=(.*)$/)
+      if (match) {
+        const k = match[1].trim()
+        const v = match[2].trim()
+        // 僅在尚未設定、或為佔位符時覆寫，避免蓋掉真實環境變數
+        if (v && (!process.env[k] || process.env[k]?.startsWith('MY_GEM'))) {
+          process.env[k] = v
+        }
+      }
+    }
+  }
+} catch {
+  // ignore
+}
+
 const app = express()
-const PORT = 3000
+const PORT = parseInt(process.env.PORT || '3000', 10)
 const HOST = '0.0.0.0'
 
 app.use(cors())
@@ -18,6 +40,10 @@ app.use(express.json())
 // --- Health check ---
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' })
+})
+
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({ status: 'ok', time: new Date().toISOString() })
 })
 
 // --- Market Proxy GET endpoint ---
@@ -68,6 +94,131 @@ app.get('/api/tw-stock-target/discover', async (req: Request, res: Response) => 
     return res.json(result)
   } catch (error: any) {
     return res.status(502).json({ error: error?.message || '市場掃描暫時無法使用。' })
+  }
+})
+
+/**
+ * 解析實際可用的 Gemini API Key（優先請求帶入，其次環境變數與 .env 檔）。
+ * @param requestKey - 前端可選帶入的 key
+ * @returns 有效 key；找不到時回傳空字串
+ */
+function getEffectiveGeminiApiKey(requestKey?: string): string {
+  if (requestKey && requestKey !== 'MY_GEMINI_API_KEY' && !requestKey.startsWith('MY_GEM')) {
+    return requestKey
+  }
+
+  const envKey = process.env.GEMINI_API_KEY
+  if (envKey && envKey !== 'MY_GEMINI_API_KEY' && !envKey.startsWith('MY_GEM')) {
+    return envKey
+  }
+
+  try {
+    const envLocalPath = path.resolve(__dirname, '.env.local')
+    if (fs.existsSync(envLocalPath)) {
+      const content = fs.readFileSync(envLocalPath, 'utf8')
+      const match = content.match(/GEMINI_API_KEY=([^\r\n]+)/)
+      if (match && match[1]?.trim() && !match[1].trim().startsWith('MY_GEM')) {
+        return match[1].trim()
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  try {
+    const envPath = path.resolve(__dirname, '.env')
+    if (fs.existsSync(envPath)) {
+      const content = fs.readFileSync(envPath, 'utf8')
+      const match = content.match(/GEMINI_API_KEY=([^\r\n]+)/)
+      if (match && match[1]?.trim() && !match[1].trim().startsWith('MY_GEM')) {
+        return match[1].trim()
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  return envKey || ''
+}
+
+// --- Server-side Gemini API（供前端 generateWithFallback 呼叫）---
+app.post('/api/gemini/generate', async (req: Request, res: Response) => {
+  try {
+    const { contents, config, model = 'gemini-3.8-flash', apiKey } = req.body
+    const key = getEffectiveGeminiApiKey(apiKey)
+    if (!key) {
+      res.status(500).json({ error: 'AI 服務連線初始化中，請稍後重試。' })
+      return
+    }
+
+    const { GoogleGenAI } = await import('@google/genai')
+    const ai = new GoogleGenAI({
+      apiKey: key,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    })
+
+    const chosenModel = model || 'gemini-3.8-flash'
+    let response: any
+
+    // 移除已棄用的 thinkingBudget，避免新模型拒絕請求
+    const cleanConfig: any = { ...config }
+    if (cleanConfig.thinkingConfig?.thinkingBudget) {
+      delete cleanConfig.thinkingConfig.thinkingBudget
+    }
+
+    try {
+      response = await ai.models.generateContent({
+        model: chosenModel,
+        contents,
+        config: cleanConfig,
+      })
+    } catch (primaryErr: any) {
+      console.warn('Primary Gemini call error:', primaryErr?.message)
+      // 若含 googleSearch grounding 失敗，改為不帶 tools 重試
+      if (cleanConfig?.tools?.some((t: any) => t.googleSearch)) {
+        console.log('Retrying without googleSearch tool...')
+        const fallbackConfig = { ...cleanConfig, tools: undefined }
+        try {
+          response = await ai.models.generateContent({
+            model: chosenModel,
+            contents,
+            config: fallbackConfig,
+          })
+        } catch (retryErr: any) {
+          if (chosenModel === 'gemini-3.8-flash') {
+            console.log('Retrying with gemini-flash-latest...')
+            response = await ai.models.generateContent({
+              model: 'gemini-flash-latest',
+              contents,
+              config: fallbackConfig,
+            })
+          } else {
+            throw retryErr
+          }
+        }
+      } else if (chosenModel === 'gemini-3.8-flash') {
+        console.log('Retrying with gemini-flash-latest...')
+        response = await ai.models.generateContent({
+          model: 'gemini-flash-latest',
+          contents,
+          config: cleanConfig,
+        })
+      } else {
+        throw primaryErr
+      }
+    }
+
+    res.json({
+      text: response.text,
+      candidates: response.candidates,
+    })
+  } catch (error: any) {
+    console.error('Server Gemini API error:', error)
+    res.status(500).json({ error: error?.message || 'Gemini 呼叫失敗，請稍後再試。' })
   }
 })
 
@@ -194,7 +345,6 @@ async function start() {
   const isProd = process.env.NODE_ENV === 'production'
 
   if (!isProd) {
-    const fs = await import('fs')
     const { createServer: createViteServer } = await import('vite')
     const vite = await createViteServer({
       server: { middlewareMode: true, host: HOST, port: PORT },

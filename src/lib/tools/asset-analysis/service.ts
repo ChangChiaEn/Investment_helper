@@ -1,6 +1,5 @@
 
-import { Type } from "@google/genai";
-import { getApiKey, createClient, generateWithFallback } from "@/lib/gemini";
+import { Type, getApiKey, createClient, generateWithFallback } from "@/lib/gemini";
 import { AssetEntry, InvestorProfile, AssetCategory, Language, InvestorProfileMode, CustomAllocation } from "./types";
 import { TRANSLATIONS } from "./constants";
 

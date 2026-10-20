@@ -1,5 +1,4 @@
-import { Type, Schema } from "@google/genai";
-import { createClient, generateWithFallback } from "@/lib/gemini";
+import { Type, Schema, createClient, generateWithFallback } from "@/lib/gemini";
 import { FundAnalysis } from "./types";
 
 // Schema definition for structured JSON output

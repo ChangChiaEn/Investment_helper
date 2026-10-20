@@ -1,5 +1,4 @@
-import { Type, Schema } from "@google/genai";
-import { createClient, generateWithFallback } from "@/lib/gemini";
+import { Type, Schema, createClient, generateWithFallback } from "@/lib/gemini";
 import { FundAnalysisResult, GroundingSource } from "./types";
 
 // Define the fund object properties
@@ -63,9 +62,6 @@ export const analyzeFundWithGemini = async (query: string): Promise<{ result: Fu
         tools: [{ googleSearch: {} }], // Enable Google Search Grounding
         responseMimeType: "application/json",
         responseSchema: analysisSchema,
-        thinkingConfig: {
-            thinkingBudget: 4096 // Increase budget for multiple funds analysis
-        }
       },
     });
 

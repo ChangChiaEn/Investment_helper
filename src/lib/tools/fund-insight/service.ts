@@ -1,5 +1,4 @@
-import { Type } from "@google/genai";
-import { getApiKey, createClient, generateWithFallback } from "@/lib/gemini";
+import { Type, getApiKey, createClient, generateWithFallback } from "@/lib/gemini";
 import { Fund, SingleFundAnalysis, OverlapAnalysis } from "./types";
 
 // 1. Fetch Funds Data (Supports both specific names and categories)

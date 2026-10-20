@@ -37,6 +37,8 @@
   --color-chart-2: 56 189 248;
   --color-chart-3: 253 224 71;
   --color-chart-4: 252 165 165;
+  --font-sans: 'Noto Sans TC', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 /*

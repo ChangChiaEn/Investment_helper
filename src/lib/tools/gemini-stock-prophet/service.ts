@@ -74,7 +74,7 @@ export const analyzeStock = async (
     }
   } catch (error: unknown) {
     console.error('Gemini API Error:', error)
-    const message = error instanceof Error ? error.message : '分析過程中發生錯誤，請檢查 API Key 或網路連線。'
+    const message = error instanceof Error ? error.message : '分析過程中發生錯誤，請稍後重試。'
     throw new Error(message)
   }
 }

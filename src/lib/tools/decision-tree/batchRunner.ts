@@ -21,7 +21,7 @@ export interface BatchRunOptions {
 
 /** 批次前置檢查結果 */
 export type BatchPrecheck =
-  | { ok: true }
+  | { ok: true; message?: undefined }
   | { ok: false; reason: 'empty' | 'has_manual'; message: string }
 
 /**

@@ -30,9 +30,9 @@ export function setGeminiApiKey(key: string): void {
   }
 }
 
-/** 檢查是否已設定 API Key */
+/** 檢查是否已設定 API Key（由後端或本機提供） */
 export function hasGeminiApiKey(): boolean {
-  return getGeminiApiKey().length > 0
+  return true
 }
 
 /** 清除 localStorage 中的 API Key */

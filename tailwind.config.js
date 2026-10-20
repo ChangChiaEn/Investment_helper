@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 const withOpacity = (cssVar) => `rgb(var(${cssVar}) / <alpha-value>)`
 
-module.exports = {
+export default {
   content: [
     './index.html',
     './src/**/*.{js,ts,jsx,tsx}',

@@ -44,7 +44,7 @@ export const MARKET_PROXY_TIMEOUT_MS = 15000
 export function validateMarketProxyRequest(
   source: string,
   path: string
-): { ok: true; host: string; path: string } | { ok: false; error: string } {
+): { ok: true; host: string; path: string; error?: undefined } | { ok: false; error: string; host?: undefined; path?: undefined } {
   if (!source || !(source in MARKET_SOURCE_CONFIG)) {
     return { ok: false, error: '無效的 source 參數' }
   }

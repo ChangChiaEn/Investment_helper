@@ -89,12 +89,6 @@ export default function TrendDashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [showHistory, setShowHistory] = useState(false)
-  const [hasApiKey, setHasApiKey] = useState(false)
-
-  // Check API key
-  useEffect(() => {
-    setHasApiKey(!!localStorage.getItem('gemini_api_key'))
-  }, [])
 
   // Load history from localStorage
   useEffect(() => {
@@ -106,9 +100,8 @@ export default function TrendDashboardPage() {
     }
   }, [])
 
-  // Auto-load dashboard summary (only when API key is set and no cached summary)
+  // Auto-load dashboard summary
   useEffect(() => {
-    if (!hasApiKey) return
     if (dashboardSummary) return // already have cached or loaded summary
     const loadSummary = async () => {
       setSummaryLoading(true)
@@ -122,7 +115,7 @@ export default function TrendDashboardPage() {
       }
     }
     loadSummary()
-  }, [hasApiKey, dashboardSummary])
+  }, [dashboardSummary])
 
   // Save to cache
   useEffect(() => {
@@ -353,57 +346,29 @@ export default function TrendDashboardPage() {
         {/* DASHBOARD VIEW */}
         {viewMode === 'DASHBOARD' && !isLoading && (
           <div className="space-y-6">
-            {/* API Key Warning */}
-            {!hasApiKey && (
-              <div className="bg-warning-soft border-2 border-warning/40 rounded-xl p-6 shadow-sm">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 bg-warning-soft rounded-xl">
-                    <Key className="w-6 h-6 text-warning" />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-lg font-semibold text-card-fg mb-1">尚未設定 Gemini API Key</h2>
-                    <p className="text-warning text-sm mb-3">
-                      趨勢儀表板需要 Gemini API Key 才能進行產業分析與取得即時數據。請先至設定頁面輸入您的 API Key。
-                    </p>
-                    <Link
-                      href="/settings"
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-warning text-white rounded-lg hover:bg-warning transition-colors text-sm font-medium"
-                    >
-                      <Settings className="w-4 h-4" />
-                      前往設定
-                    </Link>
-                  </div>
+            {/* Summary */}
+            <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 shadow-sm">
+              <h2 className="text-sm font-semibold text-card-fg mb-2">2026 全球產業熱點摘要</h2>
+              {summaryLoading ? (
+                <div className="animate-pulse space-y-2">
+                  <div className="h-4 bg-muted rounded w-full" />
+                  <div className="h-4 bg-muted rounded w-3/4" />
                 </div>
-              </div>
-            )}
-
-            {/* Summary (only when API key is set) */}
-            {hasApiKey && (
-              <div className="bg-card/95 backdrop-blur-sm rounded-xl border border-border/50 p-5 shadow-sm">
-                <h2 className="text-sm font-semibold text-card-fg mb-2">2026 全球產業熱點摘要</h2>
-                {summaryLoading ? (
-                  <div className="animate-pulse space-y-2">
-                    <div className="h-4 bg-muted rounded w-full" />
-                    <div className="h-4 bg-muted rounded w-3/4" />
-                  </div>
-                ) : dashboardSummary ? (
-                  <p className="text-sm text-muted-fg leading-relaxed">{dashboardSummary}</p>
-                ) : (
-                  <p className="text-sm text-muted-fg">摘要載入失敗，請選擇產業並輸入問題開始分析。</p>
-                )}
-              </div>
-            )}
+              ) : dashboardSummary ? (
+                <p className="text-sm text-muted-fg leading-relaxed">{dashboardSummary}</p>
+              ) : (
+                <p className="text-sm text-muted-fg">摘要載入失敗，請選擇產業並輸入問題開始分析。</p>
+              )}
+            </div>
 
             {/* Start Analyzing Prompt */}
-            {hasApiKey && (
-              <div className="bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl border border-primary/30 p-8 text-center">
-                <BarChart3 className="w-12 h-12 text-primary mx-auto mb-4" />
-                <h2 className="text-lg font-semibold text-fg mb-2">選擇產業，開始 AI 趨勢分析</h2>
-                <p className="text-sm text-muted-fg max-w-md mx-auto">
-                  從上方選擇一個 GICS 產業，並在搜尋框輸入您想了解的趨勢問題，AI 將搜尋最新全球數據為您分析。
-                </p>
-              </div>
-            )}
+            <div className="bg-gradient-to-br from-primary/20 to-accent/20 rounded-xl border border-primary/30 p-8 text-center">
+              <BarChart3 className="w-12 h-12 text-primary mx-auto mb-4" />
+              <h2 className="text-lg font-semibold text-fg mb-2">選擇產業，開始 AI 趨勢分析</h2>
+              <p className="text-sm text-muted-fg max-w-md mx-auto">
+                從上方選擇一個 GICS 產業，並在搜尋框輸入您想了解的趨勢問題，AI 將搜尋最新全球數據為您分析。
+              </p>
+            </div>
 
             <Disclaimer />
           </div>

@@ -7,7 +7,7 @@ export const generateStockAnalysis = async (prefs: UserPreferences): Promise<Ana
   const marketText = prefs.market === 'TW' ? "Taiwan Stock Market (台股)" : "US Stock Market (美股)";
 
   const prompt = `
-    You are a world-class senior financial analyst and investment strategist using Gemini 3.
+    You are a world-class senior financial analyst and investment strategist using Google's smartest Gemini 3.8 Flash model.
 
     Your task:
     1. **Search** for the LATEST REAL-TIME market data, stock prices, and news for the ${marketText} to identify undervalued stocks.

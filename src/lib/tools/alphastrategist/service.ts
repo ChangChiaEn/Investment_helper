@@ -1,6 +1,14 @@
-import { Content, Part } from "@google/genai";
 import { getApiKey, createClient, generateWithFallback } from "@/lib/gemini";
 import { Message, Sender, GroundingChunk } from "./types";
+
+interface ChatPart {
+  text: string;
+}
+
+interface ChatContent {
+  role: 'user' | 'model';
+  parts: ChatPart[];
+}
 
 // Define the expert persona system instruction
 const SYSTEM_INSTRUCTION = `
@@ -51,25 +59,21 @@ export const sendMessageToGemini = async (
   history: Message[],
   newMessage: string
 ): Promise<{ text: string; groundingChunks: GroundingChunk[] }> => {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    return { text: "請先至設定頁面輸入 Gemini API Key", groundingChunks: [] };
-  }
-  const ai = createClient(apiKey);
+  const ai = createClient();
 
   try {
     // Convert app history to Gemini Content format
-    const contents: Content[] = history
+    const contents: ChatContent[] = history
       .filter((msg) => msg.text.trim() !== '')
       .map((msg) => ({
         role: msg.sender === Sender.User ? 'user' : 'model',
-        parts: [{ text: msg.text } as Part],
+        parts: [{ text: msg.text } as ChatPart],
       }));
 
     // Add the new message
     contents.push({
       role: 'user',
-      parts: [{ text: newMessage } as Part],
+      parts: [{ text: newMessage } as ChatPart],
     });
 
     const response = await generateWithFallback(ai, {
@@ -90,7 +94,7 @@ export const sendMessageToGemini = async (
   } catch (error) {
     console.error("Gemini API Error:", error);
     return {
-      text: "連線發生錯誤，請檢查您的網路或 API 金鑰設定。\n\n(Error: " + (error instanceof Error ? error.message : String(error)) + ")",
+      text: "連線發生錯誤，請稍後重試。\n\n(Error: " + (error instanceof Error ? error.message : String(error)) + ")",
       groundingChunks: []
     };
   }

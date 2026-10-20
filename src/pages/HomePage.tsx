@@ -8,7 +8,6 @@ import { ToolIcon } from '@/components/ToolIcons'
 import { Loader } from '@/components/Loader'
 import { useRouteLoading } from '@/components/RouteLoadingOverlay'
 import Link from 'next/link'
-import { Settings, Key } from 'lucide-react'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
   getDisguiseBrand,
@@ -17,8 +16,7 @@ import {
 } from '@/config/disguise'
 
 /**
- * 平台首頁：API Key 提示、依投資流程分組的快速入口與首頁工具選擇。
- * localStorage（API Key、預設首頁）僅在 useEffect 讀取，預設值與 SSR 一致以避免 hydration 問題。
+ * 平台首頁：依投資流程分組的快速入口與首頁工具選擇。
  * @returns 首頁內容，或導向預設工具時的載入畫面
  */
 export default function Home() {
@@ -26,8 +24,6 @@ export default function Home() {
   const { disguise, disguiseVariant } = useTheme()
   const { startRouteLoading } = useRouteLoading()
   const [isRedirecting, setIsRedirecting] = useState(false)
-  // 預設 false，與伺服器 render 相同；掛載後再依 localStorage 更新
-  const [hasApiKey, setHasApiKey] = useState(false)
 
   useEffect(() => {
     const savedHomepage = localStorage.getItem('homepage_tool')
@@ -36,7 +32,6 @@ export default function Home() {
       startRouteLoading()
       router.push(`/tools/${savedHomepage}`)
     }
-    setHasApiKey(!!localStorage.getItem('gemini_api_key'))
   }, [router, startRouteLoading])
 
   if (isRedirecting) {
@@ -67,33 +62,6 @@ export default function Home() {
               : '依投資流程整理的智慧投研工具；右下角可隨時開啟綜合助理'}
           </p>
         </div>
-
-        {!hasApiKey && (
-          <div className="mb-8 bg-warning-soft border-2 border-warning/40 rounded-xl p-6 shadow-sm">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-warning/20 rounded-xl">
-                <Key className="w-6 h-6 text-warning" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-semibold text-card-fg mb-1">
-                  {disguise ? '尚未設定 API Key' : '尚未設定 Gemini API Key'}
-                </h2>
-                <p className="text-muted-fg text-sm mb-3">
-                  {disguise
-                    ? '部分功能需要 API Key。請至設定頁面完成設定。'
-                    : '所有 AI 分析工具都需要 Gemini API Key 才能運作。請先至設定頁面輸入您的 API Key。'}
-                </p>
-                <Link
-                  href="/settings"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-warning text-primary-fg rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
-                >
-                  <Settings className="w-4 h-4" />
-                  前往設定
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* 快速入口 */}
         <div className="mb-8">

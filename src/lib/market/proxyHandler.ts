@@ -15,6 +15,7 @@ export interface MarketProxySuccessBody {
   upstream: string
   contentType: string | null
   data: unknown
+  error?: undefined
 }
 
 /** 代理失敗時的回應本體 */
