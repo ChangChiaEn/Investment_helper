@@ -80,7 +80,6 @@ export const sendMessageToGemini = async (
       contents: contents,
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
-        tools: [{ googleSearch: {} }], // Enable Google Search Grounding
       },
     });
 

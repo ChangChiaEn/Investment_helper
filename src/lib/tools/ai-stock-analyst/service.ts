@@ -48,9 +48,6 @@ export const generateStockAnalysis = async (prefs: UserPreferences): Promise<Ana
   try {
     const response = await generateWithFallback(ai, {
       contents: prompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
     });
 
     const text = response.text || "";

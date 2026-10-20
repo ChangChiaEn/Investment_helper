@@ -62,7 +62,6 @@ export const analyzeFund = async (fundName: string): Promise<FundAnalysis> => {
     const response = await generateWithFallback(ai, {
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }], // Enable Google Search for real-time data
         responseMimeType: "application/json",
         responseSchema: fundAnalysisSchema,
         systemInstruction: "你是一位專業的基金經理人與股票分析師，擅長解讀台股與科技股的財報與新聞風險。",

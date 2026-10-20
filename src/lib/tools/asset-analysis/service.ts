@@ -28,7 +28,7 @@ export async function analyzePortfolio(
     Target Goals: ${targetInfo}
     Current Assets: ${portfolioSummary}
 
-    CRITICAL: Use the googleSearch tool to get up-to-date market outlooks for the year 2026.
+    Provide up-to-date forward-looking market outlooks for the year 2026.
     Provide actionable rebalancing advice and suggested percentage allocation for standard asset categories.
     Return the response strictly in JSON format.
     You must provide all text fields in ${lang === Language.ZH ? 'Traditional Chinese (繁體中文)' : 'English'}.
@@ -50,7 +50,6 @@ export async function analyzePortfolio(
     `,
     config: {
       systemInstruction,
-      tools: [{ googleSearch: {} }],
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,

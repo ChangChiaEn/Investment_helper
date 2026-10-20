@@ -42,7 +42,6 @@ export const fetchFundsData = async (query: string = ""): Promise<{ funds: Fund[
     const response = await generateWithFallback(ai, {
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
         responseSchema: {
             type: Type.OBJECT,
@@ -125,7 +124,6 @@ export const analyzeFundOverlaps = async (funds: Fund[]): Promise<OverlapAnalysi
       const response = await generateWithFallback(ai, {
         contents: prompt,
         config: {
-          tools: [{ googleSearch: {} }],
           responseMimeType: "application/json",
           maxOutputTokens: 8192,
           responseSchema: {
@@ -211,7 +209,6 @@ export const analyzeSingleFund = async (fund: Fund): Promise<SingleFundAnalysis>
     const response = await generateWithFallback(ai, {
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }],
         responseMimeType: "application/json",
         maxOutputTokens: 8192,
         responseSchema: {

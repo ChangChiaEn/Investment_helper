@@ -569,7 +569,6 @@ ${reason ? `（官方 API 失敗原因：${reason}）` : ''}
   const response = await generateWithFallback(ai, {
     contents: prompt,
     config: {
-      tools: [{ googleSearch: {} }],
       temperature: 0.2,
     },
   })

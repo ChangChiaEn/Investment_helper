@@ -231,13 +231,11 @@ export async function runGeminiPipeline(
   }
 
   const ai = createClient()
-  const useGrounding = options.useGrounding !== false
-  const sources: DataSource[] = useGrounding ? ['gemini', 'grounding'] : ['gemini']
+  const sources: DataSource[] = ['gemini']
 
   const response = await generateWithFallback(ai, {
     contents: options.prompt,
     config: {
-      ...(useGrounding ? { tools: [{ googleSearch: {} }] } : {}),
       temperature: options.temperature ?? 0.4,
     },
   })

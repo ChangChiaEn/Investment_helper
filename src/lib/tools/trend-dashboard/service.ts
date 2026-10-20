@@ -45,7 +45,6 @@ ETF|建議標籤|理由
     contents: `使用者提問：${userQuery}\n產業：${sector}`,
     config: {
       systemInstruction: systemPrompt,
-      tools: [{ googleSearch: {} }],
     },
   });
 
@@ -109,8 +108,7 @@ ETF|建議標籤|理由
 export const getDashboardSummary = async (): Promise<string> => {
   const ai = createClient();
   const response = await generateWithFallback(ai, {
-    contents: "現在是 2026 年。請使用 Google Search 總結當前 11 大 GICS 產業熱點，不要 markdown，給出純文字。",
-    config: { tools: [{ googleSearch: {} }] }
+    contents: "現在是 2026 年。請總結當前 11 大 GICS 產業熱點，不要 markdown，給出純文字。",
   });
   return response.text || "2026 年市場聚焦於 AI 落地獲利與能源系統韌性。";
 };

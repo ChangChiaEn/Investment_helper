@@ -59,7 +59,6 @@ export const analyzeFundWithGemini = async (query: string): Promise<{ result: Fu
     const response = await generateWithFallback(ai, {
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }], // Enable Google Search Grounding
         responseMimeType: "application/json",
         responseSchema: analysisSchema,
       },

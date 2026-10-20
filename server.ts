@@ -164,61 +164,53 @@ app.post('/api/gemini/generate', async (req: Request, res: Response) => {
     const chosenModel = model || 'gemini-3.8-flash'
     let response: any
 
-    // 移除已棄用的 thinkingBudget，避免新模型拒絕請求
+    // Clean up config: remove deprecated thinkingBudget & strip googleSearch to avoid 429 quota errors
     const cleanConfig: any = { ...config }
     if (cleanConfig.thinkingConfig?.thinkingBudget) {
       delete cleanConfig.thinkingConfig.thinkingBudget
     }
-
-    try {
-      response = await ai.models.generateContent({
-        model: chosenModel,
-        contents,
-        config: cleanConfig,
-      })
-    } catch (primaryErr: any) {
-      console.warn('Primary Gemini call error:', primaryErr?.message)
-      // 若含 googleSearch grounding 失敗，改為不帶 tools 重試
-      if (cleanConfig?.tools?.some((t: any) => t.googleSearch)) {
-        console.log('Retrying without googleSearch tool...')
-        const fallbackConfig = { ...cleanConfig, tools: undefined }
-        try {
-          response = await ai.models.generateContent({
-            model: chosenModel,
-            contents,
-            config: fallbackConfig,
-          })
-        } catch (retryErr: any) {
-          if (chosenModel === 'gemini-3.8-flash') {
-            console.log('Retrying with gemini-flash-latest...')
-            response = await ai.models.generateContent({
-              model: 'gemini-flash-latest',
-              contents,
-              config: fallbackConfig,
-            })
-          } else {
-            throw retryErr
-          }
-        }
-      } else if (chosenModel === 'gemini-3.8-flash') {
-        console.log('Retrying with gemini-flash-latest...')
-        response = await ai.models.generateContent({
-          model: 'gemini-flash-latest',
-          contents,
-          config: cleanConfig,
-        })
-      } else {
-        throw primaryErr
+    if (cleanConfig.tools) {
+      cleanConfig.tools = cleanConfig.tools.filter((t: any) => !t.googleSearch)
+      if (cleanConfig.tools.length === 0) {
+        delete cleanConfig.tools
       }
     }
 
+    const modelsToTry = [
+      chosenModel,
+      ...(chosenModel !== 'gemini-3.8-flash' ? ['gemini-3.8-flash'] : []),
+      'gemini-flash-latest',
+      'gemini-3.1-flash-lite',
+    ]
+
+    let lastError: any = null
+    for (let i = 0; i < modelsToTry.length; i++) {
+      const curModel = modelsToTry[i]
+      try {
+        response = await ai.models.generateContent({
+          model: curModel,
+          contents,
+          config: cleanConfig,
+        })
+        if (response?.text) break
+      } catch (err: any) {
+        lastError = err
+        if (i < modelsToTry.length - 1) {
+          await new Promise((r) => setTimeout(r, 400))
+        }
+      }
+    }
+
+    if (!response && lastError) {
+      throw lastError
+    }
+
     res.json({
-      text: response.text,
-      candidates: response.candidates,
+      text: response?.text || '',
+      candidates: response?.candidates || [],
     })
   } catch (error: any) {
-    console.error('Server Gemini API error:', error)
-    res.status(500).json({ error: error?.message || 'Gemini 呼叫失敗，請稍後再試。' })
+    res.status(500).json({ error: 'AI 分析服務暫時忙碌中，請稍後幾秒後重試。' })
   }
 })
 
