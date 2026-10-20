@@ -1,6 +1,7 @@
 import YahooFinance from 'yahoo-finance2'
 import type { DiscoveryResult, ScanMode, StockQuote } from './types'
 
+/** Yahoo Finance v3 客戶端（必須以 new 建立；v2 已 EOL） */
 const yahoo = new YahooFinance({ suppressNotices: ['yahooSurvey'] })
 const quoteCache = new Map<string, { expires: number; quote: StockQuote }>()
 const pendingQuotes = new Map<string, Promise<StockQuote | null>>()

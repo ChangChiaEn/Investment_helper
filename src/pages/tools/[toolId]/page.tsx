@@ -1,46 +1,38 @@
 'use client'
 
 import { useParams, useSearchParams } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import { useEffect, type ComponentType } from 'react'
 import { TOOL_CONFIGS } from '@/config/tools'
 import { useToolData } from '@/contexts/ToolDataContext'
 import { ToolWrapper } from '@/components/ToolWrapper'
-import { Loader } from '@/components/Loader'
 
-/** 動態載入工具頁時的全高載入畫面 */
-function ToolChunkLoading() {
-  return (
-    <div className="flex h-full min-h-[50vh] w-full items-center justify-center">
-      <Loader size="lg" text="載入中..." />
-    </div>
-  )
-}
+import AIStockAnalystPage from '@/pages/tools/ai-stock-analyst/page'
+import AlphaStrategistPage from '@/pages/tools/alphastrategist/page'
+import AssetAnalysisPage from '@/pages/tools/asset-analysis/page'
+import DecisionTreePage from '@/pages/tools/decision-tree/page'
+import FundAssistantPage from '@/pages/tools/fund-assistant/page'
+import FundInsightPage from '@/pages/tools/fund-insight/page'
+import FundRiskAnalysisPage from '@/pages/tools/fund-risk-analysis/page'
+import GeminiStockProphetPage from '@/pages/tools/gemini-stock-prophet/page'
+import HistoryPage from '@/pages/tools/history/page'
+import InventoryPage from '@/pages/tools/inventory/page'
+import TrendDashboardPage from '@/pages/tools/trend-dashboard/page'
+import TaiwanStockTargetPage from '@/pages/tools/tw-stock-target/page'
 
-/**
- * 建立客戶端動態工具頁元件（模組層級建立，避免每次 render 重建）。
- * @param loader - 對應工具 page 的 dynamic import
- * @returns Next.js dynamic 元件
- */
-function createToolPage(loader: () => Promise<{ default: ComponentType }>) {
-  return dynamic(loader, {
-    ssr: false,
-    loading: () => <ToolChunkLoading />,
-  })
-}
-
-/** 各工具專用頁面的動態載入對照（僅供 [toolId] 後備路由使用） */
-const TOOL_PAGE_COMPONENTS: Record<string, ComponentType> = {
-  'ai-stock-analyst': createToolPage(() => import('@/pages/tools/ai-stock-analyst/page')),
-  'gemini-stock-prophet': createToolPage(() => import('@/pages/tools/gemini-stock-prophet/page')),
-  'tw-stock-target': createToolPage(() => import('@/pages/tools/tw-stock-target/page')),
-  'trend-dashboard': createToolPage(() => import('@/pages/tools/trend-dashboard/page')),
-  'fund-assistant': createToolPage(() => import('@/pages/tools/fund-assistant/page')),
-  'fund-risk-analysis': createToolPage(() => import('@/pages/tools/fund-risk-analysis/page')),
-  'asset-analysis': createToolPage(() => import('@/pages/tools/asset-analysis/page')),
-  'decision-tree': createToolPage(() => import('@/pages/tools/decision-tree/page')),
-  alphastrategist: createToolPage(() => import('@/pages/tools/alphastrategist/page')),
-  'fund-insight': createToolPage(() => import('@/pages/tools/fund-insight/page')),
+/** 各工具專用頁面的對照（供 [toolId] 後備路由使用） */
+const TOOL_PAGE_COMPONENTS: Record<string, ComponentType<any>> = {
+  'ai-stock-analyst': AIStockAnalystPage,
+  'gemini-stock-prophet': GeminiStockProphetPage,
+  'tw-stock-target': TaiwanStockTargetPage,
+  'trend-dashboard': TrendDashboardPage,
+  'fund-assistant': FundAssistantPage,
+  'fund-risk-analysis': FundRiskAnalysisPage,
+  'asset-analysis': AssetAnalysisPage,
+  'decision-tree': DecisionTreePage,
+  alphastrategist: AlphaStrategistPage,
+  'fund-insight': FundInsightPage,
+  history: HistoryPage,
+  inventory: InventoryPage,
 }
 
 /**

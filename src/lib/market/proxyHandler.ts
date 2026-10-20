@@ -38,7 +38,7 @@ export async function handleMarketProxy(
 ): Promise<{ status: number; body: MarketProxySuccessBody | MarketProxyErrorBody }> {
   const validated = validateMarketProxyRequest(source, path)
   if (!validated.ok) {
-    return { status: 400, body: { ok: false, error: validated.error } }
+    return { status: 400, body: { ok: false, error: (validated as any).error || '驗證失敗' } }
   }
 
   const upstream = buildUpstreamUrl(validated.host, validated.path, query)

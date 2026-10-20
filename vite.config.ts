@@ -7,11 +7,14 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'next/link': path.resolve(__dirname, './src/compat/link.tsx'),
-      'next/navigation': path.resolve(__dirname, './src/compat/navigation.ts'),
-      'next/image': path.resolve(__dirname, './src/compat/image.tsx'),
-      'next/dynamic': path.resolve(__dirname, './src/compat/dynamic.tsx'),
+      'next/link': path.resolve(__dirname, './src/compat/next-link.tsx'),
+      'next/navigation': path.resolve(__dirname, './src/compat/next-navigation.tsx'),
+      'next/image': path.resolve(__dirname, './src/compat/next-image.tsx'),
+      'next/dynamic': path.resolve(__dirname, './src/compat/next-dynamic.tsx'),
     },
+  },
+  define: {
+    'process.env': {},
   },
   server: {
     host: '0.0.0.0',

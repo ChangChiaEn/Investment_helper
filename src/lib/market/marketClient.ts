@@ -34,7 +34,7 @@ export async function fetchViaMarketProxy(req: MarketProxyRequest): Promise<Mark
 
   const body = (await res.json()) as MarketProxySuccessBody | MarketProxyErrorBody
   if (!body.ok) {
-    throw new Error(body.error || `代理失敗（HTTP ${res.status}）`)
+    throw new Error((body as MarketProxyErrorBody).error || `代理失敗（HTTP ${res.status}）`)
   }
   return body
 }

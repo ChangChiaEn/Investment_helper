@@ -8,9 +8,7 @@ import type {
   ConditionGroup,
   DecisionInventory,
   DecisionTreeDoc,
-  ExecutionStep,
   IndicatorValue,
-  MetricCondition,
   RunState,
   TreeNode,
 } from './types'
@@ -32,21 +30,57 @@ export interface EngineOptions {
 }
 
 /**
- * 判斷決策樹是否含人工確認節點（批次執行時需改為單檔）。
- * @param tree - 決策樹文件
- * @returns 是否含 manual 節點
+ * 判斷節點是否需主觀確認（含舊版 kind=manual）。
+ * @param node - 節點
+ * @returns 是否暫停等人
  */
-export function treeHasManualNode(tree: DecisionTreeDoc): boolean {
-  return Object.values(tree.nodes).some((n) => n.kind === 'manual')
+export function isHumanConfirmNode(node: TreeNode): boolean {
+  return node.humanConfirm === true || node.kind === 'manual'
 }
 
 /**
- * 執行或繼續決策樹；遇人工節點會回傳 awaiting_manual。
+ * 判斷決策樹是否含主觀確認節點（批次執行時需改為單檔）。
+ * @param tree - 決策樹文件
+ * @returns 是否含主觀確認
+ */
+export function treeHasManualNode(tree: DecisionTreeDoc): boolean {
+  return Object.values(tree.nodes).some((n) => isHumanConfirmNode(n))
+}
+
+/**
+ * 將舊版 manual 節點遷移為 decision + humanConfirm。
+ * @param tree - 原始文件
+ * @returns 遷移後文件（必要時複製）
+ */
+export function migrateTreeNodes(tree: DecisionTreeDoc): DecisionTreeDoc {
+  let changed = false
+  const nodes: Record<string, TreeNode> = {}
+  for (const [id, n] of Object.entries(tree.nodes)) {
+    if (n.kind === 'manual') {
+      changed = true
+      nodes[id] = {
+        ...n,
+        kind: 'decision',
+        humanConfirm: true,
+        prompt: n.prompt || '請確認是否繼續？',
+        condition: undefined,
+      }
+    } else {
+      nodes[id] = n
+    }
+  }
+  if (!changed) return tree
+  return { ...tree, nodes, updatedAt: Date.now() }
+}
+
+/**
+ * 執行或繼續決策樹；遇主觀確認會回傳 awaiting_manual。
  * @param options - 樹、標的、庫存與可選繼續狀態
  * @returns 執行狀態
  */
 export async function runDecisionTree(options: EngineOptions): Promise<RunState> {
-  const { tree, symbol, inventory, previous, manualAnswer, sharedCache } = options
+  const { tree: rawTree, symbol, inventory, previous, manualAnswer, sharedCache } = options
+  const tree = migrateTreeNodes(rawTree)
   const cache = sharedCache || new Map<string, unknown>()
   const ctx: ResolveContext = { symbol, inventory, cache }
 
@@ -64,17 +98,17 @@ export async function runDecisionTree(options: EngineOptions): Promise<RunState>
   state.error = undefined
   state.pendingPrompt = undefined
 
-  // 人工確認後：依答案選分支並寫入上一步
+  // 主觀確認後：依答案選分支並寫入上一步
   if (previous?.status === 'awaiting_manual' && previous.currentNodeId && manualAnswer) {
     const node = tree.nodes[previous.currentNodeId]
-    if (!node || node.kind !== 'manual') {
-      return fail(state, '人工節點狀態不一致')
+    if (!node || !isHumanConfirmNode(node)) {
+      return fail(state, '主觀確認節點狀態不一致')
     }
     const nextId = manualAnswer === 'yes' ? node.yesTarget : node.noTarget
     const last = state.path[state.path.length - 1]
     if (last) last.branchTaken = manualAnswer
     if (!nextId) {
-      return fail(state, '人工節點缺少後續分支')
+      return fail(state, '主觀確認節點缺少後續分支')
     }
     state.currentNodeId = nextId
   }
@@ -106,7 +140,8 @@ export async function runDecisionTree(options: EngineOptions): Promise<RunState>
       return state
     }
 
-    if (node.kind === 'manual') {
+    // 主觀確認：暫停等人（路徑 kind 用 manual 以相容 UI）
+    if (isHumanConfirmNode(node)) {
       state.path.push({
         nodeId: node.id,
         label: node.label,
@@ -118,8 +153,8 @@ export async function runDecisionTree(options: EngineOptions): Promise<RunState>
       return state
     }
 
-    // decision
-    if (!node.condition) {
+    // decision（條件判別）
+    if (!node.condition || !node.condition.conditions.length) {
       return fail(state, `決策節點缺少條件：${node.id}`)
     }
 
@@ -273,7 +308,7 @@ export function createBlankTree(name: string): DecisionTreeDoc {
 }
 
 /**
- * 範例樹：示範決策 + 人工 + 結果（可刪）。
+ * 範例樹：示範決策 + 主觀確認 + 結果（可刪）。
  * @returns 範例文件
  */
 export function createSampleTree(): DecisionTreeDoc {
@@ -309,9 +344,10 @@ export function createSampleTree(): DecisionTreeDoc {
     },
     m1: {
       id: 'm1',
-      kind: 'manual',
+      kind: 'decision',
+      humanConfirm: true,
       label: '基本面確認',
-      prompt: '基本面是否仍可接受？（請人工判斷）',
+      prompt: '基本面是否仍可接受？（請主觀判斷）',
       yesTarget: 'r_buy',
       noTarget: 'r_hold',
     },

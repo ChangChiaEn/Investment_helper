@@ -38,7 +38,7 @@ export function precheckBatch(tree: DecisionTreeDoc, symbols: string[]): BatchPr
     return {
       ok: false,
       reason: 'has_manual',
-      message: '此樹含人工確認節點，請單檔執行（一次只選一個標的）',
+      message: '此樹含主觀確認節點，請單檔執行（一次只選一個標的）',
     }
   }
   return { ok: true }

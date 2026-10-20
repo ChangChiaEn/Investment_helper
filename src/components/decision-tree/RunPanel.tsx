@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * 決策樹執行頁：多選標的批次執行、結果摘要與可收合過程、本機記憶。
+ * 決策樹執行頁：多選標的批次執行、結果摘要與可收合過程、append-only 執行歷史。
  */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -12,10 +12,18 @@ import { collectAllSymbols } from '@/lib/inventory'
 import {
   clearRunSession,
   loadRunSession,
+  mergeBatches,
+  newRunBatchId,
+  prependBatch,
   saveRunSession,
+  updateBatchResult,
 } from '@/lib/tools/decision-tree/runResultStore'
 import { getActiveTree, loadTrees, setActiveTreeId } from '@/lib/tools/decision-tree/treeStore'
-import type { DecisionInventory, RunState } from '@/lib/tools/decision-tree/types'
+import {
+  getIndicatorLabel,
+  getNodeKindLabel,
+} from '@/lib/tools/decision-tree/labels'
+import type { DecisionInventory, RunBatch, RunState } from '@/lib/tools/decision-tree/types'
 import { SourceBadge } from './SourceBadge'
 import { Disclaimer } from '@/components/Disclaimer'
 
@@ -28,37 +36,61 @@ interface Props {
  * @returns 執行 UI
  */
 export function RunPanel({ inventory }: Props) {
-  const [trees, setTrees] = useState(loadTrees())
-  const [selectedSymbols, setSelectedSymbols] = useState<string[]>([])
+  const [trees, setTrees] = useState(loadTrees)
+  /** 以本機快照初始化，避免首屏空陣列在還原前就被拿去執行／寫回 */
+  const [selectedSymbols, setSelectedSymbols] = useState<string[]>(() =>
+    typeof window !== 'undefined' ? loadRunSession().selectedSymbols : []
+  )
   const [running, setRunning] = useState(false)
-  const [results, setResults] = useState<RunState[]>([])
-  /** 展開過程的標的代號集合 */
+  const [batches, setBatches] = useState<RunBatch[]>(() =>
+    typeof window !== 'undefined' ? loadRunSession().batches : []
+  )
+  const [activeBatchId, setActiveBatchId] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? loadRunSession().activeBatchId : null
+  )
+  /**
+   * 必須先標記還原完成後才允許寫回，
+   * 避免 Strict Mode／SSR hydrate 用空狀態覆寫。
+   */
+  const [sessionReady, setSessionReady] = useState(false)
+  /** 展開過程的標的代號集合（以 batchId+symbol 區分） */
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [batchHint, setBatchHint] = useState('')
 
-  // --- 還原上次執行結果（切換分頁／重整） ---
+  // --- 還原執行歷史（切換分頁／重整／離開工具再回來） ---
   useEffect(() => {
     setTrees(loadTrees())
     const session = loadRunSession()
-    if (session.selectedSymbols.length) setSelectedSymbols(session.selectedSymbols)
-    if (session.results.length) setResults(session.results)
+    setSelectedSymbols(session.selectedSymbols)
+    // 與本機合併，避免記憶體狀態短於 localStorage
+    setBatches((prev) => mergeBatches(session.batches, prev))
+    setActiveBatchId(session.activeBatchId || session.batches[0]?.id || null)
+    setSessionReady(true)
   }, [])
 
-  // --- 自動持久化 ---
+  // --- 自動持久化（僅在還原完成後；寫入時與本機合併，不刪舊批） ---
   useEffect(() => {
+    if (!sessionReady) return
     saveRunSession({
       treeId: trees.activeId,
       selectedSymbols,
-      results,
+      batches,
+      activeBatchId,
       running,
       updatedAt: Date.now(),
     })
-  }, [trees.activeId, selectedSymbols, results, running])
+  }, [sessionReady, trees.activeId, selectedSymbols, batches, activeBatchId, running])
 
   const symbols = useMemo(() => collectAllSymbols(inventory), [inventory])
 
   const activeTree = getActiveTree()
   const hasManual = activeTree ? treeHasManualNode(activeTree) : false
+
+  const activeBatch = useMemo(
+    () => batches.find((b) => b.id === activeBatchId) || batches[0] || null,
+    [batches, activeBatchId]
+  )
+  const results = activeBatch?.results ?? []
 
   /**
    * 切換標的選取。
@@ -75,7 +107,18 @@ export function RunPanel({ inventory }: Props) {
   const clearSelection = () => setSelectedSymbols([])
 
   /**
-   * 開始執行（單檔或批次）。
+   * 將進行中／完成結果寫入指定批次（不刪舊批）。
+   * @param batchId - 批次 id
+   * @param nextResults - 結果列
+   */
+  const patchActiveBatchResults = (batchId: string, nextResults: RunState[]) => {
+    setBatches((prev) =>
+      prev.map((b) => (b.id === batchId ? { ...b, results: nextResults } : b))
+    )
+  }
+
+  /**
+   * 開始執行（單檔或批次）；每次新增一批，不清舊歷史。
    */
   const handleRun = async () => {
     const tree = getActiveTree()
@@ -84,14 +127,29 @@ export function RunPanel({ inventory }: Props) {
       return
     }
     const check = precheckBatch(tree, selectedSymbols)
-    if (!check.ok) {
+    if (check.ok === false) {
       setBatchHint(check.message)
       alert(check.message)
       return
     }
     setBatchHint('')
+    const batchId = newRunBatchId()
+    const draft: RunBatch = {
+      id: batchId,
+      treeId: tree.id,
+      treeName: tree.name,
+      symbols: [...selectedSymbols],
+      results: [],
+      createdAt: Date.now(),
+    }
+    // 執行前先與 localStorage 合併，避免 React 狀態空了就把舊歷史蓋掉
+    setBatches((prev) => {
+      const fromStore = loadRunSession().batches
+      const base = mergeBatches(fromStore, prev)
+      return prependBatch(base, draft)
+    })
+    setActiveBatchId(batchId)
     setRunning(true)
-    setResults([])
     try {
       if (selectedSymbols.length === 1) {
         const next = await runDecisionTree({
@@ -99,18 +157,18 @@ export function RunPanel({ inventory }: Props) {
           symbol: selectedSymbols[0],
           inventory,
         })
-        setResults([next])
+        patchActiveBatchResults(batchId, [next])
       } else {
-        const batch = await runDecisionTreeBatch({
+        const batchResults = await runDecisionTreeBatch({
           tree,
           symbols: selectedSymbols,
           inventory,
-          onProgress: (partial) => setResults([...partial]),
+          onProgress: (partial) => patchActiveBatchResults(batchId, [...partial]),
         })
-        setResults(batch)
+        patchActiveBatchResults(batchId, batchResults)
       }
     } catch (err) {
-      setResults([
+      patchActiveBatchResults(batchId, [
         {
           status: 'error',
           treeId: tree.id,
@@ -126,13 +184,14 @@ export function RunPanel({ inventory }: Props) {
   }
 
   /**
-   * 人工節點回答後繼續（僅單檔）。
+   * 主觀確認後繼續（僅更新目前批次內該標的）。
    * @param answer - 是／否
    */
   const handleManual = async (answer: 'yes' | 'no') => {
     const tree = getActiveTree()
+    const batchId = activeBatch?.id
     const pending = results.find((r) => r.status === 'awaiting_manual')
-    if (!tree || !pending) return
+    if (!tree || !pending || !batchId) return
     setRunning(true)
     try {
       const next = await runDecisionTree({
@@ -142,18 +201,14 @@ export function RunPanel({ inventory }: Props) {
         previous: pending,
         manualAnswer: answer,
       })
-      setResults((prev) => prev.map((r) => (r.symbol === pending.symbol ? next : r)))
+      setBatches((prev) => updateBatchResult(prev, batchId, pending.symbol, next))
     } catch (err) {
-      setResults((prev) =>
-        prev.map((r) =>
-          r.symbol === pending.symbol
-            ? {
-                ...r,
-                status: 'error',
-                error: err instanceof Error ? err.message : String(err),
-              }
-            : r
-        )
+      setBatches((prev) =>
+        updateBatchResult(prev, batchId, pending.symbol, {
+          ...pending,
+          status: 'error',
+          error: err instanceof Error ? err.message : String(err),
+        })
       )
     } finally {
       setRunning(false)
@@ -165,10 +220,11 @@ export function RunPanel({ inventory }: Props) {
    * @param symbol - 代號
    */
   const toggleExpand = (symbol: string) => {
+    const key = `${activeBatchId || ''}_${symbol}`
     setExpanded((prev) => {
       const next = new Set(prev)
-      if (next.has(symbol)) next.delete(symbol)
-      else next.add(symbol)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
       return next
     })
   }
@@ -177,7 +233,12 @@ export function RunPanel({ inventory }: Props) {
     const completed = results.filter((r) => r.status === 'completed')
     const errors = results.filter((r) => r.status === 'error')
     const waiting = results.filter((r) => r.status === 'awaiting_manual')
-    return { completed: completed.length, errors: errors.length, waiting: waiting.length, total: results.length }
+    return {
+      completed: completed.length,
+      errors: errors.length,
+      waiting: waiting.length,
+      total: results.length,
+    }
   }, [results])
 
   const pendingManual = results.find((r) => r.status === 'awaiting_manual')
@@ -223,23 +284,26 @@ export function RunPanel({ inventory }: Props) {
               '執行決策樹'
             )}
           </button>
-          {results.length > 0 && (
+          {batches.length > 0 && (
             <button
               type="button"
               className="px-3 py-2 text-sm text-muted-fg border rounded-lg hover:bg-muted"
               onClick={() => {
-                setResults([])
+                if (!confirm('確定清除全部執行歷史？此操作無法復原。')) return
+                // 先清本機再清 UI，避免自動持久化又把舊批合併回來
                 clearRunSession()
+                setBatches([])
+                setActiveBatchId(null)
               }}
             >
-              清除結果記憶
+              清除全部歷史
             </button>
           )}
         </div>
 
         {hasManual && (
           <p className="text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-            此樹含人工確認節點：僅可單檔執行。若選多檔會提示改為單檔。
+            此樹含主觀確認節點：僅可單檔執行。若選多檔會提示改為單檔。
           </p>
         )}
         {batchHint && <p className="text-xs text-red-700">{batchHint}</p>}
@@ -292,7 +356,7 @@ export function RunPanel({ inventory }: Props) {
       {pendingManual && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
           <h3 className="font-semibold text-amber-900">
-            需要人工確認 · {pendingManual.symbol}
+            需要主觀確認 · {pendingManual.symbol}
           </h3>
           <p className="text-sm text-amber-800">{pendingManual.pendingPrompt}</p>
           <div className="flex gap-2">
@@ -316,30 +380,69 @@ export function RunPanel({ inventory }: Props) {
         </div>
       )}
 
-      {/* 統一結果摘要 */}
-      {results.length > 0 && (
+      {/* 歷史批次切換＋當前結果 */}
+      {batches.length > 0 && (
         <div className="bg-card border rounded-xl overflow-hidden">
-          <div className="px-4 py-3 border-b bg-muted flex flex-wrap gap-3 text-sm text-card-fg">
-            <span className="font-semibold text-fg">執行結果</span>
-            <span>共 {summary.total} 檔</span>
-            <span className="text-emerald-700">完成 {summary.completed}</span>
-            {summary.waiting > 0 && <span className="text-amber-700">待確認 {summary.waiting}</span>}
-            {summary.errors > 0 && <span className="text-red-700">錯誤 {summary.errors}</span>}
+          <div className="px-4 py-3 border-b bg-muted flex flex-wrap gap-3 items-center text-sm text-card-fg">
+            <span className="font-semibold text-fg">執行歷史</span>
+            <span className="text-xs text-muted-fg">已保留 {batches.length} 次（重跑不會刪舊的）</span>
+            <select
+              className="border rounded-lg px-2 py-1 text-xs min-w-[240px]"
+              value={activeBatch?.id || ''}
+              onChange={(e) => setActiveBatchId(e.target.value || null)}
+              aria-label="選擇歷史執行批次"
+            >
+              {batches.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {formatBatchLabel(b)}
+                </option>
+              ))}
+            </select>
+            {activeBatch && (
+              <>
+                <span>本批 {summary.total} 檔</span>
+                <span className="text-emerald-700">完成 {summary.completed}</span>
+                {summary.waiting > 0 && (
+                  <span className="text-amber-700">待確認 {summary.waiting}</span>
+                )}
+                {summary.errors > 0 && (
+                  <span className="text-red-700">錯誤 {summary.errors}</span>
+                )}
+              </>
+            )}
           </div>
-          <ul className="divide-y">
-            {results.map((state) => (
-              <ResultRow
-                key={`${state.symbol}_${state.treeId}`}
-                state={state}
-                expanded={expanded.has(state.symbol)}
-                onToggle={() => toggleExpand(state.symbol)}
-              />
-            ))}
-          </ul>
+          {results.length === 0 ? (
+            <p className="p-4 text-sm text-muted-fg">此批次尚無結果（可能仍在執行中）。</p>
+          ) : (
+            <ul className="divide-y">
+              {results.map((state) => {
+                const expandKey = `${activeBatchId || ''}_${state.symbol}`
+                return (
+                  <ResultRow
+                    key={`${activeBatchId}_${state.symbol}_${state.treeId}`}
+                    state={state}
+                    expanded={expanded.has(expandKey)}
+                    onToggle={() => toggleExpand(state.symbol)}
+                  />
+                )
+              })}
+            </ul>
+          )}
         </div>
       )}
     </div>
   )
+}
+
+/**
+ * 批次下拉顯示文字。
+ * @param b - 批次
+ * @returns 標籤
+ */
+function formatBatchLabel(b: RunBatch): string {
+  const t = new Date(b.createdAt)
+  const time = `${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`
+  return `${time} · ${b.treeName} · ${b.symbols.length} 檔`
 }
 
 /**
@@ -358,7 +461,7 @@ function ResultRow({
     state.status === 'completed'
       ? '完成'
       : state.status === 'awaiting_manual'
-        ? '待人工'
+        ? '待確認'
         : state.status === 'error'
           ? '錯誤'
           : '執行中'
@@ -373,11 +476,7 @@ function ResultRow({
 
   return (
     <li className="p-4">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-start gap-2 text-left"
-      >
+      <button type="button" onClick={onToggle} className="w-full flex items-start gap-2 text-left">
         {expanded ? (
           <ChevronDown className="w-4 h-4 mt-1 text-muted-fg shrink-0" />
         ) : (
@@ -389,22 +488,15 @@ function ResultRow({
             <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass}`}>{statusLabel}</span>
           </div>
           {state.status === 'completed' && (
-            <p className="text-sm text-card-fg">{state.resultAdvice}</p>
+            <p className="text-base md:text-lg font-medium text-fg leading-snug">
+              {state.resultAdvice}
+            </p>
           )}
           {state.status === 'error' && (
             <p className="text-sm text-red-700">執行中止：{state.error}</p>
           )}
           {state.status === 'awaiting_manual' && (
             <p className="text-sm text-amber-800">{state.pendingPrompt}</p>
-          )}
-          {state.resultParams && Object.keys(state.resultParams).length > 0 && (
-            <ul className="text-xs text-muted-fg list-disc ml-4">
-              {Object.entries(state.resultParams).map(([k, v]) => (
-                <li key={k}>
-                  {k}：{String(v)}
-                </li>
-              ))}
-            </ul>
           )}
           <p className="text-xs text-muted-fg">
             {expanded ? '收合過程' : `展開過程（${state.path.length} 步）`}
@@ -417,7 +509,7 @@ function ResultRow({
           {state.path.map((step, i) => (
             <li key={`${step.nodeId}_${i}`}>
               <div className="text-sm font-medium text-fg">
-                {i + 1}. [{step.kind}] {step.label}
+                {i + 1}. [{getNodeKindLabel(step.kind)}] {step.label}
                 {step.branchTaken && (
                   <span className="ml-2 text-xs text-muted-fg">
                     → {step.branchTaken === 'yes' ? '通過／是' : '未通過／否'}
@@ -426,16 +518,25 @@ function ResultRow({
               </div>
               {step.note && <p className="text-xs text-muted-fg mt-0.5">{step.note}</p>}
               {step.indicatorResults && (
-                <ul className="mt-1 space-y-1">
+                <ul className="mt-1 space-y-1.5">
                   {step.indicatorResults.map((r) => (
-                    <li
-                      key={r.indicatorId}
-                      className="text-xs flex flex-wrap items-center gap-2 text-card-fg"
-                    >
-                      <SourceBadge source={r.resolvedSource} />
-                      <span className="font-mono">{r.indicatorId}</span>
-                      <span>{r.display}</span>
-                      {r.error && <span className="text-danger">{r.error}</span>}
+                    <li key={r.indicatorId} className="text-xs text-card-fg">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <SourceBadge source={r.resolvedSource} />
+                        <span>{getIndicatorLabel(r.indicatorId)}</span>
+                        <span className="font-medium">{r.display}</span>
+                        {r.error && <span className="text-danger">{r.error}</span>}
+                      </div>
+                      {/* 複合／公式：列出取用的各個組成數值 */}
+                      {r.components && r.components.length > 0 && (
+                        <ul className="mt-1 ml-3 space-y-0.5 text-muted-fg border-l border-border pl-2">
+                          {r.components.map((c, ci) => (
+                            <li key={`${r.indicatorId}_c_${ci}`}>
+                              {c.label}：{c.display}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </li>
                   ))}
                 </ul>

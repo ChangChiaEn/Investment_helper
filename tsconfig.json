@@ -18,11 +18,12 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "next/link": ["src/compat/link.tsx"],
-      "next/navigation": ["src/compat/navigation.ts"],
-      "next/image": ["src/compat/image.tsx"],
-      "next/dynamic": ["src/compat/dynamic.tsx"]
+      "next/link": ["src/compat/next-link.tsx"],
+      "next/navigation": ["src/compat/next-navigation.tsx"],
+      "next/image": ["src/compat/next-image.tsx"],
+      "next/dynamic": ["src/compat/next-dynamic.tsx"]
     }
   },
-  "include": ["src", "server.ts", "vite.config.ts"]
+  "include": ["src", "server.ts", "vite.config.ts"],
+  "exclude": ["node_modules", "dist", "frontend", "backend"]
 }

@@ -1,10 +1,21 @@
 /**
- * 決策樹指標目錄（第一版白名單）。
+ * 決策樹指標目錄（內建白名單 + 本機公式合併）。
  */
 
-import type { IndicatorDef } from './types'
+import { formulaToIndicatorDef, loadFormulas } from './formulaStore'
+import type { IndicatorDef, IndicatorSource } from './types'
 
-/** 全部可選指標 */
+/**
+ * 正規化舊版來源標籤（manual → inventory）。
+ * @param source - 原始來源
+ * @returns 正規化後來源
+ */
+export function normalizeIndicatorSource(source: string): IndicatorSource {
+  if (source === 'manual') return 'inventory'
+  return source as IndicatorSource
+}
+
+/** 全部可選指標（內建） */
 export const INDICATOR_CATALOG: IndicatorDef[] = [
   {
     id: 'close_price',
@@ -276,62 +287,62 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
     id: 'is_low_zone',
     name: '股價低檔（複合）',
     description: '回檔 10–25% 或在 60 日均線附近且乖離約 -5%～+5%（預設 AND 規則可於條件組合調整）',
-    source: 'openapi',
+    source: 'composite',
     valueType: 'boolean',
   },
   {
     id: 'entry_price',
     name: '進場價',
-    description: '持股手動填入之進場價',
-    source: 'manual',
+    description: '持股自填之進場價（未填時以 0 計算）',
+    source: 'inventory',
     valueType: 'number',
     unit: '元',
   },
   {
     id: 'shares',
     name: '持股股數',
-    description: '持股手動填入之股數',
-    source: 'manual',
+    description: '持股自填之股數（未填時以 0 計算）',
+    source: 'inventory',
     valueType: 'number',
     unit: '股',
   },
   {
     id: 'swing_high',
     name: '波段最高價',
-    description: '使用者手動維護的波段最高價',
-    source: 'manual',
+    description: '使用者自填維護的波段最高價（未填時以 0 計算）',
+    source: 'inventory',
     valueType: 'number',
     unit: '元',
   },
   {
     id: 'unrealized_pnl_pct',
     name: '未實現報酬率',
-    description: '(現價 − 進場價) / 進場價；現價優先官方，失敗則僅用手動無法計算',
-    source: 'manual',
+    description: '(現價 − 進場價) / 進場價；現價取官方收盤價，進場價來自庫存',
+    source: 'composite',
     valueType: 'number',
     unit: '%',
   },
   {
     id: 'drawdown_from_swing',
     name: '自波段高點回檔%',
-    description: '(波段最高 − 現價) / 波段最高',
-    source: 'manual',
+    description: '(波段最高 − 現價) / 波段最高；現價取官方收盤價',
+    source: 'composite',
     valueType: 'number',
     unit: '%',
   },
   {
     id: 'total_capital',
     name: '總資金',
-    description: '庫存欄全域手動參數',
-    source: 'manual',
+    description: '庫存欄全域自填參數（未填時以 0 計算）',
+    source: 'inventory',
     valueType: 'number',
     unit: '元',
   },
   {
     id: 'cash_remaining',
     name: '剩餘現金',
-    description: '庫存欄全域手動參數',
-    source: 'manual',
+    description: '庫存欄全域自填參數（未填時以 0 計算）',
+    source: 'inventory',
     valueType: 'number',
     unit: '元',
   },
@@ -339,21 +350,21 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
     id: 'holding_count',
     name: '目前持股檔數',
     description: '庫存持股筆數',
-    source: 'manual',
+    source: 'inventory',
     valueType: 'number',
   },
   {
     id: 'max_holdings',
     name: '持股檔數上限',
-    description: '使用者設定之上限',
-    source: 'manual',
+    description: '使用者設定之上限（未填時以 0 計算）',
+    source: 'inventory',
     valueType: 'number',
   },
   {
     id: 'position_pct_of_capital',
     name: '單檔佔總資金%',
-    description: '進場價 × 股數 / 總資金 × 100',
-    source: 'manual',
+    description: '進場價 × 股數 / 總資金 × 100（缺值以 0 計算）',
+    source: 'inventory',
     valueType: 'number',
     unit: '%',
   },
@@ -367,7 +378,7 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
   {
     id: 'fundamentals_weak',
     name: '基本面轉弱',
-    description: '質化判斷，建議搭配人工節點；AI 可輔助',
+    description: '質化判斷，建議搭配主觀確認節點；AI 可輔助',
     source: 'ai',
     valueType: 'boolean',
   },
@@ -380,12 +391,34 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
   },
 ]
 
-/** 依 id 查指標定義 */
-export function getIndicatorDef(id: string): IndicatorDef | undefined {
-  return INDICATOR_CATALOG.find((i) => i.id === id)
+/**
+ * 內建＋本機公式的完整目錄（執行／選單用）。
+ * @returns 合併後指標列表
+ */
+export function getAllIndicators(): IndicatorDef[] {
+  const formulas = loadFormulas().map(formulaToIndicatorDef)
+  return [...INDICATOR_CATALOG, ...formulas]
 }
 
-/** 依來源篩選 */
+/**
+ * 依 id 查指標定義（含公式）。
+ * @param id - 指標 id
+ * @returns 定義或 undefined
+ */
+export function getIndicatorDef(id: string): IndicatorDef | undefined {
+  const builtIn = INDICATOR_CATALOG.find((i) => i.id === id)
+  if (builtIn) return builtIn
+  return loadFormulas()
+    .map(formulaToIndicatorDef)
+    .find((i) => i.id === id)
+}
+
+/**
+ * 依來源篩選（僅內建目錄；不含公式動態項）。
+ * @param source - 來源
+ * @returns 指標列表
+ */
 export function getIndicatorsBySource(source: IndicatorDef['source']): IndicatorDef[] {
-  return INDICATOR_CATALOG.filter((i) => i.source === source)
+  const normalized = normalizeIndicatorSource(source)
+  return INDICATOR_CATALOG.filter((i) => normalizeIndicatorSource(i.source) === normalized)
 }

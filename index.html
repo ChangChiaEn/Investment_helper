@@ -1,21 +1,46 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-TW">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/Sagafisc.png" />
     <title>Sagafisc 智慧投研平台</title>
     <meta name="description" content="整合多個 AI 分析工具的智慧投資研究平台" />
     <meta property="og:title" content="Sagafisc 智慧投研平台" />
     <meta property="og:description" content="整合多個 AI 分析工具的智慧投資研究平台" />
-    <link rel="icon" type="image/png" href="/Sagafisc.png" />
+    <!-- Fonts: Noto Sans TC and JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function(){
+        try {
+          var id = localStorage.getItem("sagafisc_theme") || "hacker";
+          var el = document.documentElement;
+          el.setAttribute("data-theme", id);
+          var d = localStorage.getItem("sagafisc_disguise");
+          if (d === "1" || d === "true") d = "chat";
+          if (d === "chat" || d === "claude" || d === "gemini") {
+            el.setAttribute("data-disguise", d);
+          } else {
+            el.removeAttribute("data-disguise");
+          }
+        } catch(e) {}
+      })();
+    </script>
+    <!-- React Refresh Preamble Safety -->
+    <script type="module">
+      try {
+        window.$RefreshReg$ = window.$RefreshReg$ || function () {};
+        window.$RefreshSig$ = window.$RefreshSig$ || function () { return function (type) { return type; }; };
+        window.__vite_plugin_react_preamble_installed__ = true;
+      } catch (e) {}
+    </script>
   </head>
-  <body class="antialiased">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

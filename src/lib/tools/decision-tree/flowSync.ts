@@ -132,19 +132,21 @@ export function treeToFlow(
       data: {
         kind: n.kind,
         label: n.label,
+        humanConfirm: n.humanConfirm,
         prompt: n.prompt,
         advice: n.advice,
         adviceParams: n.adviceParams,
         condition: n.condition,
       },
     })
+    const human = n.humanConfirm === true || n.kind === 'manual'
     if (n.yesTarget) {
       edges.push({
         id: `${n.id}->yes->${n.yesTarget}`,
         source: n.id,
         target: n.yesTarget,
         sourceHandle: 'yes',
-        label: n.kind === 'manual' ? '是' : '通過',
+        label: human ? '是' : '通過',
         style: { stroke: '#16a34a' },
         // 預設 bezier；interactionWidth 方便點選以取消連結
         interactionWidth: 24,
@@ -156,7 +158,7 @@ export function treeToFlow(
         source: n.id,
         target: n.noTarget,
         sourceHandle: 'no',
-        label: n.kind === 'manual' ? '否' : '未通過',
+        label: human ? '否' : '未通過',
         style: { stroke: '#dc2626' },
         interactionWidth: 24,
       })
@@ -193,16 +195,22 @@ export function flowToTree(
     const noTarget =
       noEdge?.target ?? (outs.length > 1 ? outs.find((e) => e.target !== yesTarget)?.target ?? null : null)
 
+    // 舊版 manual 寫回時正規化為 decision + humanConfirm
+    const humanConfirm =
+      kind === 'manual' ? true : Boolean(n.data.humanConfirm)
+    const normalizedKind: NodeKind = kind === 'manual' ? 'decision' : kind
+
     logicNodes[n.id] = {
       id: n.id,
-      kind,
+      kind: normalizedKind,
       label: n.data.label || n.id,
+      humanConfirm: humanConfirm || undefined,
       prompt: n.data.prompt,
       advice: n.data.advice,
       adviceParams: n.data.adviceParams,
-      condition: n.data.condition,
-      yesTarget: kind === 'result' ? null : yesTarget,
-      noTarget: kind === 'result' ? null : noTarget,
+      condition: humanConfirm ? undefined : n.data.condition,
+      yesTarget: normalizedKind === 'result' ? null : yesTarget,
+      noTarget: normalizedKind === 'result' ? null : noTarget,
     }
   }
 
