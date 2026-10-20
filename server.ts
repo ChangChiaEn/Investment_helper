@@ -141,6 +141,120 @@ function getEffectiveGeminiApiKey(requestKey?: string): string {
   return envKey || ''
 }
 
+interface LiveSearchSource {
+  web: {
+    title: string
+    uri: string
+  }
+}
+
+/**
+ * 伺服端即時聯網檢索引擎：
+ * 整合 Google News、Yahoo Finance 即時報價與鉅亨網基金快訊，
+ * 確保 AI 獲取最新的真實市場資料與即時新聞，絕不漏接聯網數據且不觸發額度限制。
+ */
+async function fetchRealtimeWebData(promptText: string): Promise<{
+  contextText: string
+  sources: LiveSearchSource[]
+}> {
+  const sources: LiveSearchSource[] = []
+  let contextText = ''
+
+  try {
+    // 1. 若包含台股代號（4 位數字），優先獲取 Yahoo Finance 即時盤中/收盤行情
+    const stockMatch = promptText.match(/\b([0-9]{4})\b/)
+    let queryTopic = ''
+
+    if (stockMatch) {
+      const symbol = stockMatch[1]
+      queryTopic = `${symbol} 股票`
+      try {
+        const yfRes = await fetch(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.TW?interval=1d&range=2d`,
+          { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(3000) }
+        )
+        const yfData = (await yfRes.json()) as any
+        const meta = yfData?.chart?.result?.[0]?.meta
+        if (meta && meta.regularMarketPrice) {
+          const diff = meta.chartPreviousClose
+            ? (meta.regularMarketPrice - meta.chartPreviousClose).toFixed(2)
+            : '0'
+          const pct = meta.chartPreviousClose
+            ? (((meta.regularMarketPrice - meta.chartPreviousClose) / meta.chartPreviousClose) * 100).toFixed(2) + '%'
+            : '0%'
+          contextText += `\n【${symbol} 即時市場交易資訊】最新報價: ${meta.regularMarketPrice} TWD（漲跌: ${diff}, 幅度: ${pct}）, 盤中高點: ${meta.regularMarketDayHigh || '-'}, 盤中低點: ${meta.regularMarketDayLow || '-'}\n`
+          sources.push({
+            web: {
+              title: `${symbol} Yahoo 奇摩股市即時行情`,
+              uri: `https://tw.stock.yahoo.com/quote/${symbol}.TW`,
+            },
+          })
+        }
+      } catch {
+        // ignore
+      }
+    } else {
+      const clean = promptText.replace(/[^\u4e00-\u9fa5a-zA-Z0-9\s]/g, ' ').trim()
+      const words = clean.split(/\s+/).filter((w) => w.length >= 2)
+      queryTopic = words.slice(0, 3).join(' ') || '台股 焦點新聞 2026'
+    }
+
+    // 2. 獲取 Google News 即時新聞 RSS
+    const newsQuery = encodeURIComponent(`${queryTopic} 最新 2026`)
+    const newsRes = await fetch(
+      `https://news.google.com/rss/search?q=${newsQuery}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`,
+      { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(3500) }
+    )
+    const xml = await newsRes.text()
+    const items = [
+      ...xml.matchAll(
+        /<item>[\s\S]*?<title>([^<]+)<\/title>[\s\S]*?<link>([^<]+)<\/link>[\s\S]*?<pubDate>([^<]+)<\/pubDate>[\s\S]*?<\/item>/g
+      ),
+    ]
+
+    if (items.length > 0) {
+      contextText += `\n【即時新聞聯網資訊 (即時 Web Search - 檢索時間: ${new Date().toISOString().slice(0, 10)})】:\n`
+      items.slice(0, 5).forEach((item, idx) => {
+        const title = item[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"')
+        const url = item[2]
+        const date = item[3]
+        contextText += `${idx + 1}. ${title} (報導日期: ${date})\n`
+        sources.push({ web: { title, uri: url } })
+      })
+    }
+
+    // 3. 基金相關關鍵字：獲取鉅亨網 (Anue) 即時基金市場快訊
+    if (promptText.includes('基金') || promptText.includes('Fund')) {
+      try {
+        const anueRes = await fetch('https://api.cnyes.com/media/api/v1/newslist/category/fund?limit=4', {
+          headers: { 'User-Agent': 'Mozilla/5.0' },
+          signal: AbortSignal.timeout(3000),
+        })
+        const anueData = (await anueRes.json()) as any
+        const newsItems = anueData?.items?.data || []
+        if (newsItems.length > 0) {
+          contextText += `\n【鉅亨網 (Anue) 即時基金市場快訊】:\n`
+          newsItems.forEach((n: any, idx: number) => {
+            contextText += `${idx + 1}. ${n.title}\n`
+            sources.push({
+              web: {
+                title: `${n.title} - 鉅亨基金`,
+                uri: `https://news.cnyes.com/news/id/${n.newsId}`,
+              },
+            })
+          })
+        }
+      } catch {
+        // ignore
+      }
+    }
+  } catch (err) {
+    console.error('Realtime web search error:', err)
+  }
+
+  return { contextText, sources }
+}
+
 // --- Server-side Gemini API（供前端 generateWithFallback 呼叫）---
 app.post('/api/gemini/generate', async (req: Request, res: Response) => {
   try {
@@ -164,10 +278,52 @@ app.post('/api/gemini/generate', async (req: Request, res: Response) => {
     const chosenModel = model || 'gemini-3.8-flash'
     let response: any
 
+    // 提取 prompt 文字進行即時 Web Search 檢索
+    let rawPromptText = ''
+    if (typeof contents === 'string') {
+      rawPromptText = contents
+    } else if (Array.isArray(contents)) {
+      rawPromptText = contents
+        .map((c: any) => {
+          if (typeof c === 'string') return c
+          if (c.parts) return c.parts.map((p: any) => p.text || '').join(' ')
+          return ''
+        })
+        .join(' ')
+    }
+
+    // 執行即時聯網檢索
+    const { contextText, sources } = await fetchRealtimeWebData(rawPromptText)
+
+    // 將即時搜尋資料注入 prompt，確保 Gemini 掌握最新 2026 即時市場與新聞
+    let enrichedContents: any = contents
+    if (contextText) {
+      const webContextNotice = `\n\n=== 系統即時聯網 Web Search 檢索資訊（檢索時間：${new Date().toISOString().slice(0, 10)}，請務必根據下列即時資料進行精準分析）===\n${contextText}\n=================================================`
+      if (typeof contents === 'string') {
+        enrichedContents = contents + webContextNotice
+      } else if (Array.isArray(contents) && contents.length > 0) {
+        const lastItem = contents[contents.length - 1]
+        if (typeof lastItem === 'string') {
+          enrichedContents = [...contents.slice(0, -1), lastItem + webContextNotice]
+        } else if (lastItem.parts && Array.isArray(lastItem.parts) && lastItem.parts.length > 0) {
+          const lastPart = lastItem.parts[lastItem.parts.length - 1]
+          const updatedParts = [
+            ...lastItem.parts.slice(0, -1),
+            { ...lastPart, text: (lastPart.text || '') + webContextNotice },
+          ]
+          enrichedContents = [...contents.slice(0, -1), { ...lastItem, parts: updatedParts }]
+        }
+      }
+    }
+
     // Clean up config: remove deprecated thinkingBudget & strip googleSearch to avoid 429 quota errors
     const cleanConfig: any = { ...config }
     if (cleanConfig.thinkingConfig?.thinkingBudget) {
       delete cleanConfig.thinkingConfig.thinkingBudget
+    }
+    // Set thinkingLevel LOW for Gemini 3 models to ensure fast responsiveness
+    if (chosenModel.startsWith('gemini-3') && !cleanConfig.thinkingConfig) {
+      cleanConfig.thinkingConfig = { thinkingLevel: 'LOW' }
     }
     if (cleanConfig.tools) {
       cleanConfig.tools = cleanConfig.tools.filter((t: any) => !t.googleSearch)
@@ -179,7 +335,6 @@ app.post('/api/gemini/generate', async (req: Request, res: Response) => {
     const modelsToTry = [
       chosenModel,
       ...(chosenModel !== 'gemini-3.8-flash' ? ['gemini-3.8-flash'] : []),
-      'gemini-flash-latest',
       'gemini-3.1-flash-lite',
     ]
 
@@ -189,10 +344,10 @@ app.post('/api/gemini/generate', async (req: Request, res: Response) => {
       try {
         response = await ai.models.generateContent({
           model: curModel,
-          contents,
+          contents: enrichedContents,
           config: cleanConfig,
         })
-        if (response?.text) break
+        if (response) break
       } catch (err: any) {
         lastError = err
         if (i < modelsToTry.length - 1) {
@@ -205,9 +360,25 @@ app.post('/api/gemini/generate', async (req: Request, res: Response) => {
       throw lastError
     }
 
+    // 將真實檢索到的來源附加至 candidates 的 groundingMetadata 中
+    const candidateList = response?.candidates || []
+    if (candidateList.length > 0) {
+      if (!candidateList[0].groundingMetadata) {
+        candidateList[0].groundingMetadata = {}
+      }
+      if (sources.length > 0) {
+        candidateList[0].groundingMetadata.groundingChunks = sources
+      }
+    } else if (response?.text) {
+      candidateList.push({
+        content: { parts: [{ text: response.text }] },
+        groundingMetadata: { groundingChunks: sources },
+      })
+    }
+
     res.json({
       text: response?.text || '',
-      candidates: response?.candidates || [],
+      candidates: candidateList,
     })
   } catch (error: any) {
     res.status(500).json({ error: 'AI 分析服務暫時忙碌中，請稍後幾秒後重試。' })

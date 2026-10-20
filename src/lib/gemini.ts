@@ -34,10 +34,6 @@ export enum Type {
 export type Schema = any;
 
 export function getApiKey(): string {
-  if (typeof window !== "undefined") {
-    const userKey = localStorage.getItem("gemini_api_key");
-    if (userKey) return userKey;
-  }
   return "";
 }
 
@@ -67,13 +63,14 @@ export async function testAvailableModels(_apiKey?: string): Promise<string[]> {
 }
 
 /**
- * Call Gemini through server-side proxy using Gemini 3.8 Flash.
+ * Call Gemini through server-side proxy using Gemini 3.8 Flash with live Web Search.
  */
 export async function generateWithFallback(
   _ai: any,
   config: {
     contents: string | any;
     config?: any;
+    webSearch?: boolean;
   }
 ): Promise<any> {
   const selectedModel = getSelectedModel();
@@ -85,6 +82,7 @@ export async function generateWithFallback(
       model: selectedModel,
       contents: config.contents,
       config: config.config,
+      webSearch: config.webSearch ?? true,
     }),
   });
 
