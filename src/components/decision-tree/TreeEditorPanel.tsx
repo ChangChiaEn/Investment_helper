@@ -4,7 +4,7 @@
  * 決策樹視覺編輯器：React Flow + 右側屬性面板 + 多樹列表。
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ReactFlow,
   Background,
@@ -29,6 +29,11 @@ import {
   COMPARE_OP_ORDER,
   getSourceLabel,
 } from '@/lib/tools/decision-tree/labels'
+import {
+  exportAllTrees,
+  exportSingleTree,
+  importFromFile,
+} from '@/lib/tools/decision-tree/treeImportExport'
 import {
   addBlankTree,
   addSampleTree,
@@ -196,7 +201,57 @@ function TreeEditorInner() {
   )
 
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
   const selectedNode = nodes.find((n) => n.id === selectedId)
+
+  /**
+   * 匯出目前決策樹（含條件引用到的公式）。
+   */
+  const handleExportCurrent = () => {
+    if (!active) {
+      alert('請先選擇決策樹')
+      return
+    }
+    // 先把畫布寫回再匯出，避免漏改
+    const doc = flowToTree(active, nodes, edges)
+    persist(doc)
+    exportSingleTree(doc)
+  }
+
+  /**
+   * 匯出本機全部決策樹。
+   */
+  const handleExportAll = () => {
+    try {
+      if (active) persist(flowToTree(active, nodes, edges))
+      exportAllTrees()
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  /**
+   * 自 JSON 檔匯入決策樹。
+   * @param file - 選取檔案
+   */
+  const handleImportFile = async (file: File | undefined) => {
+    if (!file) return
+    try {
+      const result = await importFromFile(file)
+      if (result.ok === false) {
+        alert(result.error)
+        return
+      }
+      setList(result.list)
+      const formulaNote =
+        result.importedFormulas > 0 ? `，另新增 ${result.importedFormulas} 筆公式` : ''
+      alert(`已匯入 ${result.importedTrees} 棵決策樹${formulaNote}`)
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err))
+    } finally {
+      if (importInputRef.current) importInputRef.current.value = ''
+    }
+  }
 
   /**
    * 取消目前選取的連線。
@@ -272,6 +327,20 @@ function TreeEditorInner() {
         >
           載入範例樹
         </button>
+        <button
+          type="button"
+          className="px-3 py-2 text-sm border rounded-lg hover:bg-muted"
+          onClick={() => importInputRef.current?.click()}
+        >
+          匯入
+        </button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => handleImportFile(e.target.files?.[0])}
+        />
         {active && (
           <>
             <input
@@ -295,7 +364,23 @@ function TreeEditorInner() {
             >
               儲存畫布
             </button>
+            <button
+              type="button"
+              className="px-3 py-2 text-sm border rounded-lg hover:bg-muted"
+              onClick={handleExportCurrent}
+            >
+              匯出此樹
+            </button>
           </>
+        )}
+        {list.trees.length > 0 && (
+          <button
+            type="button"
+            className="px-3 py-2 text-sm border rounded-lg hover:bg-muted"
+            onClick={handleExportAll}
+          >
+            匯出全部
+          </button>
         )}
       </div>
 
