@@ -142,6 +142,97 @@ export function clearRunSession(): void {
 }
 
 /**
+ * 以完整快照覆寫本機（不做 merge；刪除批次／單筆結果時使用）。
+ * @param session - 完整快照
+ */
+export function replaceRunSession(session: RunSessionSnapshot): void {
+  if (typeof window === 'undefined') return
+  const batches = session.batches.slice(0, MAX_RUN_BATCHES)
+  const activeBatchId =
+    session.activeBatchId && batches.some((b) => b.id === session.activeBatchId)
+      ? session.activeBatchId
+      : batches[0]?.id ?? null
+  const next: RunSessionSnapshot = {
+    treeId: session.treeId,
+    selectedSymbols: session.selectedSymbols,
+    batches,
+    activeBatchId,
+    running: false,
+    updatedAt: Date.now(),
+  }
+  try {
+    if (batches.length === 0) {
+      localStorage.removeItem(STORAGE_KEY)
+      return
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+  } catch {
+    // quota 滿時略過
+  }
+}
+
+/**
+ * 刪除單一執行批次並寫回本機。
+ * @param batchId - 批次 id
+ * @returns 更新後的批次列表與作用中批次 id
+ */
+export function removeBatch(batchId: string): {
+  batches: RunBatch[]
+  activeBatchId: string | null
+} {
+  const session = loadRunSession()
+  const batches = session.batches.filter((b) => b.id !== batchId)
+  const activeBatchId =
+    session.activeBatchId === batchId
+      ? batches[0]?.id ?? null
+      : session.activeBatchId && batches.some((b) => b.id === session.activeBatchId)
+        ? session.activeBatchId
+        : batches[0]?.id ?? null
+  replaceRunSession({
+    ...session,
+    batches,
+    activeBatchId,
+    running: false,
+  })
+  return { batches, activeBatchId }
+}
+
+/**
+ * 刪除某批次內單一標的結果；若該批結果清空則一併移除該批。
+ * @param batchId - 批次 id
+ * @param symbol - 標的代號
+ * @returns 更新後的批次列表與作用中批次 id
+ */
+export function removeBatchResult(
+  batchId: string,
+  symbol: string
+): {
+  batches: RunBatch[]
+  activeBatchId: string | null
+} {
+  const session = loadRunSession()
+  let batches = session.batches.map((b) => {
+    if (b.id !== batchId) return b
+    const results = b.results.filter((r) => r.symbol !== symbol)
+    const symbols = b.symbols.filter((s) => s !== symbol)
+    return { ...b, results, symbols }
+  })
+  // 結果已空的批次一併移除
+  batches = batches.filter((b) => b.id !== batchId || b.results.length > 0)
+  const activeBatchId =
+    batches.some((b) => b.id === session.activeBatchId)
+      ? session.activeBatchId
+      : batches[0]?.id ?? null
+  replaceRunSession({
+    ...session,
+    batches,
+    activeBatchId,
+    running: false,
+  })
+  return { batches, activeBatchId }
+}
+
+/**
  * 建立新執行批次 id。
  * @returns id
  */

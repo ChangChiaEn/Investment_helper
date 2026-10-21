@@ -10,11 +10,12 @@ import { precheckBatch, runDecisionTreeBatch } from '@/lib/tools/decision-tree/b
 import { runDecisionTree, treeHasManualNode } from '@/lib/tools/decision-tree/engine'
 import { collectAllSymbols } from '@/lib/inventory'
 import {
-  clearRunSession,
   loadRunSession,
   mergeBatches,
   newRunBatchId,
   prependBatch,
+  removeBatch,
+  removeBatchResult,
   saveRunSession,
   updateBatchResult,
 } from '@/lib/tools/decision-tree/runResultStore'
@@ -243,6 +244,29 @@ export function RunPanel({ inventory }: Props) {
 
   const pendingManual = results.find((r) => r.status === 'awaiting_manual')
 
+  /**
+   * 刪除目前檢視的整批執行歷史。
+   */
+  const handleDeleteActiveBatch = () => {
+    if (!activeBatch) return
+    if (!confirm(`確定刪除此批次？\n${formatBatchLabel(activeBatch)}`)) return
+    const next = removeBatch(activeBatch.id)
+    setBatches(next.batches)
+    setActiveBatchId(next.activeBatchId)
+  }
+
+  /**
+   * 刪除目前批次內單一標的結果。
+   * @param symbol - 標的代號
+   */
+  const handleDeleteResult = (symbol: string) => {
+    if (!activeBatchId) return
+    if (!confirm(`確定刪除標的 ${symbol} 的執行結果？`)) return
+    const next = removeBatchResult(activeBatchId, symbol)
+    setBatches(next.batches)
+    setActiveBatchId(next.activeBatchId)
+  }
+
   return (
     <div className="space-y-4">
       <Disclaimer />
@@ -284,21 +308,6 @@ export function RunPanel({ inventory }: Props) {
               '執行決策樹'
             )}
           </button>
-          {batches.length > 0 && (
-            <button
-              type="button"
-              className="px-3 py-2 text-sm text-muted-fg border rounded-lg hover:bg-muted"
-              onClick={() => {
-                if (!confirm('確定清除全部執行歷史？此操作無法復原。')) return
-                // 先清本機再清 UI，避免自動持久化又把舊批合併回來
-                clearRunSession()
-                setBatches([])
-                setActiveBatchId(null)
-              }}
-            >
-              清除全部歷史
-            </button>
-          )}
         </div>
 
         {hasManual && (
@@ -385,7 +394,7 @@ export function RunPanel({ inventory }: Props) {
         <div className="bg-card border rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b bg-muted flex flex-wrap gap-3 items-center text-sm text-card-fg">
             <span className="font-semibold text-fg">執行歷史</span>
-            <span className="text-xs text-muted-fg">已保留 {batches.length} 次（重跑不會刪舊的）</span>
+            <span className="text-xs text-muted-fg">已保留 {batches.length} 次</span>
             <select
               className="border rounded-lg px-2 py-1 text-xs min-w-[240px]"
               value={activeBatch?.id || ''}
@@ -408,6 +417,14 @@ export function RunPanel({ inventory }: Props) {
                 {summary.errors > 0 && (
                   <span className="text-red-700">錯誤 {summary.errors}</span>
                 )}
+                <button
+                  type="button"
+                  className="ml-auto text-xs text-danger border border-red-200 rounded-lg px-2 py-1 hover:bg-danger-soft"
+                  onClick={handleDeleteActiveBatch}
+                  disabled={running}
+                >
+                  刪除此批次
+                </button>
               </>
             )}
           </div>
@@ -423,6 +440,8 @@ export function RunPanel({ inventory }: Props) {
                     state={state}
                     expanded={expanded.has(expandKey)}
                     onToggle={() => toggleExpand(state.symbol)}
+                    onDelete={() => handleDeleteResult(state.symbol)}
+                    deleteDisabled={running}
                   />
                 )
               })}
@@ -446,16 +465,20 @@ function formatBatchLabel(b: RunBatch): string {
 }
 
 /**
- * 單一標的結果列：摘要固定顯示，過程預設收合。
+ * 單一標的結果列：摘要固定顯示，過程預設收合；可單筆刪除。
  */
 function ResultRow({
   state,
   expanded,
   onToggle,
+  onDelete,
+  deleteDisabled,
 }: {
   state: RunState
   expanded: boolean
   onToggle: () => void
+  onDelete: () => void
+  deleteDisabled?: boolean
 }) {
   const statusLabel =
     state.status === 'completed'
@@ -476,33 +499,43 @@ function ResultRow({
 
   return (
     <li className="p-4">
-      <button type="button" onClick={onToggle} className="w-full flex items-start gap-2 text-left">
-        {expanded ? (
-          <ChevronDown className="w-4 h-4 mt-1 text-muted-fg shrink-0" />
-        ) : (
-          <ChevronRight className="w-4 h-4 mt-1 text-muted-fg shrink-0" />
-        )}
-        <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono font-semibold text-fg">{state.symbol}</span>
-            <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass}`}>{statusLabel}</span>
-          </div>
-          {state.status === 'completed' && (
-            <p className="text-base md:text-lg font-medium text-fg leading-snug">
-              {state.resultAdvice}
+      <div className="flex items-start gap-2">
+        <button type="button" onClick={onToggle} className="flex-1 flex items-start gap-2 text-left min-w-0">
+          {expanded ? (
+            <ChevronDown className="w-4 h-4 mt-1 text-muted-fg shrink-0" />
+          ) : (
+            <ChevronRight className="w-4 h-4 mt-1 text-muted-fg shrink-0" />
+          )}
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono font-semibold text-fg">{state.symbol}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full ${statusClass}`}>{statusLabel}</span>
+            </div>
+            {state.status === 'completed' && (
+              <p className="text-base md:text-lg font-medium text-fg leading-snug">
+                {state.resultAdvice}
+              </p>
+            )}
+            {state.status === 'error' && (
+              <p className="text-sm text-red-700">執行中止：{state.error}</p>
+            )}
+            {state.status === 'awaiting_manual' && (
+              <p className="text-sm text-amber-800">{state.pendingPrompt}</p>
+            )}
+            <p className="text-xs text-muted-fg">
+              {expanded ? '收合過程' : `展開過程（${state.path.length} 步）`}
             </p>
-          )}
-          {state.status === 'error' && (
-            <p className="text-sm text-red-700">執行中止：{state.error}</p>
-          )}
-          {state.status === 'awaiting_manual' && (
-            <p className="text-sm text-amber-800">{state.pendingPrompt}</p>
-          )}
-          <p className="text-xs text-muted-fg">
-            {expanded ? '收合過程' : `展開過程（${state.path.length} 步）`}
-          </p>
-        </div>
-      </button>
+          </div>
+        </button>
+        <button
+          type="button"
+          className="shrink-0 text-xs text-danger border border-red-200 rounded-lg px-2 py-1 hover:bg-danger-soft disabled:opacity-50"
+          onClick={onDelete}
+          disabled={deleteDisabled}
+        >
+          刪除
+        </button>
+      </div>
 
       {expanded && state.path.length > 0 && (
         <ol className="mt-3 ml-6 space-y-3 border-l-2 border-primary-100 pl-3">
