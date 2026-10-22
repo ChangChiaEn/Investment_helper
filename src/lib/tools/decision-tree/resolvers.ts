@@ -3,7 +3,7 @@
  */
 
 import { createClient, generateWithFallback } from '@/lib/gemini'
-import { findHolding } from '@/lib/inventory'
+import { calcCashRemaining, findHolding } from '@/lib/inventory'
 import { requireEndpoint } from '@/lib/market'
 import { fetchMarketWithHistory } from '@/lib/pipeline'
 import { getIndicatorDef, normalizeIndicatorSource } from './catalog'
@@ -148,8 +148,16 @@ function resolveInventory(indicatorId: string, ctx: ResolveContext): IndicatorVa
       return num(h?.swingHigh, '波段最高價')
     case 'total_capital':
       return num(inv.totalCapital, '總資金')
-    case 'cash_remaining':
-      return num(inv.cashRemaining, '剩餘現金')
+    case 'cash_remaining': {
+      // 剩餘現金 = 總資金 − Σ(進場價 × 股數)，與庫存欄衍生邏輯一致
+      const cash = calcCashRemaining(inv)
+      return {
+        indicatorId,
+        resolvedSource: 'inventory',
+        value: cash,
+        display: String(cash),
+      }
+    }
     case 'holding_count':
       return {
         indicatorId,

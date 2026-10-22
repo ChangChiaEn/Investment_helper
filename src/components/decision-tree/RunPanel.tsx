@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import { precheckBatch, runDecisionTreeBatch } from '@/lib/tools/decision-tree/batchRunner'
 import { runDecisionTree, treeHasManualNode } from '@/lib/tools/decision-tree/engine'
-import { collectAllSymbols } from '@/lib/inventory'
+import { collectAllSymbols, collectSymbolsByGroup } from '@/lib/inventory'
 import {
   loadRunSession,
   mergeBatches,
@@ -83,6 +83,8 @@ export function RunPanel({ inventory }: Props) {
   }, [sessionReady, trees.activeId, selectedSymbols, batches, activeBatchId, running])
 
   const symbols = useMemo(() => collectAllSymbols(inventory), [inventory])
+  /** 依庫存分頁分組：持股、關注、自訂分類 */
+  const symbolGroups = useMemo(() => collectSymbolsByGroup(inventory), [inventory])
 
   const activeTree = getActiveTree()
   const hasManual = activeTree ? treeHasManualNode(activeTree) : false
@@ -334,29 +336,57 @@ export function RunPanel({ inventory }: Props) {
               庫存尚無標的。請先至「庫存」新增持股或自訂分類。
             </p>
           ) : (
-            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
-              {symbols.map(([sym, name]) => {
-                const checked = selectedSymbols.includes(sym)
-                return (
-                  <label
-                    key={sym}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm cursor-pointer ${
-                      checked
-                        ? 'border-primary-500 bg-primary-50 text-primary-900'
-                        : 'border-border bg-card text-card-fg hover:bg-muted'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="rounded"
-                      checked={checked}
-                      onChange={() => toggleSymbol(sym)}
-                    />
-                    <span className="font-mono">{sym}</span>
-                    <span className="text-muted-fg truncate max-w-[100px]">{name}</span>
-                  </label>
-                )
-              })}
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {symbolGroups.map((group) => (
+                <div key={group.key} className="space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-muted-fg uppercase tracking-wide">
+                      {group.label}
+                    </span>
+                    <span className="text-xs text-muted-fg">({group.symbols.length})</span>
+                    {group.symbols.length > 0 && (
+                      <button
+                        type="button"
+                        className="text-xs text-primary-700"
+                        onClick={() => {
+                          const ids = group.symbols.map(([s]) => s)
+                          setSelectedSymbols((prev) => Array.from(new Set([...prev, ...ids])))
+                        }}
+                      >
+                        全選此組
+                      </button>
+                    )}
+                  </div>
+                  {group.symbols.length === 0 ? (
+                    <p className="text-xs text-muted-fg pl-1">尚無標的</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {group.symbols.map(([sym, name]) => {
+                        const checked = selectedSymbols.includes(sym)
+                        return (
+                          <label
+                            key={`${group.key}_${sym}`}
+                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm cursor-pointer ${
+                              checked
+                                ? 'border-primary-500 bg-primary-50 text-primary-900'
+                                : 'border-border bg-card text-card-fg hover:bg-muted'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              className="rounded"
+                              checked={checked}
+                              onChange={() => toggleSymbol(sym)}
+                            />
+                            <span className="font-mono">{sym}</span>
+                            <span className="text-muted-fg truncate max-w-[100px]">{name}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </div>

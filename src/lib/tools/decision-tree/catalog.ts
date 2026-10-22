@@ -341,7 +341,7 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
   {
     id: 'cash_remaining',
     name: '剩餘現金',
-    description: '庫存欄全域自填參數（未填時以 0 計算）',
+    description: '總資金 − Σ(進場價 × 股數)；依持股自動計算',
     source: 'inventory',
     valueType: 'number',
     unit: '元',
