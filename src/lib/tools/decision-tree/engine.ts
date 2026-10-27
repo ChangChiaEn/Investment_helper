@@ -48,7 +48,8 @@ export function treeHasManualNode(tree: DecisionTreeDoc): boolean {
 }
 
 /**
- * 將舊版 manual 節點遷移為 decision + humanConfirm。
+ * 遷移舊版節點：manual → decision+humanConfirm；剝離已廢止的 adviceParams。
+ * 條件上的 params（指標視窗參數）予以保留。
  * @param tree - 原始文件
  * @returns 遷移後文件（必要時複製）
  */
@@ -56,18 +57,27 @@ export function migrateTreeNodes(tree: DecisionTreeDoc): DecisionTreeDoc {
   let changed = false
   const nodes: Record<string, TreeNode> = {}
   for (const [id, n] of Object.entries(tree.nodes)) {
-    if (n.kind === 'manual') {
+    let node: TreeNode = { ...n }
+
+    if (node.kind === 'manual') {
       changed = true
-      nodes[id] = {
-        ...n,
+      node = {
+        ...node,
         kind: 'decision',
         humanConfirm: true,
-        prompt: n.prompt || '請確認是否繼續？',
+        prompt: node.prompt || '請確認是否繼續？',
         condition: undefined,
       }
-    } else {
-      nodes[id] = n
     }
+
+    // --- 剝離已廢止的建議參數（含空物件）---
+    if ('adviceParams' in (node as object)) {
+      changed = true
+      const { adviceParams: _drop, ...rest } = node as TreeNode & { adviceParams?: unknown }
+      node = rest
+    }
+
+    nodes[id] = node
   }
   if (!changed) return tree
   return { ...tree, nodes, updatedAt: Date.now() }
@@ -135,7 +145,6 @@ export async function runDecisionTree(options: EngineOptions): Promise<RunState>
       })
       state.status = 'completed'
       state.resultAdvice = node.advice || node.label
-      state.resultParams = node.adviceParams
       state.currentNodeId = null
       return state
     }
@@ -296,7 +305,6 @@ export function createBlankTree(name: string): DecisionTreeDoc {
     kind: 'result',
     label: '建議',
     advice: '請編輯此結果節點的建議內容',
-    adviceParams: {},
   }
   return {
     id: `tree_${Date.now().toString(36)}`,
@@ -356,7 +364,6 @@ export function createSampleTree(): DecisionTreeDoc {
       kind: 'result',
       label: '建議加碼',
       advice: '符合連買與低檔條件，建議小額試單或加碼（僅建議，非下單指示）',
-      adviceParams: { 建議部位占總資金百分比: 10 },
     },
     r_watch: {
       id: 'r_watch',

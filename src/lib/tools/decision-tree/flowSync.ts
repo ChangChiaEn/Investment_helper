@@ -135,7 +135,6 @@ export function treeToFlow(
         humanConfirm: n.humanConfirm,
         prompt: n.prompt,
         advice: n.advice,
-        adviceParams: n.adviceParams,
         condition: n.condition,
       },
     })
@@ -207,7 +206,6 @@ export function flowToTree(
       humanConfirm: humanConfirm || undefined,
       prompt: n.data.prompt,
       advice: n.data.advice,
-      adviceParams: n.data.adviceParams,
       condition: humanConfirm ? undefined : n.data.condition,
       yesTarget: normalizedKind === 'result' ? null : yesTarget,
       noTarget: normalizedKind === 'result' ? null : noTarget,

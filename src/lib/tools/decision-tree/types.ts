@@ -32,7 +32,7 @@ export type CompareOp = 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'between' |
 /** 條件組合方式 */
 export type ConditionMode = 'all' | 'any' | 'atLeast'
 
-/** 指標參數定義（供編輯器顯示） */
+/** 指標可調參數定義（供目錄與條件編輯器） */
 export interface IndicatorParamDef {
   key: string
   label: string
@@ -52,9 +52,30 @@ export interface IndicatorDef {
   /** 回傳值語意：number 可比較；boolean 用於 truthy */
   valueType: 'number' | 'boolean' | 'string'
   unit?: string
+  /** 可調參數 schema（有則條件編輯器顯示輸入） */
   params?: IndicatorParamDef[]
   /** 公式來源時的表達式（例：entry_price - 2 * atr） */
   expression?: string
+  /**
+   * 參數變體：實際解析改呼叫此基底指標 id。
+   * 本機「複製指標」產生的項目會帶此欄。
+   */
+  baseIndicatorId?: string
+  /** 變體預設參數（與條件 params 合併，條件優先） */
+  defaultParams?: Record<string, number | string>
+}
+
+/**
+ * 本機參數變體：複製內建指標並固定另一組參數，可當獨立指標選用。
+ */
+export interface IndicatorVariant {
+  id: string
+  name: string
+  /** 對應內建指標 id（例：ma） */
+  baseIndicatorId: string
+  params: Record<string, number | string>
+  description?: string
+  createdAt: number
 }
 
 /**
@@ -88,7 +109,7 @@ export interface MetricCondition {
   /** 比較目標；between 時用 value 與 valueTo */
   value?: number | string | boolean
   valueTo?: number
-  /** 指標參數覆寫 */
+  /** 指標參數覆寫（例：days、n）；未填則用目錄／變體預設 */
   params?: Record<string, number | string>
 }
 
@@ -124,8 +145,6 @@ export interface TreeNode {
   noTarget?: string | null
   /** result：建議 */
   advice?: string
-  /** 建議參數（如賣出比例 0.33），僅顯示用 */
-  adviceParams?: Record<string, number | string>
 }
 
 /** 一棵決策樹 */
@@ -161,7 +180,6 @@ export interface RunState {
   /** 待人工確認時的問題 */
   pendingPrompt?: string
   resultAdvice?: string
-  resultParams?: Record<string, number | string>
   error?: string
 }
 
@@ -200,7 +218,6 @@ export interface FlowNodeData extends Record<string, unknown> {
   humanConfirm?: boolean
   prompt?: string
   advice?: string
-  adviceParams?: Record<string, number | string>
   condition?: ConditionGroup
 }
 

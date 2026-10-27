@@ -23,12 +23,13 @@ import {
   MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { getAllIndicators } from '@/lib/tools/decision-tree/catalog'
+import { getAllIndicators, getIndicatorDef } from '@/lib/tools/decision-tree/catalog'
 import {
   COMPARE_OP_LABELS,
   COMPARE_OP_ORDER,
   getSourceLabel,
 } from '@/lib/tools/decision-tree/labels'
+import { defaultParamsFromSchema } from '@/lib/tools/decision-tree/variantStore'
 import {
   exportAllTrees,
   exportSingleTree,
@@ -244,8 +245,10 @@ function TreeEditorInner() {
       }
       setList(result.list)
       const formulaNote =
-        result.importedFormulas > 0 ? `，另新增 ${result.importedFormulas} 筆公式` : ''
-      alert(`已匯入 ${result.importedTrees} 棵決策樹${formulaNote}`)
+        result.importedFormulas > 0 ? `，公式 ${result.importedFormulas}` : ''
+      const variantNote =
+        result.importedVariants > 0 ? `，參數變體 ${result.importedVariants}` : ''
+      alert(`已匯入 ${result.importedTrees} 棵決策樹${formulaNote}${variantNote}`)
     } catch (err) {
       alert(err instanceof Error ? err.message : String(err))
     } finally {
@@ -596,7 +599,23 @@ function NodePropsForm({
 }
 
 /**
- * 決策條件編輯：指標可搜尋、運算子中文。
+ * 依指標定義組出條件初始 params（變體 default 優先於 schema 預設）。
+ * @param indicatorId - 指標 id
+ * @returns params 物件；無可調參數時為 undefined
+ */
+function buildConditionParams(
+  indicatorId: string
+): Record<string, number | string> | undefined {
+  const def = getIndicatorDef(indicatorId)
+  if (!def?.params?.length) return undefined
+  return {
+    ...defaultParamsFromSchema(def.params),
+    ...(def.defaultParams || {}),
+  }
+}
+
+/**
+ * 決策條件編輯：指標可搜尋、可調參數、運算子中文；可複製條件另設參數。
  */
 function ConditionEditor({
   value,
@@ -607,6 +626,34 @@ function ConditionEditor({
 }) {
   const updateCond = (idx: number, patch: Partial<MetricCondition>) => {
     const conditions = value.conditions.map((c, i) => (i === idx ? { ...c, ...patch } : c))
+    onChange({ ...value, conditions })
+  }
+
+  /**
+   * 切換指標時重設 params 為該指標／變體預設。
+   * @param idx - 條件索引
+   * @param indicatorId - 新指標 id
+   */
+  const changeIndicator = (idx: number, indicatorId: string) => {
+    updateCond(idx, { indicatorId, params: buildConditionParams(indicatorId) })
+  }
+
+  /**
+   * 複製條件列，方便同一指標改不同參數。
+   * @param idx - 來源索引
+   */
+  const duplicateCond = (idx: number) => {
+    const src = value.conditions[idx]
+    if (!src) return
+    const copy: MetricCondition = {
+      ...src,
+      params: src.params ? { ...src.params } : buildConditionParams(src.indicatorId),
+    }
+    const conditions = [
+      ...value.conditions.slice(0, idx + 1),
+      copy,
+      ...value.conditions.slice(idx + 1),
+    ]
     onChange({ ...value, conditions })
   }
 
@@ -632,55 +679,106 @@ function ConditionEditor({
           />
         )}
       </div>
-      {value.conditions.map((c, idx) => (
-        <div key={idx} className="relative bg-muted rounded-lg p-2 space-y-1.5">
-          <IndicatorPicker
-            value={c.indicatorId}
-            onChange={(indicatorId) => updateCond(idx, { indicatorId })}
-          />
-          {/* 運算子與數值改直向排列，避免側欄寬度不足溢位 */}
-          <select
-            className="w-full border rounded px-2 py-1 text-xs"
-            value={c.op}
-            onChange={(e) => updateCond(idx, { op: e.target.value as CompareOp })}
-          >
-            {COMPARE_OP_ORDER.map((op) => (
-              <option key={op} value={op}>
-                {COMPARE_OP_LABELS[op]}
-              </option>
-            ))}
-          </select>
-          {c.op !== 'truthy' && (
-            <div className="flex gap-1 min-w-0">
-              <input
-                type="number"
-                className="min-w-0 flex-1 border rounded px-2 py-1 text-xs"
-                value={Number(c.value ?? 0)}
-                onChange={(e) => updateCond(idx, { value: Number(e.target.value) })}
-                placeholder={c.op === 'between' ? '下限' : '比較值'}
-              />
-              {c.op === 'between' && (
+      {value.conditions.map((c, idx) => {
+        const indDef = getIndicatorDef(c.indicatorId)
+        const paramDefs = indDef?.params || []
+        return (
+          <div key={idx} className="relative bg-muted rounded-lg p-2 space-y-1.5">
+            <IndicatorPicker
+              value={c.indicatorId}
+              onChange={(indicatorId) => changeIndicator(idx, indicatorId)}
+            />
+            {/* 有可調參數時顯示輸入（與目錄 schema 對齊） */}
+            {paramDefs.length > 0 && (
+              <div className="space-y-1 rounded border border-dashed border-border/80 bg-card/60 p-1.5">
+                <p className="text-[10px] text-muted-fg">指標參數</p>
+                {paramDefs.map((p) => {
+                  const cur =
+                    c.params?.[p.key] ??
+                    indDef?.defaultParams?.[p.key] ??
+                    p.default ??
+                    0
+                  return (
+                    <label key={p.key} className="flex items-center gap-2 text-[11px]">
+                      <span className="shrink-0 text-muted-fg w-[5.5rem] truncate" title={p.label}>
+                        {p.label}
+                      </span>
+                      <input
+                        type="number"
+                        className="min-w-0 flex-1 border rounded px-2 py-1 text-xs"
+                        value={Number(cur)}
+                        min={p.min}
+                        max={p.max}
+                        onChange={(e) =>
+                          updateCond(idx, {
+                            params: {
+                              ...(c.params || buildConditionParams(c.indicatorId) || {}),
+                              [p.key]: Number(e.target.value),
+                            },
+                          })
+                        }
+                      />
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+            {/* 運算子與數值改直向排列，避免側欄寬度不足溢位 */}
+            <select
+              className="w-full border rounded px-2 py-1 text-xs"
+              value={c.op}
+              onChange={(e) => updateCond(idx, { op: e.target.value as CompareOp })}
+            >
+              {COMPARE_OP_ORDER.map((op) => (
+                <option key={op} value={op}>
+                  {COMPARE_OP_LABELS[op]}
+                </option>
+              ))}
+            </select>
+            {c.op !== 'truthy' && (
+              <div className="flex gap-1 min-w-0">
                 <input
                   type="number"
-                  className="min-w-0 w-[45%] shrink border rounded px-2 py-1 text-xs"
-                  value={c.valueTo ?? 0}
-                  onChange={(e) => updateCond(idx, { valueTo: Number(e.target.value) })}
-                  placeholder="上限"
+                  className="min-w-0 flex-1 border rounded px-2 py-1 text-xs"
+                  value={Number(c.value ?? 0)}
+                  onChange={(e) => updateCond(idx, { value: Number(e.target.value) })}
+                  placeholder={c.op === 'between' ? '下限' : '比較值'}
                 />
-              )}
+                {c.op === 'between' && (
+                  <input
+                    type="number"
+                    className="min-w-0 w-[45%] shrink border rounded px-2 py-1 text-xs"
+                    value={c.valueTo ?? 0}
+                    onChange={(e) => updateCond(idx, { valueTo: Number(e.target.value) })}
+                    placeholder="上限"
+                  />
+                )}
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="text-[10px] text-primary-700"
+                onClick={() => duplicateCond(idx)}
+              >
+                複製條件（可改參數）
+              </button>
+              <button
+                type="button"
+                className="text-[10px] text-danger"
+                onClick={() =>
+                  onChange({
+                    ...value,
+                    conditions: value.conditions.filter((_, i) => i !== idx),
+                  })
+                }
+              >
+                移除此條件
+              </button>
             </div>
-          )}
-          <button
-            type="button"
-            className="text-[10px] text-danger"
-            onClick={() =>
-              onChange({ ...value, conditions: value.conditions.filter((_, i) => i !== idx) })
-            }
-          >
-            移除此條件
-          </button>
-        </div>
-      ))}
+          </div>
+        )
+      })}
       <button
         type="button"
         className="text-xs text-primary-700"
@@ -689,7 +787,12 @@ function ConditionEditor({
             ...value,
             conditions: [
               ...value.conditions,
-              { indicatorId: 'trust_buy_streak', op: 'gte', value: 3, params: { days: 10 } },
+              {
+                indicatorId: 'trust_buy_streak',
+                op: 'gte',
+                value: 3,
+                params: buildConditionParams('trust_buy_streak'),
+              },
             ],
           })
         }
