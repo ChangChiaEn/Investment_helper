@@ -1,9 +1,14 @@
 /**
- * 指標解析器：OpenAPI（經 proxy）→ 失敗降級 AI；inventory 讀庫存；composite／formula 複合計算。
+ * 指標解析器：OpenAPI（經 proxy）→ 失敗降級 AI；inventory 讀庫存；composite／formula 複合計算；automation 寫回庫存。
  */
 
 import { createClient, generateWithFallback } from '@/lib/gemini'
-import { calcCashRemaining, findHolding } from '@/lib/inventory'
+import {
+  calcCashRemaining,
+  findHolding,
+  loadInventory,
+  updateHolding,
+} from '@/lib/inventory'
 import { requireEndpoint } from '@/lib/market'
 import { fetchMarketWithHistory } from '@/lib/pipeline'
 import { getIndicatorDef, normalizeIndicatorSource } from './catalog'
@@ -38,6 +43,11 @@ export interface ResolveContext {
   inventory: DecisionInventory
   /** 當次執行快取，避免重複打 API */
   cache?: Map<string, unknown>
+  /**
+   * 自動化指標寫回庫存後通知 UI（例如同步 InventoryContext）。
+   * 寫入已落 localStorage；此回呼僅負責 React 狀態。
+   */
+  onInventoryChange?: (inv: DecisionInventory) => void
 }
 
 /**
@@ -77,6 +87,11 @@ export async function resolveIndicator(
     // 庫存自填：缺值以 0 防呆，不中止（變體通常不會指向庫存）
     if (source === 'inventory') {
       return tagId(resolveInventory(resolveId, ctx), indicatorId)
+    }
+
+    // 自動化：可比行情後寫回庫存（有副作用）
+    if (source === 'automation') {
+      return tagId(await resolveAutomation(resolveId, mergedParams, ctx), indicatorId)
     }
 
     // 使用者公式：解析依賴後求值
@@ -217,6 +232,130 @@ function resolveInventory(indicatorId: string, ctx: ResolveContext): IndicatorVa
         value: null,
         display: '未實作',
         error: `自填指標未實作：${indicatorId}`,
+      }
+  }
+}
+
+/**
+ * 將寫回後的庫存同步到執行上下文（同路徑後續指標可見），並通知 UI。
+ * @param ctx - 解析上下文（會就地更新 holdings 等欄位）
+ * @param next - 已 save 的最新庫存
+ */
+function syncInventoryContext(ctx: ResolveContext, next: DecisionInventory): void {
+  // 就地覆寫，讓批次共用同一 inventory 參考時也能看見更新
+  ctx.inventory.holdings = next.holdings
+  ctx.inventory.lists = next.lists
+  ctx.inventory.totalCapital = next.totalCapital
+  ctx.inventory.cashRemaining = next.cashRemaining
+  ctx.inventory.maxHoldings = next.maxHoldings
+  ctx.onInventoryChange?.(next)
+}
+
+/**
+ * 執行自動化動作（供 action 節點呼叫；非條件指標）。
+ * @param actionId - 動作 id（見 actionCatalog）
+ * @param ctx - 解析上下文
+ * @returns 執行結果（供過程顯示）
+ */
+export async function runAction(
+  actionId: string,
+  ctx: ResolveContext
+): Promise<IndicatorValue> {
+  return resolveAutomation(actionId, {}, ctx)
+}
+
+/**
+ * 自動化動作實作：可比行情後寫回庫存。
+ * @param indicatorId - 動作 id
+ * @param _params - 預留參數（目前無）
+ * @param ctx - 上下文
+ * @returns 指標值形狀（供過程顯示；不參與通過／未通過）
+ */
+async function resolveAutomation(
+  indicatorId: string,
+  _params: Record<string, number | string>,
+  ctx: ResolveContext
+): Promise<IndicatorValue> {
+  const cache = ctx.cache || new Map<string, unknown>()
+
+  switch (indicatorId) {
+    case 'auto_update_swing_high': {
+      // 從 storage 重讀，避免批次並行時覆寫彼此的持股更新
+      const fresh = loadInventory()
+      const h = findHolding(fresh, ctx.symbol)
+      if (!h) {
+        return {
+          indicatorId,
+          resolvedSource: 'error',
+          value: null,
+          display: '無持股',
+          error: `庫存無持股「${ctx.symbol}」，無法更新波段高點`,
+        }
+      }
+
+      const px = await getLatestClose(ctx.symbol, cache)
+      const prevRaw = h.swingHigh
+      const prev =
+        prevRaw === undefined || prevRaw === null || Number.isNaN(prevRaw) ? 0 : prevRaw
+      const pxR = round(px, 2)
+
+      // 現價未超過既有波段高 → 不寫入；仍回傳 true，避免當成決策「否」卡住流程
+      if (pxR <= prev) {
+        return ok(
+          'automation',
+          indicatorId,
+          true,
+          `未更新（現價 ${pxR} ≤ 波段高 ${prev}）`,
+          [
+            {
+              label: '收盤價（現價）',
+              indicatorId: 'close_price',
+              value: pxR,
+              display: String(pxR),
+            },
+            {
+              label: '波段最高價',
+              indicatorId: 'swing_high',
+              value: prev,
+              display: String(prev),
+            },
+            { label: '是否寫入', value: false, display: '否' },
+          ]
+        )
+      }
+
+      const next = updateHolding(fresh, h.id, { swingHigh: pxR })
+      syncInventoryContext(ctx, next)
+
+      return ok('automation', indicatorId, true, `已更新波段高點 ${prev} → ${pxR}`, [
+        {
+          label: '收盤價（現價）',
+          indicatorId: 'close_price',
+          value: pxR,
+          display: String(pxR),
+        },
+        {
+          label: '波段最高價（原）',
+          indicatorId: 'swing_high',
+          value: prev,
+          display: String(prev),
+        },
+        {
+          label: '波段最高價（新）',
+          indicatorId: 'swing_high',
+          value: pxR,
+          display: String(pxR),
+        },
+        { label: '是否寫入', value: true, display: '是' },
+      ])
+    }
+    default:
+      return {
+        indicatorId,
+        resolvedSource: 'error',
+        value: null,
+        display: '未實作',
+        error: `自動化指標未實作：${indicatorId}`,
       }
   }
 }

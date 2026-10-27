@@ -1,5 +1,5 @@
 /**
- * 指標來源徽章（官方／AI／自填／複合／公式／實際解析來源）。
+ * 指標來源徽章（官方／AI／自填／複合／公式／自動化／實際解析來源）。
  */
 
 import type { IndicatorSource } from '@/lib/tools/decision-tree/types'
@@ -11,6 +11,7 @@ const STYLES: Record<string, string> = {
   inventory: 'bg-warning-soft text-warning',
   composite: 'bg-primary-soft text-primary',
   formula: 'bg-muted text-card-fg',
+  automation: 'bg-accent/15 text-accent',
   manual: 'bg-warning-soft text-warning',
   error: 'bg-danger-soft text-danger',
 }
@@ -21,6 +22,7 @@ const LABELS: Record<string, string> = {
   inventory: '自填',
   composite: '複合',
   formula: '公式',
+  automation: '自動化',
   manual: '自填',
   error: '錯誤',
 }

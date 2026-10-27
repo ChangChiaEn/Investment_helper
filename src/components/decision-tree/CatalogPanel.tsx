@@ -5,6 +5,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { ACTION_CATALOG } from '@/lib/tools/decision-tree/actionCatalog'
 import { getAllIndicators, INDICATOR_CATALOG } from '@/lib/tools/decision-tree/catalog'
 import { validateFormulaSyntax } from '@/lib/tools/decision-tree/formulaEval'
 import {
@@ -129,6 +130,26 @@ export function CatalogPanel() {
         編輯決策節點時可選用下列指標。有「可調參數」者可在條件中直接改視窗日數，或在此複製成獨立變體（例如
         MA20 與 MA60）以便重複選用。官方行情失敗時降級 AI；自填欄位來自庫存。
       </p>
+
+      {/* --- 自動化動作（節點，非條件指標） --- */}
+      <div className="bg-card border border-accent/30 rounded-xl p-4 space-y-3">
+        <h3 className="font-semibold text-fg">自動化動作</h3>
+        <p className="text-xs text-muted-fg">
+          不參與條件判斷。請到「編輯樹」按「+ 自動化」加入節點（上下各一個接點），執行時寫回庫存後往下一節點。
+        </p>
+        <ul className="grid gap-2 md:grid-cols-2">
+          {ACTION_CATALOG.map((a) => (
+            <li key={a.id} className="border rounded-lg px-3 py-2 bg-accent/5">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-fg text-sm">{a.name}</span>
+                <SourceBadge source="automation" />
+              </div>
+              <p className="text-[10px] font-mono text-muted-fg mt-0.5">{a.id}</p>
+              <p className="text-xs text-card-fg mt-1">{a.description}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {/* --- 複製參數對話（指標頁） --- */}
       {cloneBase && cloneOf && (

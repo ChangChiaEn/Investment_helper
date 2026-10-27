@@ -6,6 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
+import { useInventory } from '@/contexts/InventoryContext'
 import { precheckBatch, runDecisionTreeBatch } from '@/lib/tools/decision-tree/batchRunner'
 import { runDecisionTree, treeHasManualNode } from '@/lib/tools/decision-tree/engine'
 import { collectAllSymbols, collectSymbolsByGroup } from '@/lib/inventory'
@@ -37,6 +38,8 @@ interface Props {
  * @returns 執行 UI
  */
 export function RunPanel({ inventory }: Props) {
+  /** 自動化指標寫回 localStorage 後，同步 React 庫存狀態 */
+  const { setInventory } = useInventory()
   const [trees, setTrees] = useState(loadTrees)
   /** 以本機快照初始化，避免首屏空陣列在還原前就被拿去執行／寫回 */
   const [selectedSymbols, setSelectedSymbols] = useState<string[]>(() =>
@@ -159,6 +162,7 @@ export function RunPanel({ inventory }: Props) {
           tree,
           symbol: selectedSymbols[0],
           inventory,
+          onInventoryChange: setInventory,
         })
         patchActiveBatchResults(batchId, [next])
       } else {
@@ -167,6 +171,7 @@ export function RunPanel({ inventory }: Props) {
           symbols: selectedSymbols,
           inventory,
           onProgress: (partial) => patchActiveBatchResults(batchId, [...partial]),
+          onInventoryChange: setInventory,
         })
         patchActiveBatchResults(batchId, batchResults)
       }
@@ -203,6 +208,7 @@ export function RunPanel({ inventory }: Props) {
         inventory,
         previous: pending,
         manualAnswer: answer,
+        onInventoryChange: setInventory,
       })
       setBatches((prev) => updateBatchResult(prev, batchId, pending.symbol, next))
     } catch (err) {

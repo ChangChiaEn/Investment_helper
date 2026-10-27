@@ -16,6 +16,7 @@ export type {
  * - inventory：庫存自填參數
  * - composite：庫存＋行情等複合計算
  * - formula：使用者自訂公式
+ * - automation：自動化節點執行結果的 resolvedSource（非條件指標目錄）
  * - manual：舊版相容（讀取時映射為 inventory）
  */
 export type IndicatorSource =
@@ -24,6 +25,7 @@ export type IndicatorSource =
   | 'inventory'
   | 'composite'
   | 'formula'
+  | 'automation'
   | 'manual'
 
 /** 比較運算子 */
@@ -123,9 +125,12 @@ export interface ConditionGroup {
 
 /**
  * 節點種類。
- * `manual` 僅供舊資料／執行路徑顯示相容；新編輯一律用 decision + humanConfirm。
+ * - decision：條件通過／未通過雙分支（可加 humanConfirm）
+ * - action：自動化副作用，單進單出（下一節點用 yesTarget）
+ * - result：終端建議
+ * - manual：舊資料相容；載入時遷為 decision + humanConfirm
  */
-export type NodeKind = 'decision' | 'manual' | 'result'
+export type NodeKind = 'decision' | 'manual' | 'result' | 'action'
 
 /** 決策樹節點（邏輯模型，與 React Flow 分離） */
 export interface TreeNode {
@@ -141,10 +146,16 @@ export interface TreeNode {
   humanConfirm?: boolean
   /** 主觀確認時的問題文字 */
   prompt?: string
+  /**
+   * 下一節點：decision 的「通過／是」；action 的唯一出口。
+   */
   yesTarget?: string | null
+  /** decision 的「未通過／否」；action／result 應為 null */
   noTarget?: string | null
   /** result：建議 */
   advice?: string
+  /** action：自動化動作 id（見 actionCatalog） */
+  actionId?: string
 }
 
 /** 一棵決策樹 */
@@ -219,6 +230,8 @@ export interface FlowNodeData extends Record<string, unknown> {
   prompt?: string
   advice?: string
   condition?: ConditionGroup
+  /** action 節點：自動化動作 id */
+  actionId?: string
 }
 
 /** 使用者自訂公式指標（本機儲存） */

@@ -2,7 +2,8 @@
  * 決策樹單路徑執行引擎。
  */
 
-import { resolveIndicator, type ResolveContext } from './resolvers'
+import { getActionDef } from './actionCatalog'
+import { resolveIndicator, runAction, type ResolveContext } from './resolvers'
 import type {
   CompareOp,
   ConditionGroup,
@@ -27,6 +28,8 @@ export interface EngineOptions {
    * 未傳時每次新建空 Map。
    */
   sharedCache?: Map<string, unknown>
+  /** 自動化指標寫回庫存後通知 UI */
+  onInventoryChange?: (inv: DecisionInventory) => void
 }
 
 /**
@@ -89,10 +92,18 @@ export function migrateTreeNodes(tree: DecisionTreeDoc): DecisionTreeDoc {
  * @returns 執行狀態
  */
 export async function runDecisionTree(options: EngineOptions): Promise<RunState> {
-  const { tree: rawTree, symbol, inventory, previous, manualAnswer, sharedCache } = options
+  const {
+    tree: rawTree,
+    symbol,
+    inventory,
+    previous,
+    manualAnswer,
+    sharedCache,
+    onInventoryChange,
+  } = options
   const tree = migrateTreeNodes(rawTree)
   const cache = sharedCache || new Map<string, unknown>()
-  const ctx: ResolveContext = { symbol, inventory, cache }
+  const ctx: ResolveContext = { symbol, inventory, cache, onInventoryChange }
 
   let state: RunState = previous
     ? { ...previous, path: [...previous.path] }
@@ -147,6 +158,36 @@ export async function runDecisionTree(options: EngineOptions): Promise<RunState>
       state.resultAdvice = node.advice || node.label
       state.currentNodeId = null
       return state
+    }
+
+    // 自動化：執行副作用後單一路徑往下（不評條件、無是／否）
+    if (node.kind === 'action') {
+      const actionId = node.actionId || 'auto_update_swing_high'
+      const actionDef = getActionDef(actionId)
+      const result = await runAction(actionId, ctx)
+      if (result.resolvedSource === 'error') {
+        state.path.push({
+          nodeId: node.id,
+          label: node.label,
+          kind: 'action',
+          indicatorResults: [result],
+          note: result.error,
+        })
+        return fail(state, result.error || '自動化執行失敗')
+      }
+      const nextId = node.yesTarget
+      state.path.push({
+        nodeId: node.id,
+        label: node.label,
+        kind: 'action',
+        indicatorResults: [result],
+        note: result.display || actionDef?.name,
+      })
+      if (!nextId) {
+        return fail(state, `自動化節點「${node.label}」未連接下一節點`)
+      }
+      state.currentNodeId = nextId
+      continue
     }
 
     // 主觀確認：暫停等人（路徑 kind 用 manual 以相容 UI）

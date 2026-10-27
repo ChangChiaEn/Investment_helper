@@ -23,6 +23,7 @@ import {
   MarkerType,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import { ACTION_CATALOG, getActionDef } from '@/lib/tools/decision-tree/actionCatalog'
 import { getAllIndicators, getIndicatorDef } from '@/lib/tools/decision-tree/catalog'
 import {
   COMPARE_OP_LABELS,
@@ -61,18 +62,38 @@ import {
 } from '@/lib/tools/decision-tree/flowSync'
 
 /**
- * 自訂節點外觀（通過＝左下、未通過＝右下）。
+ * 自訂節點外觀：決策雙出口；自動化上下單接點；結果僅上方入口。
  * @param props - React Flow 節點 props
  * @returns 節點 UI
  */
 function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
   const human = data.humanConfirm === true || data.kind === 'manual'
-  const kindColor =
-    data.kind === 'result' ? 'border-success' : human ? 'border-amber-500' : 'border-primary'
-  const kindBg =
-    data.kind === 'result' ? 'bg-success-soft' : human ? 'bg-amber-50' : 'bg-primary-soft'
-  const kindLabel =
-    data.kind === 'result' ? '結果' : human ? '主觀確認' : '決策'
+  const isAction = data.kind === 'action'
+  const isResult = data.kind === 'result'
+  const kindColor = isResult
+    ? 'border-success'
+    : isAction
+      ? 'border-accent'
+      : human
+        ? 'border-amber-500'
+        : 'border-primary'
+  const kindBg = isResult
+    ? 'bg-success-soft'
+    : isAction
+      ? 'bg-accent/10'
+      : human
+        ? 'bg-amber-50'
+        : 'bg-primary-soft'
+  const kindLabel = isResult
+    ? '結果'
+    : isAction
+      ? '自動化'
+      : human
+        ? '主觀確認'
+        : '決策'
+  const actionName = isAction
+    ? getActionDef(data.actionId || '')?.name
+    : undefined
 
   return (
     <div
@@ -80,7 +101,8 @@ function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
         selected ? 'ring-2 ring-primary-400' : ''
       }`}
     >
-      {data.kind !== 'result' && (
+      {/* 決策：上入口＋通過／未通過雙出口 */}
+      {!isResult && !isAction && (
         <>
           <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2.5 !h-2.5" />
           <Handle
@@ -107,11 +129,26 @@ function DtNodeView({ data, selected }: NodeProps<DtFlowNode>) {
           </div>
         </>
       )}
-      {data.kind === 'result' && (
+      {/* 自動化：僅上下各一接點，無判斷分支 */}
+      {isAction && (
+        <>
+          <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2.5 !h-2.5" />
+          <Handle
+            type="source"
+            id="next"
+            position={Position.Bottom}
+            className="!bg-slate-500 !w-2.5 !h-2.5"
+          />
+        </>
+      )}
+      {isResult && (
         <Handle type="target" position={Position.Top} className="!bg-gray-400 !w-2.5 !h-2.5" />
       )}
       <div className="text-[10px] tracking-wide text-muted-fg mb-0.5">{kindLabel}</div>
       <div className="text-sm font-medium text-fg leading-snug">{data.label}</div>
+      {actionName && (
+        <div className="text-[10px] text-muted-fg mt-0.5">{actionName}</div>
+      )}
     </div>
   )
 }
@@ -188,12 +225,18 @@ function TreeEditorInner() {
 
   const onConnect = useCallback(
     (connection: Connection) => {
+      const handle = connection.sourceHandle
+      // 自動化單出口：中性色、無通過／未通過標籤
+      const isNext = handle === 'next'
+      const isNo = handle === 'no'
       const edge: Edge = {
         ...connection,
-        id: `${connection.source}-${connection.sourceHandle}-${connection.target}`,
+        id: `${connection.source}-${handle}-${connection.target}`,
         markerEnd: { type: MarkerType.ArrowClosed },
-        label: connection.sourceHandle === 'no' ? '未通過' : '通過',
-        style: { stroke: connection.sourceHandle === 'no' ? '#dc2626' : '#16a34a' },
+        label: isNext ? undefined : isNo ? '未通過' : '通過',
+        style: {
+          stroke: isNext ? '#64748b' : isNo ? '#dc2626' : '#16a34a',
+        },
         interactionWidth: 24,
       }
       setEdges((eds) => addEdge(edge, eds))
@@ -273,17 +316,24 @@ function TreeEditorInner() {
   }
 
   /**
-   * 新增決策或結果節點（不再提供獨立「人工」按鈕）。
-   * @param kind - decision | result
+   * 新增決策／自動化／結果節點。
+   * @param kind - decision | action | result
    */
-  const addNode = (kind: 'decision' | 'result') => {
+  const addNode = (kind: 'decision' | 'action' | 'result') => {
     const id = newNodeId(kind)
+    const defaultActionId = ACTION_CATALOG[0]?.id || 'auto_update_swing_high'
     const data: FlowNodeData = {
       kind,
-      label: kind === 'decision' ? '新決策' : '建議結果',
+      label:
+        kind === 'decision'
+          ? '新決策'
+          : kind === 'action'
+            ? getActionDef(defaultActionId)?.name || '更新波段高點'
+            : '建議結果',
       condition: kind === 'decision' ? defaultCondition() : undefined,
       humanConfirm: false,
       advice: kind === 'result' ? '建議內容' : undefined,
+      actionId: kind === 'action' ? defaultActionId : undefined,
     }
     setNodes((nds) => [
       ...nds,
@@ -402,6 +452,13 @@ function TreeEditorInner() {
               </button>
               <button
                 type="button"
+                className="text-xs bg-card border border-accent/40 text-accent rounded px-2 py-1 shadow"
+                onClick={() => addNode('action')}
+              >
+                + 自動化
+              </button>
+              <button
+                type="button"
                 className="text-xs bg-card border rounded px-2 py-1 shadow"
                 onClick={() => addNode('result')}
               >
@@ -473,7 +530,7 @@ function TreeEditorInner() {
               />
             )}
             <p className="text-xs text-muted-fg">
-              綠＝通過／是（左），紅＝未通過／否（右）。點連線 →「取消連結」或按 Delete。連線後可「自動排版」。
+              決策：綠＝通過／是（左），紅＝未通過／否（右）。自動化：上下單接點、不判斷。點連線可取消；連線後可「自動排版」。
             </p>
           </aside>
         </div>
@@ -498,7 +555,13 @@ function NodePropsForm({
 }) {
   const human = data.humanConfirm === true || data.kind === 'manual'
   const kindLabel =
-    data.kind === 'result' ? '結果' : human ? '決策（主觀確認）' : '決策'
+    data.kind === 'result'
+      ? '結果'
+      : data.kind === 'action'
+        ? '自動化'
+        : human
+          ? '決策（主觀確認）'
+          : '決策'
 
   return (
     <div className="space-y-3 text-sm">
@@ -512,8 +575,40 @@ function NodePropsForm({
       </label>
       <p className="text-xs text-muted-fg">
         類型：<span className="text-card-fg font-medium">{kindLabel}</span>
-        （由「+ 決策／+ 結果」決定，不可改類型）
+        （由「+ 決策／+ 自動化／+ 結果」決定，不可改類型）
       </p>
+
+      {data.kind === 'action' && (
+        <label className="block">
+          動作
+          <select
+            className="mt-1 w-full border rounded-lg px-2 py-1.5"
+            value={data.actionId || ACTION_CATALOG[0]?.id || ''}
+            onChange={(e) => {
+              const actionId = e.target.value
+              const def = getActionDef(actionId)
+              onChange({
+                actionId,
+                // 標題仍為預設「自動化」時，改成動作名稱方便辨識
+                label:
+                  !data.label || data.label === '自動化'
+                    ? def?.name || '自動化'
+                    : data.label,
+              })
+            }}
+          >
+            {ACTION_CATALOG.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+          <span className="block text-xs text-muted-fg mt-1">
+            {getActionDef(data.actionId || '')?.description ||
+              '執行時寫回庫存，不判斷通過／未通過；上下各一個接點連到下一節點。'}
+          </span>
+        </label>
+      )}
 
       {data.kind === 'decision' && (
         <label className="flex items-start gap-2 text-xs">

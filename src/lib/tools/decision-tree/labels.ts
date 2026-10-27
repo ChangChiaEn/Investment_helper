@@ -2,6 +2,7 @@
  * 決策樹 UI 中文標籤：比較運算子、指標來源、節點種類。
  */
 
+import { getActionLabel } from './actionCatalog'
 import { getIndicatorDef } from './catalog'
 import type { CompareOp, NodeKind } from './types'
 
@@ -10,6 +11,7 @@ export const NODE_KIND_LABELS: Record<NodeKind, string> = {
   decision: '決策',
   manual: '主觀確認',
   result: '結果',
+  action: '自動化',
 }
 
 /**
@@ -22,12 +24,12 @@ export function getNodeKindLabel(kind: string): string {
 }
 
 /**
- * 取得指標顯示名稱（優先目錄中文名，否則回傳 id）。
- * @param indicatorId - 指標 id
+ * 取得指標／自動化動作顯示名稱（優先目錄中文名，否則回傳 id）。
+ * @param indicatorId - 指標或動作 id
  * @returns 顯示名稱
  */
 export function getIndicatorLabel(indicatorId: string): string {
-  return getIndicatorDef(indicatorId)?.name || indicatorId
+  return getIndicatorDef(indicatorId)?.name || getActionLabel(indicatorId) || indicatorId
 }
 
 /** 比較運算子顯示文字（選單用） */
@@ -61,6 +63,7 @@ export const INDICATOR_SOURCE_LABELS: Record<string, string> = {
   inventory: '自填',
   composite: '複合',
   formula: '公式',
+  automation: '自動化',
   manual: '自填',
   error: '錯誤',
 }
