@@ -17,6 +17,8 @@ export interface BatchRunOptions {
   concurrency?: number
   /** 每一檔完成時回呼（含進行中結果） */
   onProgress?: (results: RunState[]) => void
+  /** 自動化指標寫回庫存後通知 UI */
+  onInventoryChange?: (inv: DecisionInventory) => void
 }
 
 /** 批次前置檢查結果 */
@@ -50,7 +52,7 @@ export function precheckBatch(tree: DecisionTreeDoc, symbols: string[]): BatchPr
  * @returns 各標的 RunState（順序與 symbols 一致）
  */
 export async function runDecisionTreeBatch(options: BatchRunOptions): Promise<RunState[]> {
-  const { tree, symbols, inventory, onProgress } = options
+  const { tree, symbols, inventory, onProgress, onInventoryChange } = options
   const concurrency = Math.max(1, options.concurrency ?? DEFAULT_BATCH_CONCURRENCY)
   const sharedCache = new Map<string, unknown>()
   const results: (RunState | undefined)[] = new Array(symbols.length)
@@ -70,6 +72,7 @@ export async function runDecisionTreeBatch(options: BatchRunOptions): Promise<Ru
           symbol,
           inventory,
           sharedCache,
+          onInventoryChange,
         })
         results[i] = state
       } catch (err) {

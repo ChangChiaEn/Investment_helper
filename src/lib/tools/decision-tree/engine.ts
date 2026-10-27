@@ -2,7 +2,8 @@
  * 決策樹單路徑執行引擎。
  */
 
-import { resolveIndicator, type ResolveContext } from './resolvers'
+import { getActionDef } from './actionCatalog'
+import { resolveIndicator, runAction, type ResolveContext } from './resolvers'
 import type {
   CompareOp,
   ConditionGroup,
@@ -27,6 +28,8 @@ export interface EngineOptions {
    * 未傳時每次新建空 Map。
    */
   sharedCache?: Map<string, unknown>
+  /** 自動化指標寫回庫存後通知 UI */
+  onInventoryChange?: (inv: DecisionInventory) => void
 }
 
 /**
@@ -48,7 +51,8 @@ export function treeHasManualNode(tree: DecisionTreeDoc): boolean {
 }
 
 /**
- * 將舊版 manual 節點遷移為 decision + humanConfirm。
+ * 遷移舊版節點：manual → decision+humanConfirm；剝離已廢止的 adviceParams。
+ * 條件上的 params（指標視窗參數）予以保留。
  * @param tree - 原始文件
  * @returns 遷移後文件（必要時複製）
  */
@@ -56,18 +60,27 @@ export function migrateTreeNodes(tree: DecisionTreeDoc): DecisionTreeDoc {
   let changed = false
   const nodes: Record<string, TreeNode> = {}
   for (const [id, n] of Object.entries(tree.nodes)) {
-    if (n.kind === 'manual') {
+    let node: TreeNode = { ...n }
+
+    if (node.kind === 'manual') {
       changed = true
-      nodes[id] = {
-        ...n,
+      node = {
+        ...node,
         kind: 'decision',
         humanConfirm: true,
-        prompt: n.prompt || '請確認是否繼續？',
+        prompt: node.prompt || '請確認是否繼續？',
         condition: undefined,
       }
-    } else {
-      nodes[id] = n
     }
+
+    // --- 剝離已廢止的建議參數（含空物件）---
+    if ('adviceParams' in (node as object)) {
+      changed = true
+      const { adviceParams: _drop, ...rest } = node as TreeNode & { adviceParams?: unknown }
+      node = rest
+    }
+
+    nodes[id] = node
   }
   if (!changed) return tree
   return { ...tree, nodes, updatedAt: Date.now() }
@@ -79,10 +92,18 @@ export function migrateTreeNodes(tree: DecisionTreeDoc): DecisionTreeDoc {
  * @returns 執行狀態
  */
 export async function runDecisionTree(options: EngineOptions): Promise<RunState> {
-  const { tree: rawTree, symbol, inventory, previous, manualAnswer, sharedCache } = options
+  const {
+    tree: rawTree,
+    symbol,
+    inventory,
+    previous,
+    manualAnswer,
+    sharedCache,
+    onInventoryChange,
+  } = options
   const tree = migrateTreeNodes(rawTree)
   const cache = sharedCache || new Map<string, unknown>()
-  const ctx: ResolveContext = { symbol, inventory, cache }
+  const ctx: ResolveContext = { symbol, inventory, cache, onInventoryChange }
 
   let state: RunState = previous
     ? { ...previous, path: [...previous.path] }
@@ -135,9 +156,38 @@ export async function runDecisionTree(options: EngineOptions): Promise<RunState>
       })
       state.status = 'completed'
       state.resultAdvice = node.advice || node.label
-      state.resultParams = node.adviceParams
       state.currentNodeId = null
       return state
+    }
+
+    // 自動化：執行副作用後單一路徑往下（不評條件、無是／否）
+    if (node.kind === 'action') {
+      const actionId = node.actionId || 'auto_update_swing_high'
+      const actionDef = getActionDef(actionId)
+      const result = await runAction(actionId, ctx)
+      if (result.resolvedSource === 'error') {
+        state.path.push({
+          nodeId: node.id,
+          label: node.label,
+          kind: 'action',
+          indicatorResults: [result],
+          note: result.error,
+        })
+        return fail(state, result.error || '自動化執行失敗')
+      }
+      const nextId = node.yesTarget
+      state.path.push({
+        nodeId: node.id,
+        label: node.label,
+        kind: 'action',
+        indicatorResults: [result],
+        note: result.display || actionDef?.name,
+      })
+      if (!nextId) {
+        return fail(state, `自動化節點「${node.label}」未連接下一節點`)
+      }
+      state.currentNodeId = nextId
+      continue
     }
 
     // 主觀確認：暫停等人（路徑 kind 用 manual 以相容 UI）
@@ -296,7 +346,6 @@ export function createBlankTree(name: string): DecisionTreeDoc {
     kind: 'result',
     label: '建議',
     advice: '請編輯此結果節點的建議內容',
-    adviceParams: {},
   }
   return {
     id: `tree_${Date.now().toString(36)}`,
@@ -356,7 +405,6 @@ export function createSampleTree(): DecisionTreeDoc {
       kind: 'result',
       label: '建議加碼',
       advice: '符合連買與低檔條件，建議小額試單或加碼（僅建議，非下單指示）',
-      adviceParams: { 建議部位占總資金百分比: 10 },
     },
     r_watch: {
       id: 'r_watch',

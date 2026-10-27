@@ -11,6 +11,8 @@ import {
   addCustomList,
   addHolding,
   addListItem,
+  calcCashRemaining,
+  calcInvestedCapital,
   moveHoldingToList,
   moveListItemToHoldings,
   moveListItemToList,
@@ -120,23 +122,42 @@ export function InventoryPanel({ inventory, onChange }: Props) {
 
       {tab === 'globals' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-card rounded-xl border p-4">
-          {(
-            [
-              ['totalCapital', '總資金'],
-              ['cashRemaining', '剩餘現金'],
-              ['maxHoldings', '持股檔數上限'],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key} className="text-sm text-card-fg">
-              {label}
-              <input
-                type="number"
-                className="mt-1 w-full border rounded-lg px-3 py-2"
-                value={inventory[key]}
-                onChange={(e) => onChange(updateGlobals(inventory, { [key]: Number(e.target.value) }))}
-              />
-            </label>
-          ))}
+          <label className="text-sm text-card-fg">
+            總資金
+            <input
+              type="number"
+              className="mt-1 w-full border rounded-lg px-3 py-2"
+              value={inventory.totalCapital}
+              onChange={(e) =>
+                onChange(updateGlobals(inventory, { totalCapital: Number(e.target.value) }))
+              }
+            />
+          </label>
+          {/* 剩餘現金由持股總投入自動推算，僅供檢視 */}
+          <label className="text-sm text-card-fg">
+            剩餘現金
+            <input
+              type="number"
+              readOnly
+              className="mt-1 w-full border rounded-lg px-3 py-2 bg-muted text-muted-fg"
+              value={calcCashRemaining(inventory)}
+              title="總資金 − Σ(進場價 × 股數)"
+            />
+            <span className="mt-1 block text-xs text-muted-fg">
+              自動計算：總資金 − 持股總投入
+            </span>
+          </label>
+          <label className="text-sm text-card-fg">
+            持股檔數上限
+            <input
+              type="number"
+              className="mt-1 w-full border rounded-lg px-3 py-2"
+              value={inventory.maxHoldings}
+              onChange={(e) =>
+                onChange(updateGlobals(inventory, { maxHoldings: Number(e.target.value) }))
+              }
+            />
+          </label>
         </div>
       )}
 
@@ -144,6 +165,7 @@ export function InventoryPanel({ inventory, onChange }: Props) {
         <HoldingsTable
           items={inventory.holdings}
           lists={inventory.lists}
+          investedCapital={calcInvestedCapital(inventory)}
           onAdd={(item) => onChange(addHolding(inventory, item))}
           onUpdate={(id, patch) => onChange(updateHolding(inventory, id, patch))}
           onRemove={(id) => onChange(removeHolding(inventory, id))}
@@ -221,6 +243,7 @@ function MoveSelect({
 function HoldingsTable({
   items,
   lists,
+  investedCapital,
   onAdd,
   onUpdate,
   onRemove,
@@ -228,6 +251,8 @@ function HoldingsTable({
 }: {
   items: HoldingItem[]
   lists: CustomList[]
+  /** 目前總投入：Σ(進場價 × 股數) */
+  investedCapital: number
   onAdd: (item: Omit<HoldingItem, 'id'>) => void
   onUpdate: (id: string, patch: Partial<Omit<HoldingItem, 'id'>>) => void
   onRemove: (id: string) => void
@@ -247,6 +272,13 @@ function HoldingsTable({
 
   return (
     <div className="space-y-4">
+      <div className="bg-card border border-border rounded-xl px-4 py-3 flex flex-wrap gap-4 items-baseline text-sm">
+        <span className="font-medium text-card-fg">目前總投入資金</span>
+        <span className="font-mono text-lg text-fg tabular-nums">
+          {investedCapital.toLocaleString('zh-TW')}
+        </span>
+        <span className="text-xs text-muted-fg">Σ(進場價 × 股數)</span>
+      </div>
       <div className="bg-card rounded-xl border p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
         {(
           [

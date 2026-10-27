@@ -4,7 +4,13 @@
 
 import { migrateTreeNodes } from './engine'
 import { loadFormulas, saveFormulas } from './formulaStore'
-import type { DecisionTreeDoc, FormulaIndicator, TreeNode } from './types'
+import { loadVariants, saveVariants } from './variantStore'
+import type {
+  DecisionTreeDoc,
+  FormulaIndicator,
+  IndicatorVariant,
+  TreeNode,
+} from './types'
 import { loadTrees, saveTrees, setActiveTreeId, type TreeListState } from './treeStore'
 
 /** 匯出檔格式版本 */
@@ -18,6 +24,8 @@ export interface DecisionTreeExportFile {
   trees: DecisionTreeDoc[]
   /** 樹內條件有引用到的自訂公式（可選） */
   formulas?: FormulaIndicator[]
+  /** 樹內條件有引用到的參數變體（可選） */
+  variants?: IndicatorVariant[]
 }
 
 /**
@@ -49,22 +57,38 @@ export function formulasUsedByTrees(trees: DecisionTreeDoc[]): FormulaIndicator[
 }
 
 /**
+ * 依樹列表挑出被引用的參數變體。
+ * @param trees - 決策樹列表
+ * @returns 相關變體
+ */
+export function variantsUsedByTrees(trees: DecisionTreeDoc[]): IndicatorVariant[] {
+  const used = new Set<string>()
+  for (const t of trees) {
+    for (const id of collectIndicatorIds(t)) used.add(id)
+  }
+  return loadVariants().filter((v) => used.has(v.id))
+}
+
+/**
  * 建立匯出檔物件。
  * @param trees - 要匯出的樹
- * @param includeFormulas - 是否附帶相關公式
+ * @param includeExtras - 是否附帶相關公式／變體
  * @returns 匯出檔
  */
 export function buildExportPayload(
   trees: DecisionTreeDoc[],
-  includeFormulas = true
+  includeExtras = true
 ): DecisionTreeExportFile {
   return {
     version: TREE_EXPORT_VERSION,
     kind: 'sagafisc-decision-tree',
     exportedAt: Date.now(),
     trees: trees.map((t) => migrateTreeNodes(t)),
-    ...(includeFormulas
-      ? { formulas: formulasUsedByTrees(trees) }
+    ...(includeExtras
+      ? {
+          formulas: formulasUsedByTrees(trees),
+          variants: variantsUsedByTrees(trees),
+        }
       : {}),
   }
 }
@@ -164,6 +188,7 @@ export function parseImportText(text: string): {
   ok: true
   trees: DecisionTreeDoc[]
   formulas: FormulaIndicator[]
+  variants: IndicatorVariant[]
 } | { ok: false; error: string } {
   let data: unknown
   try {
@@ -190,11 +215,21 @@ export function parseImportText(text: string): {
             (f) => f && typeof f.id === 'string' && typeof f.expression === 'string'
           )
         : []
-      return { ok: true, trees, formulas }
+      const variants = Array.isArray(root.variants)
+        ? (root.variants as IndicatorVariant[]).filter(
+            (v) =>
+              v &&
+              typeof v.id === 'string' &&
+              typeof v.baseIndicatorId === 'string' &&
+              v.params &&
+              typeof v.params === 'object'
+          )
+        : []
+      return { ok: true, trees, formulas, variants }
     }
     // 單棵 DecisionTreeDoc
     const one = parseTreeDoc(data)
-    if (one.ok) return { ok: true, trees: [one.tree], formulas: [] }
+    if (one.ok) return { ok: true, trees: [one.tree], formulas: [], variants: [] }
   }
 
   // 純陣列
@@ -206,7 +241,7 @@ export function parseImportText(text: string): {
       if (parsed.ok === false) return { ok: false, error: parsed.error }
       trees.push(parsed.tree)
     }
-    return { ok: true, trees, formulas: [] }
+    return { ok: true, trees, formulas: [], variants: [] }
   }
 
   return { ok: false, error: '無法辨識的匯入格式' }
@@ -253,15 +288,39 @@ function mergeFormulas(incoming: FormulaIndicator[]): number {
 }
 
 /**
+ * 合併匯入的參數變體（同 id 略過，不覆寫本機）。
+ * @param incoming - 匯入變體
+ * @returns 新增筆數
+ */
+function mergeVariants(incoming: IndicatorVariant[]): number {
+  if (!incoming.length) return 0
+  const existing = loadVariants()
+  const ids = new Set(existing.map((v) => v.id))
+  const toAdd = incoming.filter(
+    (v) => v.id && v.baseIndicatorId && v.params && !ids.has(v.id)
+  )
+  if (!toAdd.length) return 0
+  saveVariants([...toAdd, ...existing])
+  return toAdd.length
+}
+
+/**
  * 將解析後的樹寫入本機並設最後一棵為作用中。
  * @param trees - 樹列表
  * @param formulas - 公式
+ * @param variants - 參數變體
  * @returns 更新後列表狀態與統計
  */
 export function applyImport(
   trees: DecisionTreeDoc[],
-  formulas: FormulaIndicator[] = []
-): { list: TreeListState; importedTrees: number; importedFormulas: number } {
+  formulas: FormulaIndicator[] = [],
+  variants: IndicatorVariant[] = []
+): {
+  list: TreeListState
+  importedTrees: number
+  importedFormulas: number
+  importedVariants: number
+} {
   const { trees: current } = loadTrees()
   const names = new Set(current.map((t) => t.name))
   const minted = trees.map((t) => remintTree(migrateTreeNodes(t), names))
@@ -270,10 +329,12 @@ export function applyImport(
   const last = minted[minted.length - 1]
   if (last) setActiveTreeId(last.id)
   const importedFormulas = mergeFormulas(formulas)
+  const importedVariants = mergeVariants(variants)
   return {
     list: { trees: next, activeId: last?.id ?? null },
     importedTrees: minted.length,
     importedFormulas,
+    importedVariants,
   }
 }
 
@@ -283,12 +344,18 @@ export function applyImport(
  * @returns 結果
  */
 export async function importFromFile(file: File): Promise<
-  | { ok: true; list: TreeListState; importedTrees: number; importedFormulas: number }
+  | {
+      ok: true
+      list: TreeListState
+      importedTrees: number
+      importedFormulas: number
+      importedVariants: number
+    }
   | { ok: false; error: string }
 > {
   const text = await file.text()
   const parsed = parseImportText(text)
   if (parsed.ok === false) return { ok: false, error: parsed.error }
-  const result = applyImport(parsed.trees, parsed.formulas)
+  const result = applyImport(parsed.trees, parsed.formulas, parsed.variants)
   return { ok: true, ...result }
 }

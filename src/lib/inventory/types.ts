@@ -78,8 +78,12 @@ export interface Inventory {
    * @deprecated 舊版欄位，載入時會遷移至 lists
    */
   candidates?: ListItem[]
-  /** 手動全域參數 */
+  /** 手動全域參數：總可運用資金 */
   totalCapital: number
+  /**
+   * 剩餘現金（衍生欄位）：總資金 − Σ(進場價 × 股數)。
+   * 寫入時會依持股重算；UI 僅顯示、不手動編輯。
+   */
   cashRemaining: number
   maxHoldings: number
   /** @deprecated 改由各 CustomList.maxItems 控制 */

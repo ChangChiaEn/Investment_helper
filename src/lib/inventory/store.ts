@@ -35,6 +35,41 @@ export function createEmptyInventory(): Inventory {
   }
 }
 
+
+/**
+ * 計算持股目前總投入資金：Σ(進場價 × 股數)。
+ * 缺漏／非數值欄位以 0 計入，避免 NaN 污染加總。
+ * @param inv - 庫存
+ * @returns 總投入金額（元）
+ */
+export function calcInvestedCapital(inv: Inventory): number {
+  return inv.holdings.reduce((sum, h) => {
+    const entry = typeof h.entryPrice === 'number' && Number.isFinite(h.entryPrice) ? h.entryPrice : 0
+    const shares = typeof h.shares === 'number' && Number.isFinite(h.shares) ? h.shares : 0
+    return sum + entry * shares
+  }, 0)
+}
+
+/**
+ * 計算剩餘現金：總資金 − 持股總投入。
+ * @param inv - 庫存（讀 totalCapital 與 holdings）
+ * @returns 剩餘現金（元）；總資金未填時依 0 計算
+ */
+export function calcCashRemaining(inv: Inventory): number {
+  const capital =
+    typeof inv.totalCapital === 'number' && Number.isFinite(inv.totalCapital) ? inv.totalCapital : 0
+  return capital - calcInvestedCapital(inv)
+}
+
+/**
+ * 以持股重算剩餘現金後回傳新物件（不寫入 storage）。
+ * @param inv - 庫存
+ * @returns 含最新 cashRemaining 的庫存
+ */
+export function withDerivedCash(inv: Inventory): Inventory {
+  return { ...inv, cashRemaining: calcCashRemaining(inv) }
+}
+
 /**
  * 將舊版 watchlist／candidates 遷移為 lists，並清掉廢棄欄位。
  * @param raw - 可能含舊欄位的部分庫存
@@ -62,13 +97,15 @@ export function migrateInventory(raw: Partial<Inventory>): Inventory {
     })
   }
 
-  return {
+  // 剩餘現金一律由持股重算，忽略舊檔手動值，避免與總投入不一致
+  const draft: Inventory = {
     holdings: Array.isArray(raw.holdings) ? raw.holdings : base.holdings,
     lists,
     totalCapital: typeof raw.totalCapital === 'number' ? raw.totalCapital : base.totalCapital,
-    cashRemaining: typeof raw.cashRemaining === 'number' ? raw.cashRemaining : base.cashRemaining,
+    cashRemaining: base.cashRemaining,
     maxHoldings: typeof raw.maxHoldings === 'number' ? raw.maxHoldings : base.maxHoldings,
   }
+  return withDerivedCash(draft)
 }
 
 /**
@@ -108,9 +145,10 @@ export function loadInventory(): Inventory {
         })())
 
     if (changed) {
-      saveInventory(withWatch)
+      return saveInventory(withWatch)
     }
-    return withWatch
+    // 讀取時仍重算剩餘現金，避免舊手動值與持股不一致
+    return withDerivedCash(withWatch)
   } catch {
     return createEmptyInventory()
   }
@@ -278,18 +316,23 @@ export function collectSymbolRefs(inv: Inventory): Array<{
 
 /**
  * 寫入庫存（僅新鍵；不持久化廢棄欄位）。
+ * 寫入前一律重算剩餘現金，確保與持股總投入一致。
  * @param inventory - 完整庫存
+ * @returns 含最新 cashRemaining 的庫存（SSR 時僅回傳衍生結果、不寫入）
  */
-export function saveInventory(inventory: Inventory): void {
-  if (typeof window === 'undefined') return
+export function saveInventory(inventory: Inventory): Inventory {
+  const derived = withDerivedCash(inventory)
   const clean: Inventory = {
-    holdings: inventory.holdings,
-    lists: inventory.lists,
-    totalCapital: inventory.totalCapital,
-    cashRemaining: inventory.cashRemaining,
-    maxHoldings: inventory.maxHoldings,
+    holdings: derived.holdings,
+    lists: derived.lists,
+    totalCapital: derived.totalCapital,
+    cashRemaining: derived.cashRemaining,
+    maxHoldings: derived.maxHoldings,
   }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(clean))
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(clean))
+  }
+  return clean
 }
 
 /**
@@ -311,8 +354,7 @@ export function addHolding(inv: Inventory, item: Omit<HoldingItem, 'id'>): Inven
     ...inv,
     holdings: [...inv.holdings, { ...item, id: newId() }],
   }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -331,8 +373,7 @@ export function updateHolding(
     ...inv,
     holdings: inv.holdings.map((h) => (h.id === id ? { ...h, ...patch } : h)),
   }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -343,8 +384,7 @@ export function updateHolding(
  */
 export function removeHolding(inv: Inventory, id: string): Inventory {
   const next = { ...inv, holdings: inv.holdings.filter((h) => h.id !== id) }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -370,8 +410,7 @@ export function addCustomList(inv: Inventory, name: string, maxItems?: number): 
       },
     ],
   }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -388,8 +427,7 @@ export function renameCustomList(inv: Inventory, listId: string, name: string): 
     ...inv,
     lists: inv.lists.map((l) => (l.id === listId ? { ...l, name: trimmed } : l)),
   }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -400,8 +438,7 @@ export function renameCustomList(inv: Inventory, listId: string, name: string): 
  */
 export function removeCustomList(inv: Inventory, listId: string): Inventory {
   const next = { ...inv, lists: inv.lists.filter((l) => l.id !== listId) }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -428,8 +465,7 @@ export function addListItem(inv: Inventory, listId: string, item: ListItemInput)
       }
     }),
   }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -446,8 +482,7 @@ export function removeListItem(inv: Inventory, listId: string, itemId: string): 
       l.id === listId ? { ...l, items: l.items.filter((i) => i.id !== itemId) } : l
     ),
   }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -475,8 +510,7 @@ export function updateListItem(
         : l
     ),
   }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -535,8 +569,7 @@ export function moveHoldingToList(
       swingHigh: holding.swingHigh,
     })
   }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -580,8 +613,7 @@ export function moveListItemToHoldings(
       swingHigh: item.swingHigh ?? 0,
     })
   }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
@@ -642,23 +674,21 @@ export function moveListItemToList(
       swingHigh: item.swingHigh,
     })
   }
-  saveInventory(next)
-  return next
+  return saveInventory(next)
 }
 
 /**
- * 更新全域手動參數。
+ * 更新全域手動參數（總資金、持股上限）。
+ * 剩餘現金由持股重算，不接受手動覆寫。
  * @param inv - 目前庫存
- * @param patch - 部分全域欄位
+ * @param patch - 可改的全域欄位
  * @returns 更新後庫存
  */
 export function updateGlobals(
   inv: Inventory,
-  patch: Partial<Pick<Inventory, 'totalCapital' | 'cashRemaining' | 'maxHoldings'>>
+  patch: Partial<Pick<Inventory, 'totalCapital' | 'maxHoldings'>>
 ): Inventory {
-  const next = { ...inv, ...patch }
-  saveInventory(next)
-  return next
+  return saveInventory({ ...inv, ...patch })
 }
 
 /**
@@ -685,4 +715,37 @@ export function collectAllSymbols(inv: Inventory): [string, string][] {
     })
   })
   return Array.from(map.entries())
+}
+
+/** 決策樹／選股用的標的分組（對齊庫存分頁：持股、關注、自訂分類） */
+export interface SymbolGroup {
+  /** 分組鍵：holdings 或 list id */
+  key: string
+  /** 顯示名稱 */
+  label: string
+  /** [代號, 名稱] */
+  symbols: [string, string][]
+}
+
+/**
+ * 依庫存分頁結構彙整標的（持股＋各分類各自列出，不去重跨組）。
+ * @param inv - 庫存
+ * @returns 分組陣列（空組也保留，方便 UI 對齊分頁）
+ */
+export function collectSymbolsByGroup(inv: Inventory): SymbolGroup[] {
+  const groups: SymbolGroup[] = [
+    {
+      key: 'holdings',
+      label: '持股',
+      symbols: inv.holdings.map((h) => [h.symbol, h.name]),
+    },
+  ]
+  inv.lists.forEach((list) => {
+    groups.push({
+      key: list.id,
+      label: list.name,
+      symbols: list.items.map((i) => [i.symbol, i.name]),
+    })
+  })
+  return groups
 }

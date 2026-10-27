@@ -151,11 +151,19 @@ export function AssistantChatPanel() {
   const { messages, isLoading, send } = useAssistant()
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
+
+  // 依內容自動增高，上限約 8 行，方便多行編輯又不佔滿面板
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 192)}px`
+  }, [input])
 
   const handleSend = async () => {
     const text = input.trim()
@@ -165,6 +173,7 @@ export function AssistantChatPanel() {
     inputRef.current?.focus()
   }
 
+  /** Enter 送出；Shift+Enter 換行 */
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -180,7 +189,7 @@ export function AssistantChatPanel() {
             return (
               <div key={msg.id} className="flex justify-end">
                 <div className="max-w-[90%] bg-primary text-primary-fg rounded-2xl rounded-br-md px-4 py-3 shadow-sm">
-                  <p className="text-sm leading-relaxed">{msg.text}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                 </div>
               </div>
             )
@@ -209,15 +218,15 @@ export function AssistantChatPanel() {
       </div>
 
       <div className="border-t border-border bg-card px-3 py-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <input
+        <div className="flex items-end gap-2">
+          <textarea
             ref={inputRef}
-            type="text"
+            rows={2}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="請輸入您想分析的股票或基金..."
-            className="flex-1 px-3 py-2.5 bg-muted border border-border rounded-xl text-sm text-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary"
+            placeholder="請輸入您想分析的股票或基金…"
+            className="flex-1 min-h-[2.75rem] max-h-48 resize-none overflow-y-auto px-3 py-2.5 bg-muted border border-border rounded-xl text-sm text-fg placeholder:text-muted-fg focus:outline-none focus:ring-2 focus:ring-ring focus:border-primary leading-relaxed"
             disabled={isLoading}
             aria-label="助理訊息輸入"
           />
@@ -225,7 +234,7 @@ export function AssistantChatPanel() {
             type="button"
             onClick={() => void handleSend()}
             disabled={isLoading || !input.trim()}
-            className="p-2.5 bg-primary hover:opacity-90 disabled:bg-muted disabled:cursor-not-allowed text-primary-fg rounded-xl transition-colors flex-shrink-0"
+            className="p-2.5 mb-0.5 bg-primary hover:opacity-90 disabled:bg-muted disabled:cursor-not-allowed text-primary-fg rounded-xl transition-colors flex-shrink-0"
             aria-label="送出"
           >
             {isLoading ? (

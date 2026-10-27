@@ -11,13 +11,17 @@ export type {
   ListItem,
   ListItemInput,
 } from './types'
+export type { SymbolGroup } from './store'
 export { WATCH_LIST_NAME } from './types'
 export {
   addCustomList,
   addHolding,
   addListItem,
+  calcCashRemaining,
+  calcInvestedCapital,
   collectAllSymbols,
   collectSymbolRefs,
+  collectSymbolsByGroup,
   createEmptyInventory,
   ensureWatchList,
   findHolding,
@@ -39,4 +43,5 @@ export {
   updateGlobals,
   updateHolding,
   updateListItem,
+  withDerivedCash,
 } from './store'

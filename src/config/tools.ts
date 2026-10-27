@@ -161,7 +161,7 @@ export const TOOL_CONFIGS: Record<string, ToolConfig> = {
   alphastrategist: {
     id: 'alphastrategist',
     name: 'AlphaStrategist AI',
-    description: '綜合幫助管家；可全頁或懸浮小視窗',
+    description: '綜合幫助管家',
     category: 'advanced',
     localPath: 'alphastrategist-ai',
     inNavigation: true,

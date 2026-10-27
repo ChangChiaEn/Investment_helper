@@ -135,11 +135,25 @@ export function treeToFlow(
         humanConfirm: n.humanConfirm,
         prompt: n.prompt,
         advice: n.advice,
-        adviceParams: n.adviceParams,
         condition: n.condition,
+        actionId: n.actionId,
       },
     })
     const human = n.humanConfirm === true || n.kind === 'manual'
+    // 自動化：單出口（handle=next），無通過／未通過標籤
+    if (n.kind === 'action') {
+      if (n.yesTarget) {
+        edges.push({
+          id: `${n.id}->next->${n.yesTarget}`,
+          source: n.id,
+          target: n.yesTarget,
+          sourceHandle: 'next',
+          style: { stroke: '#64748b' },
+          interactionWidth: 24,
+        })
+      }
+      return
+    }
     if (n.yesTarget) {
       edges.push({
         id: `${n.id}->yes->${n.yesTarget}`,
@@ -189,6 +203,9 @@ export function flowToTree(
     const noEdge = edges.find(
       (e) => e.source === n.id && (e.sourceHandle === 'no' || e.label === '否' || e.label === '未通過')
     )
+    const nextEdge = edges.find(
+      (e) => e.source === n.id && (e.sourceHandle === 'next' || e.label === '下一步')
+    )
     // 若無 handle 標記，依邊順序：第一條 yes、第二條 no
     const outs = edges.filter((e) => e.source === n.id)
     const yesTarget = yesEdge?.target ?? (outs[0] && outs[0] !== noEdge ? outs[0].target : null)
@@ -200,6 +217,20 @@ export function flowToTree(
       kind === 'manual' ? true : Boolean(n.data.humanConfirm)
     const normalizedKind: NodeKind = kind === 'manual' ? 'decision' : kind
 
+    // 自動化：唯一出口存 yesTarget；結果／自動化皆無 no 分支
+    if (normalizedKind === 'action') {
+      const nextTarget = nextEdge?.target ?? yesTarget ?? outs[0]?.target ?? null
+      logicNodes[n.id] = {
+        id: n.id,
+        kind: 'action',
+        label: n.data.label || n.id,
+        actionId: n.data.actionId || 'auto_update_swing_high',
+        yesTarget: nextTarget,
+        noTarget: null,
+      }
+      continue
+    }
+
     logicNodes[n.id] = {
       id: n.id,
       kind: normalizedKind,
@@ -207,18 +238,22 @@ export function flowToTree(
       humanConfirm: humanConfirm || undefined,
       prompt: n.data.prompt,
       advice: n.data.advice,
-      adviceParams: n.data.adviceParams,
       condition: humanConfirm ? undefined : n.data.condition,
       yesTarget: normalizedKind === 'result' ? null : yesTarget,
       noTarget: normalizedKind === 'result' ? null : noTarget,
     }
   }
 
-  // root：優先既有 root，否則第一個決策／人工，否則第一個節點
+  // root：優先既有 root，否則第一個決策／自動化／人工，否則第一個節點
   let rootId = doc.rootId
   if (!logicNodes[rootId]) {
     rootId =
-      nodes.find((n) => n.data.kind === 'decision' || n.data.kind === 'manual')?.id ||
+      nodes.find(
+        (n) =>
+          n.data.kind === 'decision' ||
+          n.data.kind === 'action' ||
+          n.data.kind === 'manual'
+      )?.id ||
       nodes[0]?.id ||
       doc.rootId
   }

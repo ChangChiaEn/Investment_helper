@@ -1,9 +1,10 @@
 /**
- * 決策樹指標目錄（內建白名單 + 本機公式合併）。
+ * 決策樹指標目錄（內建白名單 + 本機公式／參數變體合併）。
  */
 
 import { formulaToIndicatorDef, loadFormulas } from './formulaStore'
-import type { IndicatorDef, IndicatorSource } from './types'
+import { formatParamsLabel, loadVariants } from './variantStore'
+import type { IndicatorDef, IndicatorSource, IndicatorVariant } from './types'
 
 /**
  * 正規化舊版來源標籤（manual → inventory）。
@@ -184,7 +185,7 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
   {
     id: 'trust_buy_streak',
     name: '投信連買天數',
-    description: '執行時即時連打多日法人資料計算（不落庫）',
+    description: '執行時即時連打法人資料計算（可調最多檢查天數，不落庫）',
     source: 'openapi',
     valueType: 'number',
     unit: '天',
@@ -193,7 +194,7 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
   {
     id: 'foreign_buy_streak',
     name: '外資連買天數',
-    description: '執行時即時連打多日法人資料計算（不落庫）',
+    description: '執行時即時連打法人資料計算（可調最多檢查天數，不落庫）',
     source: 'openapi',
     valueType: 'number',
     unit: '天',
@@ -250,7 +251,7 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
   {
     id: 'ma',
     name: '移動平均線',
-    description: 'N 日收盤均線（當次連打行情計算）',
+    description: 'N 日收盤均線（當次連打行情計算；預設 60）',
     source: 'openapi',
     valueType: 'number',
     unit: '元',
@@ -259,7 +260,7 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
   {
     id: 'bias',
     name: '乖離率',
-    description: '(收盤 − MA) / MA × 100%',
+    description: '(收盤 − MA) / MA × 100%（均線日數可調，預設 60）',
     source: 'openapi',
     valueType: 'number',
     unit: '%',
@@ -268,7 +269,7 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
   {
     id: 'drawdown_from_high',
     name: '近 N 日高點回檔%',
-    description: '自近 N 交易日最高價回檔幅度',
+    description: '自近 N 交易日最高價回檔幅度（預設 60）',
     source: 'openapi',
     valueType: 'number',
     unit: '%',
@@ -277,7 +278,7 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
   {
     id: 'atr',
     name: 'ATR',
-    description: '平均真實波幅（當次計算）',
+    description: '平均真實波幅（日數可調，預設 14）',
     source: 'openapi',
     valueType: 'number',
     unit: '元',
@@ -341,7 +342,7 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
   {
     id: 'cash_remaining',
     name: '剩餘現金',
-    description: '庫存欄全域自填參數（未填時以 0 計算）',
+    description: '總資金 − Σ(進場價 × 股數)；依持股自動計算',
     source: 'inventory',
     valueType: 'number',
     unit: '元',
@@ -392,22 +393,52 @@ export const INDICATOR_CATALOG: IndicatorDef[] = [
 ]
 
 /**
- * 內建＋本機公式的完整目錄（執行／選單用）。
+ * 將參數變體轉成目錄項目。
+ * @param v - 變體
+ * @returns IndicatorDef；基底遺失時略過
+ */
+export function variantToIndicatorDef(v: IndicatorVariant): IndicatorDef | null {
+  const base = INDICATOR_CATALOG.find((i) => i.id === v.baseIndicatorId)
+  if (!base) return null
+  const paramLabel = formatParamsLabel(v.params)
+  return {
+    id: v.id,
+    name: v.name,
+    description:
+      v.description || `複製自「${base.name}」，參數 ${paramLabel || '（未設）'}`,
+    source: base.source,
+    valueType: base.valueType,
+    unit: base.unit,
+    params: base.params,
+    baseIndicatorId: v.baseIndicatorId,
+    defaultParams: { ...v.params },
+  }
+}
+
+/**
+ * 內建＋本機公式＋參數變體的完整目錄（執行／選單用）。
  * @returns 合併後指標列表
  */
 export function getAllIndicators(): IndicatorDef[] {
   const formulas = loadFormulas().map(formulaToIndicatorDef)
-  return [...INDICATOR_CATALOG, ...formulas]
+  const variants = loadVariants()
+    .map(variantToIndicatorDef)
+    .filter((d): d is IndicatorDef => d !== null)
+  return [...INDICATOR_CATALOG, ...variants, ...formulas]
 }
 
 /**
- * 依 id 查指標定義（含公式）。
+ * 依 id 查指標定義（含公式、變體）。
  * @param id - 指標 id
  * @returns 定義或 undefined
  */
 export function getIndicatorDef(id: string): IndicatorDef | undefined {
   const builtIn = INDICATOR_CATALOG.find((i) => i.id === id)
   if (builtIn) return builtIn
+  const variant = loadVariants()
+    .map(variantToIndicatorDef)
+    .find((i) => i?.id === id)
+  if (variant) return variant
   return loadFormulas()
     .map(formulaToIndicatorDef)
     .find((i) => i.id === id)

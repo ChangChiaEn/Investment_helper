@@ -1,9 +1,14 @@
 /**
- * 指標解析器：OpenAPI（經 proxy）→ 失敗降級 AI；inventory 讀庫存；composite／formula 複合計算。
+ * 指標解析器：OpenAPI（經 proxy）→ 失敗降級 AI；inventory 讀庫存；composite／formula 複合計算；automation 寫回庫存。
  */
 
 import { createClient, generateWithFallback } from '@/lib/gemini'
-import { findHolding } from '@/lib/inventory'
+import {
+  calcCashRemaining,
+  findHolding,
+  loadInventory,
+  updateHolding,
+} from '@/lib/inventory'
 import { requireEndpoint } from '@/lib/market'
 import { fetchMarketWithHistory } from '@/lib/pipeline'
 import { getIndicatorDef, normalizeIndicatorSource } from './catalog'
@@ -38,14 +43,20 @@ export interface ResolveContext {
   inventory: DecisionInventory
   /** 當次執行快取，避免重複打 API */
   cache?: Map<string, unknown>
+  /**
+   * 自動化指標寫回庫存後通知 UI（例如同步 InventoryContext）。
+   * 寫入已落 localStorage；此回呼僅負責 React 狀態。
+   */
+  onInventoryChange?: (inv: DecisionInventory) => void
 }
 
 /**
  * 解析單一指標；OpenAPI 失敗或缺資料時降級 AI；錯誤時 resolvedSource=error。
- * @param indicatorId - 指標 id
- * @param params - 參數覆寫
+ * 變體指標會解析至 baseIndicatorId，並合併 defaultParams 與條件 params。
+ * @param indicatorId - 指標 id（可為變體）
+ * @param params - 條件上的參數覆寫
  * @param ctx - 標的與庫存
- * @returns 指標值
+ * @returns 指標值（indicatorId 仍為呼叫端 id，方便對照條件）
  */
 export async function resolveIndicator(
   indicatorId: string,
@@ -63,31 +74,43 @@ export async function resolveIndicator(
     }
   }
 
+  // 變體：實際打 API／計算用基底 id；回傳仍標示原 id
+  const resolveId = def.baseIndicatorId || indicatorId
+  const mergedParams: Record<string, number | string> = {
+    ...(def.defaultParams || {}),
+    ...(params || {}),
+  }
+
   try {
     const source = normalizeIndicatorSource(def.source)
 
-    // 庫存自填：缺值以 0 防呆，不中止
+    // 庫存自填：缺值以 0 防呆，不中止（變體通常不會指向庫存）
     if (source === 'inventory') {
-      return resolveInventory(indicatorId, ctx)
+      return tagId(resolveInventory(resolveId, ctx), indicatorId)
+    }
+
+    // 自動化：可比行情後寫回庫存（有副作用）
+    if (source === 'automation') {
+      return tagId(await resolveAutomation(resolveId, mergedParams, ctx), indicatorId)
     }
 
     // 使用者公式：解析依賴後求值
     if (source === 'formula') {
-      return await resolveFormula(indicatorId, def.expression || '', params, ctx)
+      return tagId(await resolveFormula(resolveId, def.expression || '', mergedParams, ctx), indicatorId)
     }
 
     if (source === 'ai') {
-      return await resolveViaAi(indicatorId, def.name, params, ctx)
+      return tagId(await resolveViaAi(resolveId, def.name, mergedParams, ctx), indicatorId)
     }
 
     // openapi／composite：先官方（含複合），失敗降級 AI
     try {
-      return await resolveOpenApi(indicatorId, params, ctx)
+      return tagId(await resolveOpenApi(resolveId, mergedParams, ctx), indicatorId)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       try {
-        const ai = await resolveViaAi(indicatorId, def.name, params, ctx, msg)
-        return ai
+        const ai = await resolveViaAi(resolveId, def.name, mergedParams, ctx, msg)
+        return tagId(ai, indicatorId)
       } catch (aiErr) {
         const aiMsg = aiErr instanceof Error ? aiErr.message : String(aiErr)
         return {
@@ -109,6 +132,16 @@ export async function resolveIndicator(
       error: msg,
     }
   }
+}
+
+/**
+ * 將解析結果的 indicatorId 改回呼叫端 id（變體對照用）。
+ * @param value - 解析結果
+ * @param indicatorId - 原始 id
+ * @returns 覆寫 id 後的結果
+ */
+function tagId(value: IndicatorValue, indicatorId: string): IndicatorValue {
+  return value.indicatorId === indicatorId ? value : { ...value, indicatorId }
 }
 
 /**
@@ -148,8 +181,16 @@ function resolveInventory(indicatorId: string, ctx: ResolveContext): IndicatorVa
       return num(h?.swingHigh, '波段最高價')
     case 'total_capital':
       return num(inv.totalCapital, '總資金')
-    case 'cash_remaining':
-      return num(inv.cashRemaining, '剩餘現金')
+    case 'cash_remaining': {
+      // 剩餘現金 = 總資金 − Σ(進場價 × 股數)，與庫存欄衍生邏輯一致
+      const cash = calcCashRemaining(inv)
+      return {
+        indicatorId,
+        resolvedSource: 'inventory',
+        value: cash,
+        display: String(cash),
+      }
+    }
     case 'holding_count':
       return {
         indicatorId,
@@ -196,10 +237,134 @@ function resolveInventory(indicatorId: string, ctx: ResolveContext): IndicatorVa
 }
 
 /**
+ * 將寫回後的庫存同步到執行上下文（同路徑後續指標可見），並通知 UI。
+ * @param ctx - 解析上下文（會就地更新 holdings 等欄位）
+ * @param next - 已 save 的最新庫存
+ */
+function syncInventoryContext(ctx: ResolveContext, next: DecisionInventory): void {
+  // 就地覆寫，讓批次共用同一 inventory 參考時也能看見更新
+  ctx.inventory.holdings = next.holdings
+  ctx.inventory.lists = next.lists
+  ctx.inventory.totalCapital = next.totalCapital
+  ctx.inventory.cashRemaining = next.cashRemaining
+  ctx.inventory.maxHoldings = next.maxHoldings
+  ctx.onInventoryChange?.(next)
+}
+
+/**
+ * 執行自動化動作（供 action 節點呼叫；非條件指標）。
+ * @param actionId - 動作 id（見 actionCatalog）
+ * @param ctx - 解析上下文
+ * @returns 執行結果（供過程顯示）
+ */
+export async function runAction(
+  actionId: string,
+  ctx: ResolveContext
+): Promise<IndicatorValue> {
+  return resolveAutomation(actionId, {}, ctx)
+}
+
+/**
+ * 自動化動作實作：可比行情後寫回庫存。
+ * @param indicatorId - 動作 id
+ * @param _params - 預留參數（目前無）
+ * @param ctx - 上下文
+ * @returns 指標值形狀（供過程顯示；不參與通過／未通過）
+ */
+async function resolveAutomation(
+  indicatorId: string,
+  _params: Record<string, number | string>,
+  ctx: ResolveContext
+): Promise<IndicatorValue> {
+  const cache = ctx.cache || new Map<string, unknown>()
+
+  switch (indicatorId) {
+    case 'auto_update_swing_high': {
+      // 從 storage 重讀，避免批次並行時覆寫彼此的持股更新
+      const fresh = loadInventory()
+      const h = findHolding(fresh, ctx.symbol)
+      if (!h) {
+        return {
+          indicatorId,
+          resolvedSource: 'error',
+          value: null,
+          display: '無持股',
+          error: `庫存無持股「${ctx.symbol}」，無法更新波段高點`,
+        }
+      }
+
+      const px = await getLatestClose(ctx.symbol, cache)
+      const prevRaw = h.swingHigh
+      const prev =
+        prevRaw === undefined || prevRaw === null || Number.isNaN(prevRaw) ? 0 : prevRaw
+      const pxR = round(px, 2)
+
+      // 現價未超過既有波段高 → 不寫入；仍回傳 true，避免當成決策「否」卡住流程
+      if (pxR <= prev) {
+        return ok(
+          'automation',
+          indicatorId,
+          true,
+          `未更新（現價 ${pxR} ≤ 波段高 ${prev}）`,
+          [
+            {
+              label: '收盤價（現價）',
+              indicatorId: 'close_price',
+              value: pxR,
+              display: String(pxR),
+            },
+            {
+              label: '波段最高價',
+              indicatorId: 'swing_high',
+              value: prev,
+              display: String(prev),
+            },
+            { label: '是否寫入', value: false, display: '否' },
+          ]
+        )
+      }
+
+      const next = updateHolding(fresh, h.id, { swingHigh: pxR })
+      syncInventoryContext(ctx, next)
+
+      return ok('automation', indicatorId, true, `已更新波段高點 ${prev} → ${pxR}`, [
+        {
+          label: '收盤價（現價）',
+          indicatorId: 'close_price',
+          value: pxR,
+          display: String(pxR),
+        },
+        {
+          label: '波段最高價（原）',
+          indicatorId: 'swing_high',
+          value: prev,
+          display: String(prev),
+        },
+        {
+          label: '波段最高價（新）',
+          indicatorId: 'swing_high',
+          value: pxR,
+          display: String(pxR),
+        },
+        { label: '是否寫入', value: true, display: '是' },
+      ])
+    }
+    default:
+      return {
+        indicatorId,
+        resolvedSource: 'error',
+        value: null,
+        display: '未實作',
+        error: `自動化指標未實作：${indicatorId}`,
+      }
+  }
+}
+
+/**
  * 解析使用者公式指標。
  * @param indicatorId - 公式指標 id
  * @param expression - 表達式
- * @param params - 參數（轉傳給依賴指標）
+ * @param params - 轉傳給依賴指標的參數
  * @param ctx - 上下文
  * @returns 指標值
  */
@@ -293,10 +458,17 @@ async function resolveFormula(
   }
 }
 
+/** 投信／外資連買檢查天數預設 */
+const BUY_STREAK_MAX_DAYS = 10
+/** 均線／乖離／回檔預設視窗日數 */
+const SERIES_WINDOW_N = 60
+/** ATR 計算日數預設 */
+const ATR_WINDOW_N = 14
+
 /**
- * OpenAPI／衍生指標解析。
- * @param indicatorId - 指標 id
- * @param params - 參數
+ * OpenAPI／衍生指標解析；視窗日數可由 params 覆寫。
+ * @param indicatorId - 指標 id（基底，不含變體）
+ * @param params - 參數覆寫
  * @param ctx - 上下文
  * @returns 指標值
  */
@@ -411,8 +583,13 @@ async function resolveOpenApi(
     }
     case 'trust_buy_streak':
     case 'foreign_buy_streak': {
-      const maxDays = Number(params?.days ?? 10)
-      const streak = await calcBuyStreak(ctx.symbol, indicatorId === 'trust_buy_streak' ? 'trust' : 'foreign', maxDays, cache)
+      const maxDays = Number(params?.days ?? BUY_STREAK_MAX_DAYS)
+      const streak = await calcBuyStreak(
+        ctx.symbol,
+        indicatorId === 'trust_buy_streak' ? 'trust' : 'foreign',
+        maxDays,
+        cache
+      )
       return ok('openapi', indicatorId, streak, `${streak} 天`)
     }
     case 'monthly_revenue_yoy':
@@ -449,13 +626,13 @@ async function resolveOpenApi(
       return ok('openapi', indicatorId, v, String(v))
     }
     case 'ma': {
-      const n = Number(params?.n ?? 60)
+      const n = Number(params?.n ?? SERIES_WINDOW_N)
       const closes = await getCloseSeries(ctx.symbol, n, cache)
       const ma = avg(closes.slice(-n))
       return ok('openapi', indicatorId, round(ma, 2), String(round(ma, 2)))
     }
     case 'bias': {
-      const n = Number(params?.n ?? 60)
+      const n = Number(params?.n ?? SERIES_WINDOW_N)
       const closes = await getCloseSeries(ctx.symbol, Math.max(n, 5), cache)
       const last = closes[closes.length - 1]
       const ma = avg(closes.slice(-n))
@@ -463,7 +640,7 @@ async function resolveOpenApi(
       return ok('openapi', indicatorId, round(bias, 2), `${round(bias, 2)}%`)
     }
     case 'drawdown_from_high': {
-      const n = Number(params?.n ?? 60)
+      const n = Number(params?.n ?? SERIES_WINDOW_N)
       const highs = await getHighSeries(ctx.symbol, n, cache)
       const closes = await getCloseSeries(ctx.symbol, n, cache)
       const high = Math.max(...highs)
@@ -472,7 +649,7 @@ async function resolveOpenApi(
       return ok('openapi', indicatorId, round(dd, 2), `${round(dd, 2)}%`)
     }
     case 'atr': {
-      const n = Number(params?.n ?? 14)
+      const n = Number(params?.n ?? ATR_WINDOW_N)
       const bars = await getOhlcSeries(ctx.symbol, n + 1, cache)
       const atr = calcAtr(bars, n)
       return ok('openapi', indicatorId, round(atr, 2), String(round(atr, 2)))
@@ -546,7 +723,7 @@ async function resolveOpenApi(
  * 以 Gemini + Google Search 取得指標數值（結構化 JSON）。
  * @param indicatorId - 指標 id
  * @param name - 顯示名稱
- * @param params - 參數
+ * @param params - 參數（寫入 prompt 供 AI 對齊視窗）
  * @param ctx - 上下文
  * @param reason - 降級原因
  * @returns 指標值（resolvedSource=ai）
@@ -559,9 +736,9 @@ async function resolveViaAi(
   reason?: string
 ): Promise<IndicatorValue> {
   const ai = createClient()
-  const prompt = `你是台股資料助手。請查詢股票 ${ctx.symbol} 的「${name}」（indicatorId=${indicatorId}）${
-    params ? `，參數=${JSON.stringify(params)}` : ''
-  }。
+  const paramNote =
+    params && Object.keys(params).length > 0 ? `，參數=${JSON.stringify(params)}` : ''
+  const prompt = `你是台股資料助手。請查詢股票 ${ctx.symbol} 的「${name}」（indicatorId=${indicatorId}）${paramNote}。
 ${reason ? `（官方 API 失敗原因：${reason}）` : ''}
 只回傳 JSON：{"value": number|boolean|null, "display": string, "note": string}
 若無法確定，value 設 null 並在 note 說明。不要 markdown。`
